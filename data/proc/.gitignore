@@ -1,0 +1,8 @@
+/dataset.parquet
+/cls-political.parquet
+/cls-negativity.parquet
+/cls.parquet
+/daily.parquet
+/fulldata.parquet
+/textdata.parquet
+/quality.parquet

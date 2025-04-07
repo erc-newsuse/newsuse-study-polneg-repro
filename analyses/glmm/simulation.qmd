@@ -1,0 +1,525 @@
+---
+title: "Engagement simulation"
+author: "Szymon Talaga"
+date: last-modified
+date-format: "MMMM D, YYYY | HH:mm:ss (Z)"
+toc: true
+toc-depth: 3
+toc-location: left
+execute:
+  echo: false
+  warning: false
+  cache: false
+  daemon: false
+format:
+  html:
+    grid:
+      margin-width: 350px
+    embed-resources: true
+  pdf:
+    toc: false
+    number-sections: true
+    colorlinks: true
+reference-location: margin
+citation-location: margin
+---
+
+```{r}
+library(arrow)
+library(stringr)
+library(dplyr)
+library(tidyr)
+library(purrr)
+library(tibble)
+library(emmeans)
+library(broom)
+library(reticulate)
+library(lubridate)
+library(glmmTMB)
+
+filter <- dplyr::filter
+
+use_condaenv("newsuse-study-polneg")
+
+project <- import("project")
+config  <- project$config
+paths   <- project$paths[["__copy__"]]()
+
+alpha     <- config$inference$alpha
+conf      <- config$inference$conf
+adjust    <- config$inference$adjust
+countries <- config$countries$order
+countries <- countries[0L:length(countries)]
+
+emm_options(
+    emmeans  = list(type = "response", level = conf, adjust = adjust),
+    contrast = list(adjust = adjust),
+    summary  = list(infer = TRUE)
+)
+```
+
+```{python}
+import importlib
+from typing import Mapping
+import datetime
+import numpy as np
+import pandas as pd
+from scipy import stats
+import matplotlib as mpl
+import matplotlib.patches
+import matplotlib.dates
+import matplotlib.transforms
+import matplotlib.legend_handler
+import matplotlib.pyplot as plt
+from matplotlib.patheffects import withStroke
+import seaborn as sns
+import seaborn.objects as so
+from project import config, paths
+
+mpl.style.use(config.plotting.style)
+mpl.rcParams.update({
+    k: v.make() if isinstance(v, Mapping) and "make!" in v else v
+    for k, v in config.plotting.params.items()
+})
+
+figpath = paths.figures / "glmm"
+figpath.mkdir(parents=True, exist_ok=True)
+
+countries = config.countries.labels
+colors    = {
+    **config.plotting.color.semantics,
+    **config.plotting.color.palette,
+}
+```
+
+```{r}
+glmm_n <- readRDS(as.character(paths$glmm / "negativity" / "0.rds"))
+glmm_l <- readRDS(as.character(paths$glmm / "likes" / "0.rds"))
+glmm_c <- readRDS(as.character(paths$glmm / "comments" / "0.rds"))
+glmm_s <- readRDS(as.character(paths$glmm / "shares" / "0.rds"))
+
+rg_n <- ref_grid(glmm_n)
+rg_l <- ref_grid(glmm_l)
+rg_c <- ref_grid(glmm_c)
+rg_s <- ref_grid(glmm_s)
+
+countries  <- rg_l@levels$country
+political  <- rg_l@levels$political
+negativity <- rg_l@levels$negativity
+```
+
+# Simulation
+
+```{r}
+# Factory function for generating estimator functions
+# producing estimates of negative engagements shares
+# and corresponding variances derived with delta method
+get_estimator <- function(rg, pol, country = NA) {
+    # Shares estimator factory function for specific p - prevalence of negative news
+    get_func <- function(p) function(x, y) p*exp(x) / (p*exp(x) + (1-p)*exp(y))
+    # Gradient factory function
+    get_grad <- function(p) function(x, y) {
+        dx <- p*(1-p)*exp(x+y) / (p*exp(x) + (1-p)*exp(y))^2
+        c(dx, -dx)
+    }
+    # Indicator vector for extracting terms from variance matrix etc.
+    ivec <- function(..., sep = " ") {
+        parts <- unlist(rlang::dots_list(...))
+        str_c(parts[!is.na(parts)], collapse = sep)
+    }
+    if (is.na(country)) {
+        frm <- ~political * negativity
+    } else {
+        frm <- ~country * political * negativity
+    }
+    # Define appropriate EMM grid only once
+    emm  <- emmeans(rg, frm, type = "link")
+    semm <- summary(emm)
+    grid <- model.frame(frm, semm)
+    pred <- set_names(semm$emmean, do.call(str_c, c(grid, sep = " ")))
+    V    <- vcov(emm)
+
+    estimate <- function(p) {
+        func <- get_func(p)
+        grad <- get_grad(p)
+        vec_n <- ivec(country, pol, "NEGATIVE" )
+        vec_o <- ivec(country, pol, "OTHER")
+        vec   <- c(vec_n, vec_o)
+        x     <- pred[vec_n]
+        y     <- pred[vec_o]
+        est   <- func(x, y)
+        deriv <- grad(x, y)
+        hV    <- (t(deriv) %*% V[vec, vec] %*% deriv)[1, 1]
+        stats <- c(share = unname(est), var = unname(hV))
+        stats
+    }
+    estimate
+}
+
+# Function for marginalizing out negativity probability
+# using simple numerical integration and model-based
+# estimates of negativity prevalence and using the asymptotic
+# normality of MLE estimators
+marginalize <- function(est, se, estimator, sdrange = 3, n_steps = 100L) {
+    start  <- max(0, est - se * sdrange)
+    end    <- min(1, est + se * sdrange)
+    pvec   <- seq(start, end, length.out = n_steps)
+    wvec   <- dnorm(pvec, mean = est, sd = se)
+    wvec   <- wvec / sum(wvec)
+    shares <- do.call(rbind, map(pvec, estimator))
+    shares <- colSums(shares * wvec) / sum(wvec)
+    shares <- t(as.data.frame(shares))
+    rownames(shares) <- NULL
+    shares
+}
+
+simulate <- function(rg) function(country, political, pn, pn_se) {
+    marginalize(pn, pn_se, get_estimator(rg, political, country))
+}
+```
+
+```{r}
+zrange <- function(alpha = config$inference$alpha) abs(qnorm(alpha / 2))
+
+ngrid <- bind_rows(
+    as_tibble(emmeans(rg_n, ~political)),
+    as_tibble(emmeans(rg_n, ~political*country))
+) %>%
+    select(
+        country, political,
+        pn = prob, pn_se = SE, pn_lo = asymp.LCL, pn_hi = asymp.UCL
+    ) %>%
+    mutate(across(where(is.factor), as.character)) %>%
+    mutate(
+        likes =    pmap(select(., 1:4), simulate(rg_l)),
+        comments = pmap(select(., 1:4), simulate(rg_c)),
+        shares =   pmap(select(., 1:4), simulate(rg_s)),
+    ) %>%
+    mutate(across(c(likes, comments, shares), rlang::ll(
+        est = ~map_dbl(.x, ~.x[1L, "share"]),
+        var = ~map_dbl(.x, ~.x[1L, "var"]),
+    ))) %>%
+    select(-c(likes, comments, shares)) %>%
+    select(
+        everything(),
+        likes = likes_est,
+        likes_var,
+        comments = comments_est,
+        comments_var,
+        shares = shares_est,
+        shares_var,
+    ) %>%
+    mutate(country = replace_na(country, "overall")) %>%
+    mutate(across(c(likes, comments, shares), rlang::ll(
+        lo = ~.x - zrange() *
+            sqrt(pick(str_c(cur_column(), "_var"))[[1L]]),
+        hi = ~.x + zrange() *
+            sqrt(pick(str_c(cur_column(), "_var"))[[1L]]),
+    )))
+```
+
+## Simulation for different politicality levels
+
+```{r}
+sgrid <- ngrid %>%
+    mutate(
+        pp = list(seq(0, 1, .01)),
+        .after = "political",
+    ) %>%
+    unnest(pp) %>%
+    group_by(country, pp) %>%
+    summarize(across(matches("^(likes|comments|shares)(_var)?$"), ~{
+        stopifnot(length(pp) == 2L)
+        p <- if_else(political == "POLITICAL", pp, 1 - pp)
+        sum(p*.x)
+    })) %>%
+    ungroup %>%
+    mutate(across(c(likes, comments, shares), rlang::ll(
+        lo = ~.x - zrange() *
+            sqrt(pick(str_c(cur_column(), "_var"))[[1L]]),
+        hi = ~.x + zrange() *
+            sqrt(pick(str_c(cur_column(), "_var"))[[1L]]),
+    )))
+```
+
+# Figures
+
+```{python}
+palette  = [colors["other"], colors["political"]]
+gap      = 0.05
+ymin     = "lower.CL"
+ymax     = "upper.CL"
+metrics  = ["likes", "comments", "shares"]
+dodgekw  = {"empty": "drop"}
+rangekw  = {"color": "black", "linewidth": 2}
+linekw   = {"linewidth": 3, "edgecolor": "black"}
+dotkw    = {
+    "pointsize": 8,
+    "edgecolor": "black",
+    "artist_kws": {"zorder": 10}
+}
+violkw   = {
+    "inner": None,
+    "alpha": 0.3,
+    "linewidth": 0,
+    "legend": False,
+    "gap": gap,
+    "palette": palette
+}
+```
+
+```{python}
+nrows = len(metrics)
+fig, axes = plt.subplots(
+    nrows=nrows,
+    figsize=(7, 2*nrows),
+    sharex=True,
+    sharey=True,
+)
+
+ngrid = r.ngrid
+
+for df in (ngrid,):
+    col = "country"
+    df[col] = df[col].map(lambda x: countries.get(x, r"\textbf{Overall}"))
+
+hue      = "political"
+hue_ord  = ["OTHER", "POLITICAL"]
+boxprops = {"facecolor": "white"}
+palette  = [colors["other"], colors["political"]]
+
+# Estimates for POLITICAL/OTHER news -------------------------------------
+for ax, metric in zip(axes.flat, metrics, strict=True):
+    x, y = "country", metric
+    ymin = f"{metric}_lo"
+    ymax = f"{metric}_hi"
+    hue  = "political"
+    (
+        so.Plot(ngrid, x=x, y=y, color=hue)
+        .add(so.Line(linestyle="--"), so.Dodge(), y="pn")
+        .add(so.Band(), so.Dodge(), ymin="pn_lo", ymax="pn_hi")
+        # .add(so.Line(**linekw), so.Dodge())
+        .add(
+            so.Range(**rangekw), so.Dodge(), so.Shift(x=.1),
+            ymin=ymin, ymax=ymax,
+        )
+        .add(so.Dot(**dotkw), so.Dodge())
+        .scale(color=so.Nominal(palette, order=hue_ord))
+        .on(ax)
+        .show()
+    )
+    ax.set_ylim(0, 1.1*max(*ax.get_ylim()))
+    ax.yaxis.set_major_formatter(
+        mpl.ticker.PercentFormatter(1.0, decimals=0)
+    )
+    ax.axvline(.5, ls="--", color="k", zorder=-10)
+    ax.set_title(metric.title())
+    ax.set_xlabel(None)
+    ax.set_ylabel(None)
+    ax.tick_params(
+        bottom=False, top=False,
+        labelbottom=False, labeltop=False,
+    )
+
+axes.flatten()[0].tick_params(top=True, labeltop=True)
+axes.flatten()[-1].tick_params(bottom=True, labelbottom=True)
+
+handles = [
+    mpl.lines.Line2D([], [], color=color, label=label.lower(), lw=3)
+    for color, label in zip(palette, hue_ord, strict=True)
+] + [
+    mpl.lines.Line2D(
+        [], [], color="k",
+        lw=0, marker="|", markersize=10, markeredgewidth=2,
+    ),
+    (
+        mpl.patches.Patch(color=colors["other"], alpha=.3, linewidth=0),
+        mpl.lines.Line2D([], [], color=colors["other"], ls="--")
+    ),
+]
+
+fig.legends.clear()
+fig.legend(
+    handles=handles,
+    labels=[
+        *map(str.lower, hue_ord),
+        rf"{r.conf*100:.0f}\% CI",
+        r"negativity prevalence + 95\%CI",
+    ],
+    loc="center",
+    framealpha=1.0,
+    frameon=False,
+    bbox_to_anchor=(.5, -0.03),
+    ncols=len(handles),
+)
+fig.supxlabel("XXX", color="white")
+fig.supylabel("Share of negative engagement")
+fig.tight_layout()
+fig.savefig(figpath / "sim-political.pdf")
+```
+
+```{python}
+nrows = len(metrics)
+fig, axes = plt.subplots(
+    ncols=nrows,
+    figsize=(7, 2*nrows),
+    sharex=True,
+    sharey=True,
+)
+
+hue      = "country"
+hue_ord  = ["overall", *countries]
+palette  = ["black", *[colors[c] for c in countries]]
+metrics  = ["likes", "comments", "shares"]
+
+sgrid = (
+    r.sgrid
+    .set_index("country")
+    .loc[["overall", *countries]]
+    .reset_index()
+)
+
+# Estimates for POLITICAL/OTHER news -------------------------------------
+for ax, metric in zip(axes.flat, metrics, strict=True):
+    x, y = "pp", metric
+    ymin = f"{metric}_lo"
+    ymax = f"{metric}_hi"
+    (
+        so.Plot(sgrid, x=x, y=y, color=hue)
+        .add(so.Band(), ymin=ymin, ymax=ymax)
+        .add(so.Line(**linekw))
+        .scale(color=so.Nominal(palette, order=hue_ord))
+        .on(ax)
+        .show()
+    )
+    ax.xaxis.set_major_formatter(
+        mpl.ticker.PercentFormatter(1.0, decimals=0)
+    )
+    ax.yaxis.set_major_formatter(
+        mpl.ticker.PercentFormatter(1.0, decimals=0)
+    )
+    ax.set_title(metric.title())
+    ax.set_xlabel(None)
+    ax.set_ylabel(None)
+    # Occam's razor level
+    ax.axvline(.5, ls="--", color = "black")
+    ax.axvline(.25, ls="--", color = "black")
+
+ax = axes.flatten()[0]
+ax.annotate(
+    r"``Occam's razor''", (.57, .95), xycoords="axes fraction",
+    bbox=boxprops,
+)
+ax.annotate(
+    r"Wojcieszak et al., (2024)", (.44, .8), xycoords="axes fraction",
+    ha="right",
+    bbox=boxprops,
+    annotation_clip=False,
+)
+
+for ax in axes.flatten()[1:]:
+    ax.tick_params(left=False, labelleft=False)
+
+handles = [
+    mpl.lines.Line2D(
+        [], [], color=color, lw=3,
+        label=countries.get(label, r"\textbf{Overall}")
+    )
+    for color, label in zip(palette, hue_ord, strict=True)
+]
+
+fig.legends.clear()
+fig.legend(
+    handles=handles,
+    loc="center",
+    framealpha=1.0,
+    frameon=False,
+    bbox_to_anchor=(.55, -0.03),
+    fontsize="small",
+    ncols=len(handles),
+)
+fig.supxlabel("Share of political news", x=.55)
+fig.supylabel("Share of negative engagement", x=.08)
+fig.tight_layout()
+fig.savefig(figpath / "sim-overall.pdf")
+```
+
+# Tables
+
+```{python}
+cilo = (r.alpha/2)*100
+cihi = 100-cilo
+metrics = ["likes", "comments", "shares"]
+data = (
+    pd.concat({
+        metric.title(): (
+            r.ngrid
+            .set_index(["country", "political"])
+            [[metric, f"{metric}_lo", f"{metric}_hi"]]
+            .pipe(lambda df: pd.DataFrame(df.to_numpy(), index=df.index, columns=[
+                "estimate", rf"{cilo}\%", rf"{cihi}\%",
+            ]))
+            .loc[[*countries, "overall"]]
+            .rename(lambda x: countries.get(x, r"\textbf{Overall}"), level="country")
+            .rename(str.lower, level="political")
+            .rename({"other": "non-political"}, level="political")
+        )
+        for metric in metrics
+    }, axis=1)
+    .pipe(lambda df: print(
+        df.style
+        .format(
+            escape=False,
+            precision=3,
+            na_rep="",
+        )
+        .to_latex(
+            multicol_align="c",
+            multirow_align="t",
+            hrules=True,
+        )
+    ))
+)
+```
+
+```{python}
+metrics = ["likes", "comments", "shares"]
+sgrid = r.sgrid
+sgrid = (
+    pd.concat([
+        sgrid.query("pp == .25").assign(label="Wojcieszak et al. (2024)"),
+        sgrid.query("pp == .5").assign(label="Occam's razor")
+    ], axis=0, ignore_index=True)
+    .set_index(["country"])
+    .loc[[*countries, "overall"]]
+    .reset_index()
+    .assign(pp=lambda df: (df["pp"]*100).astype(int))
+    .set_index(["country", "label", "pp"])
+)
+data = (
+    pd.concat({
+        metric.title(): (
+            sgrid[[metric, f"{metric}_lo", f"{metric}_hi"]]
+            .pipe(lambda df: pd.DataFrame(df.to_numpy(), index=df.index, columns=[
+                "estimate", rf"{cilo}\%", rf"{cihi}\%",
+            ]))
+        )
+        for metric in metrics
+    }, axis=1)
+    .rename(lambda x: countries.get(x, r"\textbf{Overall}"), level="country")
+)
+data.index.names = ["", "", r"\% political"]
+data.pipe(lambda df: print(
+    df.style
+    .format(
+            escape=False,
+            precision=3,
+            na_rep="",
+        )
+    .to_latex(
+        multicol_align="c",
+        multirow_align="t",
+        hrules=True,
+    )
+))
+```

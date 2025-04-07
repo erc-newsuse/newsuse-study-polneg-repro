@@ -1,0 +1,449 @@
+---
+title: "Prediction of political and negative news"
+subtitle: "Logistic regression with fixed and random effects"
+author: "Szymon Talaga"
+date: last-modified
+date-format: "MMMM D, YYYY | HH:mm:ss (Z)"
+toc: true
+toc-depth: 3
+toc-location: left
+execute:
+  echo: false
+  warning: false
+  cache: false
+  daemon: false
+format:
+  html:
+    grid:
+      margin-width: 350px
+    embed-resources: true
+  pdf:
+    toc: false
+    number-sections: true
+    colorlinks: true
+reference-location: margin
+citation-location: margin
+---
+
+```{r}
+library(arrow)
+library(stringr)
+library(dplyr)
+library(purrr)
+library(tibble)
+library(emmeans)
+library(broom)
+library(reticulate)
+library(lubridate)
+library(glmmTMB)
+
+use_condaenv("study-polneg")
+
+project <- import("project")
+config  <- project$config
+paths   <- project$paths[["__copy__"]]()
+
+alpha     <- config$inference$alpha
+conf      <- config$inference$conf
+adjust    <- config$inference$adjust
+countries <- config$countries$order
+countries <- countries[0L:length(countries)]
+
+emm_options(
+    emmeans  = list(type = "response", level = conf, adjust = adjust),
+    contrast = list(adjust = adjust),
+    summary  = list(infer = TRUE)
+)
+```
+
+```{python}
+import importlib
+from typing import Mapping
+import datetime
+import numpy as np
+import pandas as pd
+from scipy import stats
+import matplotlib as mpl
+import matplotlib.dates
+import matplotlib.transforms
+import matplotlib.pyplot as plt
+from matplotlib.patheffects import withStroke
+import seaborn as sns
+import seaborn.objects as so
+from project import config, paths
+
+mpl.style.use(config.plotting.style)
+mpl.rcParams.update({
+    k: v.make() if isinstance(v, Mapping) and "make!" in v else v
+    for k, v in config.plotting.params.items()
+})
+
+figpath = paths.figures / "glmm"
+figpath.mkdir(parents=True, exist_ok=True)
+
+countries = config.countries.labels
+colors    = {"overall": "white", **config.plotting.color.semantics}
+```
+
+```{r}
+data <- as.character(paths$dataset) %>%
+    read_parquet %>%
+    tibble %>%
+    mutate(across(c(year, month, day), as.factor)) %>%
+    mutate(
+        political  = relevel(as.factor(political), "OTHER"),
+        negativity = relevel(as.factor(negativity), "OTHER"),
+        country    = factor(country, levels = countries)
+    )
+```
+
+```{r}
+glmm <- readRDS(as.character(paths$glmm / "negativity" / "0.rds"))
+gc()
+```
+
+# Reference grids for estimated marginal means
+
+```{r}
+rg <- ref_grid(glmm)
+gc()
+```
+
+# Estimated probabilities of negativity
+
+```{r}
+countries <- rg@levels$country
+polvals   <- str_to_lower(rg@levels$political)
+
+obs <- data %>%
+    group_by(country, name, year, month, day, political) %>%
+    summarize(prob = mean(negativity == "NEGATIVE")) %>%
+    ungroup
+
+emm  <- emmeans(rg, ~country*political)
+est  <- as_tibble(emm)
+
+emm_avg <- emmeans(rg, ~political)
+est_avg <- mutate(as_tibble(emm_avg), country = "overall", .before = 1L)
+```
+
+## Political/other contrasts
+
+```{r}
+con <- coef(contrast(emm, by = "country", method = "trt.vs.ctrl"))
+C   <- as.matrix(select(con, starts_with("c.")))
+C   <- cbind(rowMeans(C), C)
+C   <- set_names(as.data.frame(C), c("overall", countries))
+con <- contrast(emm, method = C)
+cdf <- mutate(as_tibble(con), country = contrast, .after = 1L)
+```
+
+## Country vs rest contrasts
+
+```{r}
+nc   <- length(countries)
+nm   <- reduce(map(c("overall", polvals), str_c, countries, sep = ","), c)
+ccon <- coef(contrast(emm, by = "political", method = "del.eff"))
+Cg   <- as.matrix(select(ccon, starts_with("c.")))
+Co   <- rbind(Cg[1:nc, 1:nc], Cg[(nc+1):(nc*2), (nc+1):(nc*2)]) / 2
+C    <- set_names(as.data.frame(cbind(Co, Cg)), nm)
+ccon <- contrast(emm, method = C)
+ccdf <- mutate(
+    as_tibble(ccon),
+    country   = str_split_i(contrast, ",", 2L),
+    political = str_split_i(contrast, ",", 1L),
+    .after = 1L,
+)
+```
+
+# Figure
+
+```{python}
+palette  = [colors["other"], colors["political"]]
+gap      = 0.05
+ymin     = "asymp.LCL"
+ymax     = "asymp.UCL"
+hue      = "political"
+hue_ord  = ["OTHER", "POLITICAL"]
+nlabels  = {"OTHER": "other", "NEGATIVE": "negative"}
+plabels  = {"OTHER": "other", "POLITICAL": "political"}
+boxprops = {"facecolor": "white"}
+dodgekw  = {"empty": "drop"}
+rangekw  = {"color": "black", "linewidth": 2}
+linekw   = {"linewidth": 3, "edgecolor": "black"}
+dotkw    = {
+    "pointsize": 10,
+    "edgecolor": "black",
+    "artist_kws": {"zorder": 10}
+}
+violkw   = {
+    "inner": None,
+    "split": True,
+    "alpha": 0.3,
+    "linewidth": 0,
+    "legend": False,
+    "gap": gap,
+    "palette": palette
+}
+```
+
+```{python}
+fig, axes = plt.subplot_mosaic(
+    "A;A;A;B;B;C;C;C",
+    figsize=(7, 6),
+    sharex=True
+)
+
+# Point estimates -------------------------------------------------------
+ax  = axes["A"]
+obs = pd.concat([r.obs.assign(country=""), r.obs], ignore_index=True)
+est = pd.concat([r.est, r.est_avg], ignore_index=True)
+cnt = r.ccdf
+cnt["political"] = cnt["political"].str.lower()
+
+for df in (obs, est):
+    col = "country"
+    df[col] = df[col].map(lambda x: countries.get(x, r"\textbf{Overall}"))
+
+x, y = "country", "prob"
+sns.violinplot(obs, x=x, y=y, hue=hue, hue_order=hue_ord, ax=ax, **violkw)
+(
+    so.Plot(est, x=x, y=y, color=hue)
+    .add(so.Range(**rangekw), so.Dodge(), ymin=ymin, ymax=ymax)
+    .add(so.Dot(**dotkw), so.Dodge())
+    .scale(color=palette)
+    .on(ax)
+    .show()
+)
+
+ax.set_title(None)
+ax.set_xlabel(None)
+ax.set_ylabel(r"$\mathbb{P}(\text{negative} \mid \text{political})$")
+ax.yaxis.set_major_formatter(mpl.ticker.PercentFormatter(1.0))
+ax.set_ylim(0, .6)
+ax.axvline(.5, ls="--", color="k")
+ax.tick_params(
+    top=True, labeltop=True,
+    bottom=False, labelbottom=False,
+)
+
+handles = [
+    mpl.lines.Line2D(
+        [], [], lw=0, label="Obs. distribution over outlet-days",
+        marker="|", markersize=12, markeredgewidth=10,
+        markeredgecolor=colors["other"]
+    ),
+]
+ax.legend(
+    handles=handles,
+    loc="upper right",
+    frameon=False,
+    framealpha=1.0,
+)
+
+# Within-country contrasts -----------------------------------------------
+ax   = axes["B"]
+con  = r.cdf
+x, y = "country", "odds.ratio"
+for df in (con,):
+    df[x] = df[x].map(lambda x: countries.get(x, r"\textbf{Overall}"))
+
+(
+    so.Plot(con, x=x, y=y)
+    .add(so.Range(**rangekw), ymin=ymin, ymax=ymax)
+    .add(so.Dot(**dotkw, color=colors["negative"]))
+    .on(ax)
+    .show()
+)
+ax.set_ylabel("OR (political/other)")
+ax.set_xlabel(None)
+ax.set_ylim(0, max(*ax.get_ylim()))
+ax.axhline(1, ls=":", lw=2, color="black")
+ax.axvline(.5, ls="--", color="k")
+ax.tick_params(bottom=False, labelbottom=False)
+
+# Add p-value annotations
+for term, pval in zip(con[x], con["p.value"]):
+    ax.annotate(
+        rf"$p \approx {pval:.3f}$",
+        (term, 4.5), xycoords="data",
+        fontsize="small",
+        ha="center",
+        bbox=boxprops,
+    )
+
+# Country vs rest contrasts
+ax = axes["C"]
+cnt = (
+    r.ccdf
+    .set_index(x)
+    .loc[list(countries)]
+    .rename(index=countries)
+    .reset_index()
+)
+cnt["sig"] = cnt["p.value"] <= r.alpha
+hue_ord = ["other", "overall", "political"]
+(
+    so.Plot(cnt, x=x, y=y, color="political")
+    .add(so.Dot(**dotkw), so.Dodge())
+    .add(so.Range(**rangekw), so.Dodge(), ymin=ymin, ymax=ymax)
+    .add(
+        so.Dot(
+            color=colors["negative"], marker="*", edgecolor="k",
+            artist_kws={"zorder": 90}
+        ),
+        so.Dodge(),
+        pointsize="sig"
+    )
+    .scale(color=so.Nominal(colors, order=hue_ord), pointsize=[0, 15])
+    .on(ax)
+    .show()
+)
+ax.axhline(1, ls=":", color="black")
+ax.set_xlabel(None)
+ax.set_ylabel("OR (country/rest)")
+ax.axvline(.5, ls="--", color="k")
+
+# Figure legend ------------------------------------------------------
+fig.legends.clear()
+fig.align_ylabels(list(axes.values()))
+fig.tight_layout()
+fig.savefig(figpath / "negativity.pdf")
+```
+
+```{python}
+fig, ax = plt.subplots(figsize=(7, .25))
+ax.axis("off")
+
+handles = [
+    mpl.lines.Line2D(
+        [], [], label=label, color=colors.get(label, colors["other"]),
+        lw=0, marker="o", markersize=10, markeredgecolor="black",
+    )
+    for label in ["non-political", "overall", "political"]
+]
+handles += [
+    mpl.lines.Line2D(
+        [], [], label=rf"{r.conf*100:.0f}\% CI", color="k",
+        lw=0, marker="|", markersize=14, markeredgewidth=4,
+    ),
+    mpl.lines.Line2D(
+        [], [], lw=0, label=rf"significant at $p \leq {r.alpha}$",
+        color=colors["negative"], marker="*",
+        markersize=12, markeredgecolor="black",
+    ),
+]
+ax.legend(
+    loc="center",
+    handles=handles,
+    ncols=len(handles),
+    frameon=False,
+    fontsize="x-large",
+)
+
+fig.tight_layout()
+fig.savefig(figpath/"legend.pdf")
+```
+
+
+# Tables
+## Estimates
+
+```{python}
+cilo = rf"{r.alpha/2*100:.1f}\%"
+cihi = rf"{(1-r.alpha/2)*100:.1f}\%"
+
+table = (
+    pd.concat([r.est_avg, r.est], ignore_index=True)
+    .set_index("country")
+    .loc[[*countries, "overall"]]
+    .reset_index()
+    .pipe(lambda df: pd.DataFrame({
+            "country": df["country"],
+            "political": df["political"].str.lower().replace("other", "non-political"),
+            r"$\mathbb{P}$": df["prob"],
+            cilo: df["asymp.LCL"],
+            cihi: df["asymp.UCL"],
+        })
+    )
+    .merge(
+        r.cdf.pipe(lambda df: pd.DataFrame({
+            "country": df["country"],
+            "OR": df["odds.ratio"],
+            cilo: df["asymp.LCL"],
+            cihi: df["asymp.UCL"],
+        })
+    ), how="left", on="country")
+    .set_index(["country", "political"])
+    .rename(lambda x: countries.get(x.lower(), r"\textbf{Overall}"), level="country")
+    .pipe(lambda df: pd.concat({
+        "Probability": df.iloc[:, :3],
+        "Contrast (political / non-political)": df.iloc[:, 3:6],
+        "Country / Rest": df.iloc[:, 6:]
+    }, axis=1))
+)
+
+for i in range(3, 0, -1):
+    table.iloc[1::2, -i] = np.nan
+
+(
+    table
+    .rename(columns=lambda n: n.rsplit("_", 1)[0])
+    .pipe(lambda df: print(
+        df.style
+        .format(
+            escape=False,
+            precision=3,
+            na_rep="",
+        )
+        .to_latex(
+            multicol_align="c",
+            multirow_align="t",
+            hrules=True,
+        )
+    ))
+)
+```
+
+```{python}
+(
+    r.ccdf
+    .set_index("political")
+    .loc[["political", "other", "overall"]]
+    .reset_index()
+    .set_index(["country", "political"])
+    .loc[[*countries]]
+    .pipe(lambda df: pd.DataFrame({
+        r"OR": df["odds.ratio"],
+        cilo: df["asymp.LCL"],
+        cihi: df["asymp.UCL"],
+    }, index=df.index))
+    .rename(countries.get, level="country")
+    .rename({"other": "non-political"}, level="political")
+    .pipe(lambda df: print(
+        df.style
+         .format(
+            escape=False,
+            precision=3,
+            na_rep="",
+        )
+        .to_latex(
+            multicol_align="c",
+            multirow_align="t",
+            hrules=True,
+        )
+    ))
+)
+```
+
+# Some stats for the introduction
+
+```{r}
+filter(ccdf, country %in% c("us", "esp")) %>%
+    select(-c(contrast, df, null, z.ratio)) %>%
+    mutate(decrease = 1 - odds.ratio)
+```
+
+```{r}
+emmeans(rg, ~1)
+```

@@ -1,0 +1,36 @@
+name: polneg-repro
+channels:
+  - conda-forge
+  - pytorch
+  - nvidia
+  - huggingface
+dependencies:
+  - python>=3.11,<3.13
+  - dvc
+  - dvc-gdrive
+  - pip
+  - libsqlite=3.48.0
+  - r-base>=4.4
+  - r-remotes
+  - r-rhpcblasctl
+  - r-reticulate
+  - r-arrow
+  - r-dplyr
+  - r-tidyr
+  - r-tibble
+  - r-emmeans
+  - r-broom
+  - r-broom.mixed
+  - r-stringr
+  - r-lubridate
+  - r-purrr
+  - r-readr
+  - r-nloptr=2.1.1
+  - r-matrix=1.6.5
+  - r-lme4=1.1.35.5
+  - r-tmb=1.9.15
+  # - r-glmmtmb=1.1.10
+  - r-heplots
+  - quarto
+variables:
+  LIBARROW_MINIMAL: false

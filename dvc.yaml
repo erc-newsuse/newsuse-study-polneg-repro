@@ -1,0 +1,94 @@
+stages:
+
+  data:
+    cmd: python scripts/make_data.py
+    deps:
+    - scripts/make_data.py
+    - data/raw/posts-eu.parquet
+    - data/raw/posts-us.parquet
+    params:
+    - dataset.usecols
+    outs:
+    - data/proc/fulldata.parquet:
+        persist: true
+    - data/proc/textdata.parquet:
+        persist: true
+
+  train:
+    foreach:
+    - political
+    - negativity
+    do:
+      cmd: python scripts/train_${item}.py
+      deps:
+      - ml/datasets/${item}
+      - scripts/train_${item}.py
+      outs:
+      - ml/classifiers/${item}:
+          persist: true
+
+  labels:
+    foreach:
+      - political
+      - negativity
+    do:
+      cmd: python scripts/make_labels.py --model='"${item}"'
+      deps:
+      - scripts/make_labels.py
+      - ml/classifiers/${item}
+      - data/proc/textdata.parquet
+      outs:
+      - data/proc/cls-${item}.parquet:
+          persist: true
+
+  merge-labels:
+    cmd: python scripts/merge_labels.py
+    deps:
+    - scripts/merge_labels.py
+    - data/proc/cls-political.parquet
+    - data/proc/cls-negativity.parquet
+    outs:
+    - data/proc/cls.parquet:
+        persist: true
+
+  daily-counts:
+    cmd: python scripts/make_daily.py
+    deps:
+    - scripts/make_daily.py
+    - data/proc/fulldata.parquet
+    params:
+    - dataset.min_posts_per_day
+    outs:
+    - data/proc/daily.parquet:
+        persist: true
+
+  dataset:
+    cmd: python scripts/make_dataset.py
+    deps:
+    - scripts/make_dataset.py
+    - data/proc/fulldata.parquet
+    - data/proc/daily.parquet
+    - data/proc/cls.parquet
+    params:
+    - dataset.min_posts_per_day
+    - dataset.max_decile_difference
+    outs:
+    - data/proc/dataset.parquet:
+        persist: true
+    - data/proc/quality.parquet:
+        persist: true
+
+  glmm:
+    foreach:
+    - negativity
+    - likes
+    - comments
+    - shares
+    do:
+      cmd: Rscript scripts/glmm_${item}.R
+      deps:
+      - scripts/glmm_${item}.R
+      - data/proc/dataset.parquet
+      outs:
+      - models/glmm/${item}:
+          persist: true

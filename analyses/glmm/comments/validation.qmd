@@ -1,0 +1,452 @@
+---
+title: "comments"
+subtitle: "Models' validation"
+author: "Szymon Talaga"
+date: last-modified
+date-format: "MMMM D, YYYY | HH:mm:ss (Z)"
+toc: true
+toc-depth: 3
+toc-location: left
+execute:
+  echo: false
+  warning: false
+  cache: false
+  daemon: false
+format:
+  html:
+    grid:
+      margin-width: 350px
+    embed-resources: true
+  pdf:
+    toc: false
+    number-sections: true
+    colorlinks: true
+reference-location: margin
+citation-location: margin
+---
+
+```{r}
+library(arrow)
+library(stringr)
+library(dplyr)
+library(tidyr)
+library(purrr)
+library(tibble)
+library(heplots)
+library(emmeans)
+library(broom)
+library(reticulate)
+library(ggplot2)
+library(lubridate)
+library(glmmTMB)
+
+use_condaenv("study-polneg")
+
+project <- import("project")
+config  <- project$config
+paths   <- project$paths[["__copy__"]]()
+
+theme_set(theme_bw())
+
+alpha     <- config$inference$alpha
+conf      <- config$inference$conf
+adjust    <- config$inference$adjust
+countries <- config$countries$order
+countries <- countries[0L:length(countries)]
+```
+
+```{python}
+import importlib
+from typing import Mapping
+import datetime
+import numpy as np
+import pandas as pd
+from scipy import stats
+import matplotlib as mpl
+import matplotlib.dates
+import matplotlib.transforms
+import matplotlib.pyplot as plt
+from matplotlib.patheffects import withStroke
+import seaborn as sns
+import seaborn.objects as so
+from project import config, paths, plotting
+
+mpl.style.use(config.plotting.style)
+mpl.rcParams.update({
+    k: v.make() if isinstance(v, Mapping) and "make!" in v else v
+    for k, v in config.plotting.params.items()
+})
+
+figpath = paths.figures / "glmm" / "comments"
+figpath.mkdir(parents=True, exist_ok=True)
+
+countries = config.countries.labels
+colors    = {
+    "overall": "white",
+    **config.plotting.color.semantics,
+    **config.plotting.color.palette,
+}
+```
+
+```{r}
+data <- as.character(paths$dataset) %>%
+    read_parquet %>%
+    tibble %>%
+    mutate(across(c(year, month, day), as.factor)) %>%
+    mutate(
+        political  = relevel(as.factor(political), "OTHER"),
+        negativity = relevel(as.factor(negativity), "OTHER"),
+        country    = factor(country, levels = countries)
+    )
+```
+
+```{r}
+glmm <- readRDS(as.character(paths$glmm / "comments" / "0.rds"))
+```
+
+```{r}
+rdf      <- as_tibble(ranef(glmm))
+rdf_disp <- filter(rdf, component == "disp")
+rdf_cond <- filter(rdf, component == "cond")
+```
+
+```{r}
+time <- mutate(
+    filter(rdf_cond, grpvar == "country:year:month:day"),
+    term    = str_replace_all(term, "political|negativity", ""),
+    country = str_split_i(grp, ":", 1L),
+    year    = as.integer(str_split_i(grp, ":", 2L)),
+    month   = as.integer(str_split_i(grp, ":", 3L)),
+    day     = as.integer(str_split_i(grp, ":", 4L)),
+) %>% relocate(c(country, year, month, day), .after = grpvar)
+
+outlets <- mutate(
+    filter(rdf_cond, grpvar == "country:name"),
+    term    = str_replace_all(term, "political|negativity", ""),
+    country = str_split_i(grp, ":", 1L),
+    name    = str_split_i(grp, ":", 2L),
+) %>% relocate(c(country, name), .after = grpvar)
+```
+
+# Distributions of random effects' estimates
+
+## Time (individual `country/days`)
+
+```{python}
+keys  = ["country", "year", "month", "day"]
+odata = (
+    r.time[[*keys, "condval", "term"]]
+    .pivot(index=keys, columns="term", values="condval")
+)
+odata.insert(0, "country", "overall")
+cdata = (
+    r.time[[*keys, "condval", "term"]]
+    .pivot(index=keys, columns="term", values="condval")
+    .reset_index(level="country")
+)
+data = pd.concat([odata, cdata])
+```
+
+```{python}
+n   = data.shape[1] - 1
+hue = "country"
+lvl = ["overall", *countries]
+pal = [colors[c] for c in lvl]
+
+def kde1d(x, label, **kwargs):
+    ax = plt.gca()
+    sns.kdeplot(x=x, ax=ax, color=colors[label])
+    ax.axvline(0, ls="--", color="black")
+
+def plotcorr(x, y, label, fontsize="xx-large", **kwargs):
+    if label == "overall":
+        ax = plt.gca()
+        r  = x.corr(y)
+        ax.axis("off")
+        ax.annotate(
+            f"{r:.2f}", (.5, .5), xycoords="axes fraction",
+            fontsize=fontsize, ha="center", va="center",
+        )
+
+grid = sns.PairGrid(
+    data, hue=hue, hue_order=lvl, palette=pal,
+    height=2, aspect=1.0,
+)
+grid.map_diag(kde1d)
+grid.map_lower(sns.kdeplot)
+grid.map_upper(plotcorr)
+
+grid.fig.suptitle("Time effects", y=.95)
+grid.fig.tight_layout()
+grid.fig.savefig(figpath / "random-effects-time.pdf")
+```
+
+## Outlets
+
+```{python}
+keys  = ["country", "name"]
+odata = (
+    r.outlets[[*keys, "condval", "term"]]
+    .pivot(index=keys, columns="term", values="condval")
+)
+odata.insert(0, "country", "overall")
+cdata = (
+    r.outlets[[*keys, "condval", "term"]]
+    .pivot(index=keys, columns="term", values="condval")
+    .reset_index(level="country")
+)
+data = pd.concat([odata, cdata])
+```
+
+```{python}
+n   = data.shape[1] - 1
+hue = "country"
+lvl = ["overall", *countries]
+pal = [colors[c] for c in lvl]
+
+def kde1d(x, label, **kwargs):
+    ax = plt.gca()
+    sns.kdeplot(x=x, ax=ax, color=colors[label])
+    ax.axvline(0, ls="--", color="black")
+
+def plotcorr(x, y, label, fontsize="xx-large", **kwargs):
+    if label == "overall":
+        ax = plt.gca()
+        r  = x.corr(y)
+        ax.axis("off")
+        ax.annotate(
+            f"{r:.2f}", (.5, .5), xycoords="axes fraction",
+            fontsize=fontsize, ha="center", va="center",
+        )
+
+grid = sns.PairGrid(
+    data, hue=hue, hue_order=lvl, palette=pal,
+    height=2, aspect=1.0,
+)
+grid.map_diag(kde1d)
+grid.map_lower(sns.kdeplot)
+grid.map_upper(plotcorr)
+
+grid.fig.suptitle("Outlet effects", y=.95)
+grid.fig.tight_layout()
+grid.fig.savefig(figpath / "random-effects-outlets.pdf")
+```
+
+
+# Analysis of zero covariance assumptions
+
+```{r}
+make_data <- function(data, rdf, ...) {
+    keys <- unlist(rlang::dots_list(...))
+    df <- pivot_wider(
+        rdf,
+        id_cols = all_of(keys),
+        names_from=term,
+        values_from=condval
+    ) %>%
+        mutate(across(all_of(keys), as.factor)) %>%
+        left_join(select(data, !!!keys, political, negativity))
+    U   <- as.matrix(cbind(df[, unique(time$term)]))
+    mod <- lm(U ~ country * political * negativity, data = df)
+    fit <- fitted(mod)
+    rsq <- broom::glance(mod)$r.squared
+    aov <- car::Anova(mod, type = 2L)
+    esq <- etasq(aov)
+    rlang::ll(
+        U   = U,
+        fit = fit,
+        rsq = rsq,
+        aov = aov,
+        esq = esq,
+        terms = colnames(U),
+    )
+}
+
+covt <- make_data(data, time, "country", "year", "month", "day")
+covo <- make_data(data, outlets, "country", "name")
+```
+
+```{python}
+fig, axes = plt.subplots(nrows=4, ncols=2, figsize=(4, 8))
+for key, axcol in zip(["t", "o"], axes.T):
+    cov = getattr(r, f"cov{key}")
+    U = cov["U"]
+    F = cov["fit"]
+    for i, ax in enumerate(axcol):
+        rsq = cov["rsq"][i]
+        label  = cov["terms"][i]
+        label += rf" $(R^2 \approx {rsq:.3f})$"
+        df = pd.DataFrame({"x": F.T[i], "y": U.T[i]})
+        sns.regplot(
+            df, x="x", y="y", ax=ax, ci=None,
+            line_kws={"color": colors["negative"]},
+            scatter_kws={"color": colors["other"]},
+        )
+        ax.set_title(None)
+        ax.set_xlabel(None)
+        ax.set_ylabel(None)
+        ax.annotate(
+            label, (.5, .92), xycoords="axes fraction",
+            fontsize="xx-small",
+            bbox={"facecolor": "white"},
+            ha="center",
+        )
+    axcol[0].set_title("Time" if key == "t" else "Outlets")
+
+fig.supxlabel(
+    r"$\hat{\mathbf{y}} \sim \textbf{political} \times \textbf{country}$",
+    y=0.02,
+)
+fig.supylabel(r"$\mathcal{B}_k = \mathbf{b}_k$", x=0.04)
+fig.tight_layout()
+fig.savefig(figpath / "zero-cov.png")
+```
+
+# Simulation
+
+```{r}
+gc()
+sim <- simulate(glmm, nsim = 100L, seed = 303L) %>%
+    as_tibble %>%
+    mutate(across(everything(), as.integer))
+```
+
+```{r}
+simdata <- bind_cols(
+    select(data, country, political, negativity, obs = comments),
+    sim
+)
+
+kdedata <- simdata %>%
+    group_by(country, political, negativity) %>%
+    summarize(
+        obs = mean(obs),
+        sim = list(colMeans(pick(starts_with("sim_"))))
+    ) %>%
+    ungroup %>%
+    unnest(sim)
+
+ccdfdata <- simdata %>%
+    pivot_longer(sim_1:sim_10, values_to="sim") %>%
+    select(-name, -starts_with("sim_")) %>%
+    pivot_longer(c(obs, sim))
+```
+
+```{python}
+data      = r.kdedata
+polvals   = data["political"].unique()
+negvals   = data["negativity"].unique()
+fig, axes = plt.subplots(
+    nrows=len(polvals),
+    ncols=len(countries),
+    sharex=True,
+    sharey=False,
+    figsize=(10, 3)
+)
+
+for pol, axrow in zip(polvals, axes, strict=True):
+    for country, ax in zip(countries, axrow, strict=True):
+        df = (
+            data
+            .query(f"political == '{pol}'")
+            .query(f"country == '{country}'")
+        )
+        sns.kdeplot(
+            df, x="sim", ax=ax,
+            hue="negativity", hue_order=["NEGATIVE", "OTHER"],
+            palette=[colors["negative"], "black"],
+            fill=True,
+            legend=False,
+            common_norm=False,
+        )
+        for neg in negvals:
+            obs = df.query(f"negativity == '{neg}'")["obs"].iloc[0]
+            ax.axvline(
+                obs, ls="--",
+                color="k" if neg == "OTHER" else colors["negative"]
+            )
+        ax.set_xlabel(None)
+        ax.set_ylabel(None)
+        ax.set_xscale("log")
+        ax.tick_params(left=False, labelleft=False)
+    ylab = "Political" if pol == "POLITICAL" else "Non-political"
+    axrow[0].set_ylabel(ylab)
+
+for country, ax in zip(countries, axes[0], strict=True):
+    ax.set_title(countries[country])
+
+fig.supxlabel("Expected engagement (comments)", y=0.06)
+fig.tight_layout()
+fig.savefig(figpath / "simulation.pdf")
+```
+
+```{r}
+rm(glmm)
+rm(data)
+rm(simdata)
+rm(kdedata)
+gc()
+```
+
+```{python}
+gdf = r.ccdfdata.groupby(["political", "negativity", "country"])
+fig, axes = plt.subplots(
+    nrows=4,
+    ncols=len(countries),
+    figsize=(10, 6),
+    sharex=True,
+    sharey=True,
+)
+
+hue_order = ["obs", "sim"]
+palette   = ["black", colors["blue"]]
+
+for ax, df in zip(axes.flat, gdf, strict=True):
+    key, df = df
+    political, negativity, country = key
+    label = f"{political.lower()}, {negativity.lower()}"
+    sns.ecdfplot(
+        df, x="value", hue="name", ax=ax,
+        log_scale=True, complementary=True,
+        hue_order=hue_order, palette=palette,
+        legend=False,
+    )
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.set_title(countries[country], fontsize="medium")
+    ax.set_xlabel(None)
+    ax.set_ylabel(label)
+    zio = (df.query("name == 'obs'")["value"] == 0).mean()
+    zis = (df.query("name == 'sim'")["value"] == 0).mean()
+    ann = rf"\noindent $zi_o = {zio:.3f}$\\$zi_s = {zis:.3f}$"
+    annkws = {
+        "xycoords": "axes fraction",
+        "fontsize": "small",
+        "bbox": {"facecolor": "white", "alpha": 1.0}
+    }
+    ax.annotate(ann, (.075, .225), **annkws)
+
+for ax in axes[:, 1:].flat:
+    ax.set_ylabel(None)
+for ax in axes[1:, :].flat:
+    ax.set_title(None)
+
+labels = {"obs": "Observed", "sim": "Simulated"}
+handles = [
+    mpl.lines.Line2D([], [], label=labels[label], color=color, lw=3)
+    for label, color in zip(hue_order, palette, strict=True)
+]
+fig.legend(
+    handles=handles,
+    loc="right",
+    bbox_to_anchor=(.97, 0.02),
+    framealpha=1.0,
+    frameon=False,
+    ncols=2,
+)
+
+fig.supxlabel("Engagement (comments)")
+fig.supylabel("Complementary Cumulative Distribution Function")
+fig.tight_layout()
+fig.savefig(figpath / "simulation-ccdf.pdf")
+```

@@ -1,0 +1,212 @@
+paths:
+  make!:       "newsuse.config:Paths"
+  data:        "data"
+  raw:         "@data/raw"
+  proc:        "@data/proc"
+  predictions: "@data/predictions"
+  fulldata:    "@proc/fulldata.parquet"
+  textdata:    "@proc/textdata.parquet"
+  dataset:     "@proc/dataset.parquet"
+  daily:       "@proc/daily.parquet"
+  quality:     "@proc/quality.parquet"
+  labels:      "@proc/cls.parquet"
+  ml:          "ml"
+  models:      "models"
+  glmm:        "@models/glmm"
+  figures:     "figures"
+
+countries:
+  order:
+  - us
+  - esp
+  - fr
+  - pl
+  - irl
+  - uk
+  labels:
+    us:  United States
+    esp: Spain
+    fr:  France
+    pl:  Poland
+    irl: Ireland
+    uk:  United Kingdom
+
+annotations:
+  labels:
+    political:
+    - OTHER
+    - POLITICAL
+    negativity:
+    - OTHER
+    - NEGATIVE
+
+dataset:
+  usecols:
+  - key
+  - country
+  - name
+  - timestamp
+  - type
+  - has_snippet
+  - likes
+  - reactions_LIKE
+  - reactions_LOVE
+  - reactions_WOW
+  - reactions_HAHA
+  - reactions_ANGRY
+  - reactions_SAD
+  - comments
+  - shares
+  - ini
+  - text
+  - post_url
+  min_posts_per_day: 2
+  max_decile_difference: 10.0
+
+inference:
+  alpha: 0.05
+  conf: ${eval:1-${.alpha}}
+  adjust: holm
+
+plotting:
+  style:  tableau-colorblind10
+  usetex: true
+  color:
+    palette:
+      gold:       "#ecc00f"
+      red:        "#f10d71"
+      green:      "#7adf06"
+      blue:       "#5bbdff"
+      brown:      "#ae6f4a"
+      teal:       "#1cdae4"
+      purple:     "#c618cc"
+      white:      "white"
+      gray:       "#bdbaba"
+      black:      "black"
+    semantics:
+      other:         ${..palette.gray}
+      political:     ${..palette.gold}
+      negative:      ${..palette.red}
+      non-political: ${.other}
+      non-negative:  ${.other}
+      negativity:    ${.negative}
+      overall:       ${..palette.black}
+      us:            ${..palette.blue}
+      esp:           ${..palette.gold}
+      fr:            ${..palette.gray}
+      pl:            ${..palette.red}
+      irl:           ${..palette.green}
+      uk:            ${..palette.brown}
+  params:
+    font.family:           sans-serif
+    font.sans-serif:       Montserrat
+    text.usetex:           ${..usetex}
+    text.latex.preamble:   \usepackage{amsmath,amsfonts,amssymb,sfmath,xcolor}
+    figure.figsize:        [5, 5]
+    figure.labelsize:      x-large
+    figure.titlesize:      xx-large
+    figure.titleweight:    bold
+    savefig.bbox:          tight
+    axes.grid:             true
+    axes.axisbelow:        true
+    axes.titleweight:      bold
+    axes.titlesize:        large
+    axes.labelsize:        large
+    axes.prop_cycle:
+      make!:               matplotlib:cycler
+      color:               ${oc.dict.values:plotting.color.palette}
+    scatter.marker:        o
+    scatter.edgecolors:    black
+    lines.markeredgecolor: black
+    lines.markeredgewidth: 1
+
+ml:
+  inference:
+    batch_size: 32
+  tokenize:
+    field: text
+    padding: max_length
+    truncation: true
+    batched: true
+  training:
+    evaluation:
+      make!: newsuse.ml:Evaluation
+      metric: f1
+    callbacks:
+      - make!: transformers:EarlyStoppingCallback
+        early_stopping_patience: 2
+    arguments:
+      make!: newsuse.ml:TrainingArguments
+      num_train_epochs: ${eval:${oc.env:NEWSUSE_NUM_TRAIN_EPOCHS,10}}
+      per_device_train_batch_size: ${eval:${oc.env:NEWSUSE_PER_DEVICE_TRAIN_BATCH_SIZE,16}}
+      learning_rate: 1e-6
+      seed: 303
+      gradient_checkpointing: ${eval:${oc.env:NEWSUSE_GRADIENT_CHECKPOINTING,1}}
+      fp16: ${eval:${oc.env:NEWSUSE_FP16,1}}
+      metric_for_best_model: loss
+      save_strategy: epoch
+      eval_strategy: epoch
+      logging_strategy: epoch
+      load_best_model_at_end: true
+      overwrite_output_dir: true
+    hyper:
+      n_jobs: ${eval:${oc.env:NEWSUSE_OPTUNA_N_JOBS,1}}
+      n_trials: ${eval:${oc.env:NEWSUSE_OPTUNA_N_TRIALS,100}}
+      models:
+        - distilbert
+        - bert
+        - xlm-base
+        - xlm-large
+      space:
+        learning_rate:
+          type: float
+          low: 1e-7
+          high: 1e-4
+          log: true
+        warmup_ratio:
+          type: float
+          low: 0
+          high: 0.5
+          step: ${eval:1 / ${....arguments.num_train_epochs}}
+        weight_decay:
+          type: float
+          low: 0
+          high: 0.01
+          step: 0.002
+        lr_scheduler_type:
+          type: categorical
+          choices:
+          - linear
+          - cosine
+          - cosine_with_restarts
+        seed:
+          type: categorical
+          choices:
+          - 1965040122
+          - 2057176687
+          - 3887095350
+          - 478249731
+          - 685971017
+          - 1545849842
+          - 3325700108
+          - 2824374826
+          - 3584008421
+          - 78984196
+  models:
+    use: xlm-large
+    xlm-large:
+      name: xlm-large
+      base: FacebookAI/xlm-roberta-large
+      training:
+        evaluation: ${ml.training.evaluation}
+        callbacks: ${ml.training.callbacks}
+        arguments:
+          defaults!: ${ml.training.arguments}
+          learning_rate: 1e-6
+          lr_scheduler_type: cosine
+          warmup_ratio: 0.25
+          weight_decay: 0.004
+          seed: 1884749421
+          full_determinism: true
+      inference: ${ml.inference}
+      tokenize: ${ml.tokenize}

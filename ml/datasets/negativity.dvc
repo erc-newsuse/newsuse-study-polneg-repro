@@ -1,0 +1,6 @@
+outs:
+- md5: 16205f65e0e773993739e70b5f351148.dir
+  size: 1488755
+  nfiles: 10
+  hash: md5
+  path: negativity

@@ -1,0 +1,7 @@
+/.quarto/
+**/*.html
+**/*.pdf
+**/*.csv
+**/*.tsv
+**/*.xlsx
+**/*.parquet
