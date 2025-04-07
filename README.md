@@ -5,7 +5,7 @@ This is a repository for reproducing the results from the paper
 > Negative news is less prevalent and generates lower user engagement
 > than non-negative news across six countries
 
-## Github repo
+## [Github repo](https://github.com/erc-newsuse/newsuse-study-polneg-repro)
 
 Code (without data) is archived in a Github repository.
 
@@ -22,7 +22,7 @@ We can also share the content data for private use upon a reasonable request.
 > and post labeling, do not require text content and can be reproduced without it.
 
 
-## OSF data and code repository
+## [OSF data and code repository](https://osf.io/79a46/?view_only=f7cad71ef9b54a5a866e2e579eb92e62)
 
 Dehydrated data and full code is archived as an OSF repository,
 which allows for reproduction of all analyses other than the training of classifiers and posts' classification even without data rehydration.
