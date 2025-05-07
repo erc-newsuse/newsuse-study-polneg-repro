@@ -3,6 +3,8 @@
 /cls-negativity.parquet
 /cls.parquet
 /daily.parquet
-/fulldata.parquet
-/textdata.parquet
+/posts.parquet
+/posts-text.parquet
 /quality.parquet
+/articles-sample.parquet
+/predictions.parquet

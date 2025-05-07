@@ -1,0 +1,375 @@
+---
+title: "Outlet and time effects"
+subtitle: "Detailed analysis"
+author: "Szymon Talaga"
+date: last-modified
+date-format: "MMMM D, YYYY | HH:mm:ss (Z)"
+toc: true
+toc-depth: 3
+toc-location: left
+execute:
+  echo: false
+  warning: false
+  cache: false
+  daemon: false
+format:
+  html:
+    grid:
+      margin-width: 350px
+    embed-resources: true
+  pdf:
+    toc: false
+    number-sections: true
+    colorlinks: true
+reference-location: margin
+citation-location: margin
+---
+
+```{r}
+library(arrow)
+library(stringr)
+library(dplyr)
+library(purrr)
+library(tibble)
+library(emmeans)
+library(broom)
+library(tidyr)
+library(reticulate)
+library(lubridate)
+library(glmmTMB)
+
+use_condaenv("polneg-repro")
+
+project <- import("project")
+config  <- project$config
+paths   <- project$paths[["__copy__"]]()
+
+alpha     <- config$inference$alpha
+conf      <- config$inference$conf
+adjust    <- config$inference$adjust
+countries <- config$countries$order
+countries <- countries[0L:length(countries)]
+
+emm_options(
+    emmeans  = list(type = "response", level = conf, adjust = adjust),
+    contrast = list(adjust = adjust),
+    summary  = list(infer = TRUE)
+)
+```
+
+```{r}
+obs <- as.character(paths$dataset) %>%
+    read_parquet() %>%
+    pivot_longer(c(reactions, comments, shares), names_to = "metric") %>%
+    group_by(country, name, year, month, day, political, negativity, metric) %>%
+    summarize(value = mean(value)) %>%
+    ungroup %>%
+    mutate(across(c(political, negativity), ~relevel(as.factor(.x), ref = "OTHER")))
+```
+
+```{r}
+pred <- as.character(paths$predictions) %>%
+    read_parquet() %>%
+    mutate(prediction = prediction) %>%
+    mutate(across(c(political, negativity), ~relevel(as.factor(.x), ref = "OTHER")))
+```
+
+```{r}
+# data <- obs
+data <- rename(pred, value = prediction)
+
+data %>%
+    group_by(country, political, negativity, metric) %>%
+    summarize(value = mean(value)) %>%
+    ungroup %>%
+    group_by(political, negativity, metric) %>%
+    summarize(value = mean(value)) %>%
+    ungroup %>%
+    arrange(political, negativity)
+```
+
+```{r}
+ratios <- pred %>%
+    pivot_wider(
+        names_from = negativity,
+        values_from = prediction,
+    ) %>%
+    rename(other = OTHER, negative = NEGATIVE) %>%
+    mutate(ratio = negative / other)
+
+ratios %>%
+    group_by(country, political, metric) %>%
+    summarize(ratio = mean(ratio)) %>%
+    ungroup
+```
+
+```{r}
+outlets <- ratios %>%
+    group_by(country, name, political, metric) %>%
+    summarize(logratio = mean(log(ratio))) %>%
+    ungroup
+```
+
+## Figure (means of predicted ratios)
+
+```{python}
+import importlib
+from typing import Mapping
+import datetime
+import numpy as np
+import pandas as pd
+from scipy import stats
+import matplotlib as mpl
+import matplotlib.dates
+import matplotlib.transforms
+import matplotlib.pyplot as plt
+from matplotlib.patheffects import withStroke
+import seaborn as sns
+import seaborn.objects as so
+from project import config, paths
+
+mpl.style.use(config.plotting.style)
+mpl.rcParams.update({
+    k: v.make() if isinstance(v, Mapping) and "make!" in v else v
+    for k, v in config.plotting.params.items()
+})
+
+figpath = paths.figures / "glmm"
+figpath.mkdir(parents=True, exist_ok=True)
+
+countries = config.countries.labels
+colors    = {"overall": "white", **config.plotting.color.semantics}
+```
+
+```{python}
+palette  = [colors["other"], colors["political"]]
+gap      = 0.05
+ymin     = "asymp.LCL"
+ymax     = "asymp.UCL"
+hue      = "political"
+hue_ord  = ["OTHER", "POLITICAL"]
+nlabels  = {"OTHER": "other", "NEGATIVE": "negative"}
+plabels  = {"OTHER": "other", "POLITICAL": "political"}
+boxprops = {"facecolor": "white"}
+dodgekw  = {"empty": "drop"}
+rangekw  = {"color": "black", "linewidth": 2}
+linekw   = {"linewidth": 3, "edgecolor": "black"}
+dotkw    = {
+    "pointsize": 10,
+    "edgecolor": "black",
+    "artist_kws": {"zorder": 10}
+}
+violkw   = {
+    "inner": None,
+    "split": True,
+    "alpha": 0.5,
+    # "linewidth": 0,
+    "legend": False,
+    "gap": gap,
+    "palette": palette,
+}
+```
+
+```{python}
+fig, axes = plt.subplots(
+    ncols=3,
+    figsize=(10, 4),
+    sharex=True,
+    sharey=True,
+)
+
+data = (
+    r.ratios
+    .assign(
+        metric=lambda df: pd.Categorical(
+            df["metric"],
+            categories=["reactions", "comments", "shares"],
+        ),
+        country=lambda df: pd.Categorical(
+            df["country"].str.upper(),
+            categories=[k.upper() for k in countries],
+        )
+    )
+    .groupby(["country", "name", "political", "metric"])
+    ["ratio"]
+    .mean()
+    .reset_index()
+)
+x = "country"
+y = "ratio"
+hue = "political"
+for ax, gdf in zip(axes.flat, data.groupby("metric"), strict=True):
+    metric, gdf = gdf
+    sns.stripplot(
+        data=gdf,
+        x=x,
+        y=y,
+        hue=hue,
+        hue_order=hue_ord,
+        dodge=True,
+        palette=palette,
+        ax=ax,
+        legend=False,
+    )
+    gdf = (
+        gdf.groupby(["country", "political"])
+        ["ratio"]
+        .mean()
+        .reset_index()
+    )
+    ax.axhline(1, ls="--", color="black", lw=1)
+    (
+        so.Plot(gdf, x=x, y=y, color=hue)
+        .add(so.Dot(**dotkw), so.Dodge(), legend=False)
+        .scale(color=so.Nominal(values=palette, order=hue_ord))
+        .on(ax)
+        .show()
+    )
+    ax.set_yscale("log")
+    ax.set_title(metric.title())
+    ax.set_xlabel(None)
+    ax.set_ylabel(None)
+    ax.set_ylim(10**-1, 10**1)
+
+for ax in axes.flatten()[1:]:
+    ax.tick_params(left=False, labelleft=False)
+
+fig.suptitle(
+    r"Ratio of expected values of negative vs non-negative posts",
+)
+
+handles = [
+    mpl.lines.Line2D(
+        [0], [0],
+        color=colors["other"],
+        lw=0,
+        marker="o",
+        markersize=10,
+        markeredgewidth=0,
+        label="Outlet",
+    ),
+    mpl.lines.Line2D(
+        [0], [0],
+        color=colors["other"],
+        lw=0,
+        marker="o",
+        markersize=15,
+        markeredgecolor="black",
+        label="Average",
+    ),
+    mpl.lines.Line2D(
+        [0], [0],
+        color=colors["political"],
+        lw=0,
+        marker="o",
+        markersize=10,
+        markeredgecolor="black",
+        label="Political",
+    ),
+    mpl.lines.Line2D(
+        [0], [0],
+        color=colors["other"],
+        lw=0,
+        marker="o",
+        markersize=10,
+        markeredgecolor="black",
+        label="Non-political",
+    ),
+]
+
+fig.legend(
+    handles=handles,
+    ncols=len(handles),
+    loc="center",
+    bbox_to_anchor=(.5, -.05),
+    frameon=False,
+    fontsize=12
+)
+
+fig.tight_layout()
+fig.savefig(figpath / "outlets.pdf")
+```
+
+## Figure outlets (ratios)
+
+```{python}
+x = "ratio"
+y = "name"
+hue = "political"
+data = (
+    r.outlets
+    .assign(
+        metric=lambda df: pd.Categorical(
+            df["metric"],
+            categories=["shares", "comments", "reactions"],
+        ),
+        outlet=lambda df: df["country"].str.upper()+": "+df["name"],
+        ratio=lambda df: np.exp(df["logratio"]),
+        country=lambda df: pd.Categorical(
+            df["country"],
+            categories=list(countries),
+        ),
+        political=lambda df: pd.Categorical(
+            df["political"],
+            categories=["POLITICAL", "OTHER"],
+        ),
+    )
+    .sort_values(
+        ["metric", "country", "political", "logratio"],
+        ascending=[True, True, True, False],
+        ignore_index=True
+    )
+)
+
+fig, axes = plt.subplots(
+    ncols=3,
+    nrows=6,
+    figsize=(15, 20),
+    sharex=True,
+    gridspec_kw={
+        "height_ratios": (
+            data
+            .groupby("country")
+            .size()
+        )
+    }
+
+)
+
+for axrow, gdf in zip(axes, data.groupby("country"), strict=True):
+    country, gdf = gdf
+    for ax, df in zip(axrow, gdf.groupby("metric"), strict=True):
+        metric, df = df
+        (
+            so.Plot(df, x=x, y=y, color=hue)
+            .add(so.Dot(**dotkw), legend=False)
+            .scale(color=so.Nominal(values=palette, order=hue_ord))
+            .on(ax)
+            .show()
+        )
+        ax.set_xscale("log")
+        ax.set_xlim(10**-1.2, 10**1.2)
+        ax.set_xlabel(None)
+        ax.set_ylabel(None)
+        for idx in range(len(df.query("political == 'OTHER'"))-1):
+            ax.axhline(idx, ls=":", color="black", lw=.5, zorder=-99)
+        if ax in axes[0]:
+            ax.set_title(metric.title(), fontsize=20)
+        if ax not in axes[-1]:
+            ax.tick_params(bottom=False, labelbottom=False)
+        else:
+            ax.tick_params(axis="x", labelsize=14)
+    for ax in axrow[1:]:
+        ax.tick_params(left=False, labelleft=False)
+    axrow[0].set_ylabel(countries[country], fontsize=20)
+
+fig.align_ylabels(axes[:, 0])
+fig.supxlabel(
+    r"Ratio of expected values for negative vs non-negative posts",
+    fontsize=24,
+    x=.6,
+)
+
+fig.tight_layout()
+fig.savefig(figpath / "outlets-ratios.pdf")
+```

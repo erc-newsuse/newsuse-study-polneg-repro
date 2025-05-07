@@ -10,7 +10,7 @@ from project import paths
 # %% Get data ----------------------------------------------------------------------------
 
 data = DataFrame.from_(
-    paths.fulldata,
+    paths.posts,
     columns=[
         "key",
         "country",

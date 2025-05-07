@@ -3,18 +3,18 @@ stages:
   data:
     cmd: python scripts/make_data.py
     deps:
-    - path: data/raw/posts-eu.parquet
+    - path: data/raw/posts-text.parquet
       hash: md5
-      md5: cca745d77bf752ddf717717d7f3feeea
-      size: 368035358
-    - path: data/raw/posts-us.parquet
+      md5: c3987abb792d1e01eec9a456a9903e53
+      size: 604106646
+    - path: data/raw/posts.parquet
       hash: md5
-      md5: 832504f7d0a9d12f06b49aa0dd5d76c1
-      size: 433455983
+      md5: a6a98bc3097f40a47ea151bd2043692f
+      size: 247912431
     - path: scripts/make_data.py
       hash: md5
-      md5: 55f4794c586f66e4add3f401a730750f
-      size: 1450
+      md5: 88735a473509dc321531845265078c67
+      size: 1373
     params:
       params.yaml:
         dataset.usecols:
@@ -34,89 +34,153 @@ stages:
         - comments
         - shares
         - ini
-        - text
         - post_url
     outs:
-    - path: data/proc/fulldata.parquet
+    - path: data/proc/posts-text.parquet
       hash: md5
-      md5: 756ce32dfc87df6f3ce6154e27d907f0
-      size: 272262592
-    - path: data/proc/textdata.parquet
+      md5: 2e8cbbb7b6185d4ef224c2645faf093e
+      size: 604129252
+    - path: data/proc/posts.parquet
       hash: md5
-      md5: 3bbc921d48b546e38dd380728377b6b1
-      size: 604142640
-  daily-counts:
-    cmd: python scripts/make_daily.py
+      md5: 5d0a18be409dbb6fa851c0077864029e
+      size: 271443044
+  ml-datasets@political:
+    cmd: python scripts/ml/make_dataset_political.py
     deps:
-    - path: data/proc/fulldata.parquet
+    - path: data/ml/political
       hash: md5
-      md5: 756ce32dfc87df6f3ce6154e27d907f0
-      size: 272262592
-    - path: scripts/make_daily.py
+      md5: a5d2ef5ef904f208cb6a4fcb82fbc0d9.dir
+      size: 1629934
+      nfiles: 5
+    - path: scripts/ml/make_dataset_political.py
       hash: md5
-      md5: 56cee36e963b778832af5abc27a9f56d
-      size: 1720
+      md5: ccc1be51acf3e559d86ba42e9c227a6a
+      size: 1277
     params:
       params.yaml:
-        dataset.min_posts_per_day: 2
+        annotations.political:
+          labels:
+          - OTHER
+          - POLITICAL
     outs:
-    - path: data/proc/daily.parquet
+    - path: ml/datasets/political
       hash: md5
-      md5: 447d8ac136cb67ff2dc22da5731c6f9c
-      size: 247136
-  labels@negativity:
-    cmd: python scripts/make_labels.py --model='"negativity"'
+      md5: c89ccb94348d758a91ba967fd6e8694b.dir
+      size: 1945539
+      nfiles: 13
+  ml-datasets@negativity:
+    cmd: python scripts/ml/make_dataset_negativity.py
     deps:
-    - path: data/proc/textdata.parquet
+    - path: data/ml/negativity
       hash: md5
-      md5: 3bbc921d48b546e38dd380728377b6b1
-      size: 604142640
+      md5: ccdc2baf9def5a5084436a17dd368d84.dir
+      size: 984694
+      nfiles: 5
+    - path: scripts/ml/make_dataset_negativity.py
+      hash: md5
+      md5: 26f1c68e15e54d47ce5433b5c41d03f6
+      size: 1461
+    params:
+      params.yaml:
+        annotations.negativity:
+          labels:
+          - OTHER
+          - NEGATIVE
+    outs:
+    - path: ml/datasets/negativity
+      hash: md5
+      md5: 20c91105aed3abcb53f8b2a9c3f885ec.dir
+      size: 1445341
+      nfiles: 10
+  train@political:
+    cmd: python scripts/train_political.py
+    deps:
+    - path: ml/datasets/political
+      hash: md5
+      md5: c89ccb94348d758a91ba967fd6e8694b.dir
+      size: 1945539
+      nfiles: 13
+    - path: scripts/train_political.py
+      hash: md5
+      md5: 61981e9106902c7e4828ca7943210703
+      size: 1663
+    outs:
+    - path: ml/classifiers/political
+      hash: md5
+      md5: e3fbdd95f6babab253d23518742cf928.dir
+      size: 2256709253
+      nfiles: 6
+  train@negativity:
+    cmd: python scripts/train_negativity.py
+    deps:
+    - path: ml/datasets/negativity
+      hash: md5
+      md5: 20c91105aed3abcb53f8b2a9c3f885ec.dir
+      size: 1445341
+      nfiles: 10
+    - path: scripts/train_negativity.py
+      hash: md5
+      md5: 6ddd961bc825e70379fdbec1a9795d49
+      size: 1664
+    outs:
     - path: ml/classifiers/negativity
       hash: md5
-      md5: 1e0bc0f2271802e6db985c617c14d223.dir
+      md5: 6e86a059d9b92cb3c238dfac6df279a7.dir
       size: 2256709251
       nfiles: 6
-    - path: scripts/make_labels.py
-      hash: md5
-      md5: d40fc30db9b373329e7c5d857a29705f
-      size: 1328
-    outs:
-    - path: data/proc/cls-negativity.parquet
-      hash: md5
-      md5: c41cbb96fb593949f26e77d0f41382c0
-      size: 84395772
   labels@political:
     cmd: python scripts/make_labels.py --model='"political"'
     deps:
-    - path: data/proc/textdata.parquet
+    - path: data/proc/posts-text.parquet
       hash: md5
-      md5: 3bbc921d48b546e38dd380728377b6b1
-      size: 604142640
+      md5: 2e8cbbb7b6185d4ef224c2645faf093e
+      size: 604129252
     - path: ml/classifiers/political
       hash: md5
-      md5: 24b298c5d2c5ac61902911aca85d8c3d.dir
+      md5: e3fbdd95f6babab253d23518742cf928.dir
       size: 2256709253
       nfiles: 6
     - path: scripts/make_labels.py
       hash: md5
-      md5: d40fc30db9b373329e7c5d857a29705f
-      size: 1328
+      md5: ce3996ca4b1674b24118b5640bc9da4e
+      size: 1324
     outs:
     - path: data/proc/cls-political.parquet
       hash: md5
-      md5: 6f77a7ec49c88512ba0e7a10bf9339fa
-      size: 85904336
+      md5: f6eb792a082ef42e9c530fba347c34a7
+      size: 85950608
+  labels@negativity:
+    cmd: python scripts/make_labels.py --model='"negativity"'
+    deps:
+    - path: data/proc/posts-text.parquet
+      hash: md5
+      md5: 2e8cbbb7b6185d4ef224c2645faf093e
+      size: 604129252
+    - path: ml/classifiers/negativity
+      hash: md5
+      md5: 6e86a059d9b92cb3c238dfac6df279a7.dir
+      size: 2256709251
+      nfiles: 6
+    - path: scripts/make_labels.py
+      hash: md5
+      md5: ce3996ca4b1674b24118b5640bc9da4e
+      size: 1324
+    outs:
+    - path: data/proc/cls-negativity.parquet
+      hash: md5
+      md5: 1796865b2c26c90612cb157ffb23b9a3
+      size: 84447475
   merge-labels:
     cmd: python scripts/merge_labels.py
     deps:
     - path: data/proc/cls-negativity.parquet
       hash: md5
-      md5: c41cbb96fb593949f26e77d0f41382c0
-      size: 84395772
+      md5: 1796865b2c26c90612cb157ffb23b9a3
+      size: 84447475
     - path: data/proc/cls-political.parquet
       hash: md5
-      md5: 6f77a7ec49c88512ba0e7a10bf9339fa
-      size: 85904336
+      md5: f6eb792a082ef42e9c530fba347c34a7
+      size: 85950608
     - path: scripts/merge_labels.py
       hash: md5
       md5: 18e7dcc810afbafa0178675c734f5e3a
@@ -124,27 +188,46 @@ stages:
     outs:
     - path: data/proc/cls.parquet
       hash: md5
-      md5: fe803cd42796a532f46b6f865dac279a
-      size: 118393775
+      md5: 97e245055c57000f0e841dc7803fdf41
+      size: 118261607
+  daily-counts:
+    cmd: python scripts/make_daily.py
+    deps:
+    - path: data/proc/posts.parquet
+      hash: md5
+      md5: 5d0a18be409dbb6fa851c0077864029e
+      size: 271443044
+    - path: scripts/make_daily.py
+      hash: md5
+      md5: 7bfaecf8d962c1e98f40114da0ba6271
+      size: 1717
+    params:
+      params.yaml:
+        dataset.min_posts_per_day: 2
+    outs:
+    - path: data/proc/daily.parquet
+      hash: md5
+      md5: 447d8ac136cb67ff2dc22da5731c6f9c
+      size: 247136
   dataset:
     cmd: python scripts/make_dataset.py
     deps:
     - path: data/proc/cls.parquet
       hash: md5
-      md5: fe803cd42796a532f46b6f865dac279a
-      size: 118393775
+      md5: 97e245055c57000f0e841dc7803fdf41
+      size: 118261607
     - path: data/proc/daily.parquet
       hash: md5
       md5: 447d8ac136cb67ff2dc22da5731c6f9c
       size: 247136
-    - path: data/proc/fulldata.parquet
+    - path: data/proc/posts.parquet
       hash: md5
-      md5: 756ce32dfc87df6f3ce6154e27d907f0
-      size: 272262592
+      md5: 5d0a18be409dbb6fa851c0077864029e
+      size: 271443044
     - path: scripts/make_dataset.py
       hash: md5
-      md5: e15a03093abb553dc4edc838743128e2
-      size: 2172
+      md5: 4ccf97290eb3ed73f0c9994a6ba0186f
+      size: 2173
     params:
       params.yaml:
         dataset.max_decile_difference: 10.0
@@ -152,45 +235,28 @@ stages:
     outs:
     - path: data/proc/dataset.parquet
       hash: md5
-      md5: 7f21946741bf2fd92e40ddc526d259a4
-      size: 238634300
+      md5: ced69356e7ad17799fda0a660e732b2b
+      size: 239708427
     - path: data/proc/quality.parquet
       hash: md5
-      md5: effcf0c59e925897a28c5e4ff99f441c
-      size: 10960
-  glmm@political:
-    cmd: Rscript scripts/glmm_political.R
-    deps:
-    - path: data/proc/dataset.parquet
-      hash: md5
-      md5: 4680f7b8a2d23f695263a467cedd616d
-      size: 238723081
-    - path: scripts/glmm_political.R
-      hash: md5
-      md5: 8c024c897961b2f2de1dfec347cd6451
-      size: 2110
-    outs:
-    - path: models/glmm/political
-      hash: md5
-      md5: 84a07a791c01e0eebebc378f4672d7e0.dir
-      size: 295302515
-      nfiles: 1
+      md5: 55e1f10fc2a6905e2ebaa2974936ffd9
+      size: 10981
   glmm@negativity:
     cmd: Rscript scripts/glmm_negativity.R
     deps:
     - path: data/proc/dataset.parquet
       hash: md5
-      md5: 7f21946741bf2fd92e40ddc526d259a4
-      size: 238634300
+      md5: ced69356e7ad17799fda0a660e732b2b
+      size: 239708427
     - path: scripts/glmm_negativity.R
       hash: md5
-      md5: 531f14c6c5430743079681b620a5f4e9
+      md5: c607e0923d38cbe470b2b334db79ac7a
       size: 2083
     outs:
     - path: models/glmm/negativity
       hash: md5
-      md5: a8dba3b3b8564f79dd8065bb3da0b10b.dir
-      size: 333450125
+      md5: 4c462c35cf4966da350952157137cbbe.dir
+      size: 333706738
       nfiles: 1
   glmm@likes:
     cmd: Rscript scripts/glmm_likes.R
@@ -206,183 +272,104 @@ stages:
     outs:
     - path: models/glmm/likes
       hash: md5
-      md5: b386379dbee3e12eb3e3e98d2176074c.dir
-      size: 471946436
+      md5: c89ae361596fa6c4519cb081f25d0306.dir
+      size: 471941144
       nfiles: 1
   glmm@comments:
     cmd: Rscript scripts/glmm_comments.R
     deps:
     - path: data/proc/dataset.parquet
       hash: md5
-      md5: 7f21946741bf2fd92e40ddc526d259a4
-      size: 238634300
+      md5: ced69356e7ad17799fda0a660e732b2b
+      size: 239708427
     - path: scripts/glmm_comments.R
       hash: md5
-      md5: a48be4506b8019fd4072037f0bfdea5f
+      md5: 3451aa58b989be667e4ba39c4a7426aa
       size: 2293
     outs:
     - path: models/glmm/comments
       hash: md5
-      md5: e73b05405557fbc43bca5ba003674444.dir
-      size: 465618540
+      md5: 5eef25869a1bca3de8c2a22bfed0e692.dir
+      size: 465867435
       nfiles: 1
   glmm@shares:
     cmd: Rscript scripts/glmm_shares.R
     deps:
     - path: data/proc/dataset.parquet
       hash: md5
-      md5: 7f21946741bf2fd92e40ddc526d259a4
-      size: 238634300
+      md5: ced69356e7ad17799fda0a660e732b2b
+      size: 239708427
     - path: scripts/glmm_shares.R
       hash: md5
-      md5: 066b453c526ca961f96880f8c6f2cf1f
+      md5: 27d2c28c8070bf470d7e243a69eb45ea
       size: 2289
     outs:
     - path: models/glmm/shares
       hash: md5
-      md5: f3380d6cdb02574aa15f8b9378f4f7f0.dir
-      size: 455515632
+      md5: 694cc56b410528292a1f389c0474a3e0.dir
+      size: 455754503
       nfiles: 1
-  report-descriptives:
-    cmd: python analyses/descriptives/descriptives.py
+  articles-sample:
+    cmd: python scripts/make_articles_sample.py
     deps:
-    - path: analyses/descriptives/descriptives.py
+    - path: data/raw/articles-sample.xlsx
       hash: md5
-      md5: 5a11f00f889d98a11f677b0a5591d12f
-      size: 9867
-    - path: data/proc/dataset.parquet
+      md5: cb4501b611be5925894c2b1985ba2b08
+      size: 41840
+    - path: scripts/make_articles_sample.py
       hash: md5
-      md5: 4680f7b8a2d23f695263a467cedd616d
-      size: 238723081
+      md5: a5f23e61f388fbc8e1104cac8347f162
+      size: 2894
     outs:
-    - path: figures/descriptives
+    - path: data/proc/articles-sample.parquet
       hash: md5
-      md5: 75cf6c0246ebe57c2569e1cc6cd228ee.dir
-      size: 229128
-      nfiles: 3
-  descriptives:
-    cmd: python analyses/descriptives/descriptives.py
+      md5: 3bdb6ec940d57d1f0afd2c6f5487d455
+      size: 352252
+  predictions:
+    cmd: Rscript scripts/make_predictions.R
     deps:
-    - path: analyses/descriptives/descriptives.py
-      hash: md5
-      md5: 5a11f00f889d98a11f677b0a5591d12f
-      size: 9867
     - path: data/proc/dataset.parquet
       hash: md5
-      md5: 4680f7b8a2d23f695263a467cedd616d
-      size: 238723081
-    outs:
-    - path: figures/descriptives
-      hash: md5
-      md5: 83d4a19ee8842b59692108de64845ac5.dir
-      size: 229128
-      nfiles: 3
-  examples:
-    cmd: python analyses/descriptives/examples.py
-    deps:
-    - path: analyses/descriptives/examples.py
-      hash: md5
-      md5: 408cf00572e0ed338a15c63ed9d1defa
-      size: 1002
-    - path: data/proc/dataset.parquet
-      hash: md5
-      md5: 4680f7b8a2d23f695263a467cedd616d
-      size: 238723081
-    - path: data/proc/textdata.parquet
-      hash: md5
-      md5: 3bbc921d48b546e38dd380728377b6b1
-      size: 604142640
-  negativity:
-    cmd: "cd analyses/glmm && quarto render polneg.qmd --to pdf && rm -rf *_files
-      && cd -\n"
-    deps:
-    - path: analyses/glmm/polneg.qmd
-      hash: md5
-      md5: f233634d9bf4ec63308141a5d79f2922
-      size: 11022
-    - path: data/proc/dataset.parquet
-      hash: md5
-      md5: 4680f7b8a2d23f695263a467cedd616d
-      size: 238723081
-    - path: models/glmm/negativity
-      hash: md5
-      md5: dabb2c74ac24de37e1112826c70a0eaf.dir
-      size: 333532553
-      nfiles: 1
-    outs:
-    - path: figures/glmm/legend.pdf
-      hash: md5
-      md5: 6476fabc4140b58d015f5becd4b8ad90
-      size: 16466
-    - path: figures/glmm/negativity.pdf
-      hash: md5
-      md5: 21078ccd314de975f002f7b02c1499a3
-      size: 62458
-  engagement:
-    cmd: "cd analyses/glmm && quarto render engagement.qmd --to pdf && rm -rf *_files
-      && cd -\n"
-    deps:
-    - path: analyses/glmm/engagement.qmd
-      hash: md5
-      md5: 69da330f3f5a34a52b5a7355101f77f9
-      size: 8337
-    - path: data/proc/dataset.parquet
-      hash: md5
-      md5: 4680f7b8a2d23f695263a467cedd616d
-      size: 238723081
+      md5: ced69356e7ad17799fda0a660e732b2b
+      size: 239708427
     - path: models/glmm/comments
       hash: md5
-      md5: 213fbcd5a4da5032153aa6cb3e98e961.dir
-      size: 465428754
+      md5: 5eef25869a1bca3de8c2a22bfed0e692.dir
+      size: 465867435
       nfiles: 1
-    - path: models/glmm/likes
+    - path: models/glmm/reactions
       hash: md5
-      md5: 9f37ee383e97823b2684182b1d4f4ebd.dir
-      size: 471736333
+      md5: d079c59625d17c40e15adf2f52b2538d.dir
+      size: 472191537
       nfiles: 1
     - path: models/glmm/shares
       hash: md5
-      md5: bd6ba44f33db0fd5ee1d5b76bfe58678.dir
-      size: 455304558
+      md5: 694cc56b410528292a1f389c0474a3e0.dir
+      size: 455754503
       nfiles: 1
-    outs:
-    - path: figures/glmm/engagement.pdf
+    - path: scripts/make_predictions.R
       hash: md5
-      md5: 6dee2e3ed80e34f9ffcfd4bb491757d7
-      size: 36944
-  train@political:
-    cmd: python scripts/train_political.py
+      md5: 121b57758cfb30260b4edf6bad5f8f19
+      size: 2117
+    outs:
+    - path: data/proc/predictions.parquet
+      hash: md5
+      md5: f52fba9cd2ce8f9a5fa3c0b08f999d31
+      size: 14345946
+  glmm@reactions:
+    cmd: Rscript scripts/glmm_reactions.R
     deps:
-    - path: ml/datasets/political
+    - path: data/proc/dataset.parquet
       hash: md5
-      md5: 4656722c33668c6dd2f6ca2fbeb62317.dir
-      size: 2016443
-      nfiles: 13
-    - path: scripts/train_political.py
+      md5: ced69356e7ad17799fda0a660e732b2b
+      size: 239708427
+    - path: scripts/glmm_reactions.R
       hash: md5
-      md5: 33683601a03e1302cf0de7df8649d882
-      size: 1663
+      md5: 74d6e08d5ad6f5f8e9b82f78e7ae2e23
+      size: 2395
     outs:
-    - path: ml/classifiers/political
+    - path: models/glmm/reactions
       hash: md5
-      md5: 24b298c5d2c5ac61902911aca85d8c3d.dir
-      size: 2256709253
-      nfiles: 6
-  train@negativity:
-    cmd: python scripts/train_negativity.py
-    deps:
-    - path: ml/datasets/negativity
-      hash: md5
-      md5: 16205f65e0e773993739e70b5f351148.dir
-      size: 1488755
-      nfiles: 10
-    - path: scripts/train_negativity.py
-      hash: md5
-      md5: cc1308be8ef988ed860e8c30e3e51851
-      size: 1664
-    outs:
-    - path: ml/classifiers/negativity
-      hash: md5
-      md5: 1e0bc0f2271802e6db985c617c14d223.dir
-      size: 2256709251
-      nfiles: 6
+      md5: d079c59625d17c40e15adf2f52b2538d.dir
+      size: 472191537
+      nfiles: 1

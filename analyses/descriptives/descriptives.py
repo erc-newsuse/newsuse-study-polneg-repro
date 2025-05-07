@@ -28,12 +28,12 @@ colors = config.plotting.color
 
 
 # %% Read data =======================================================================
+
 dataset = (
     DataFrame.from_(paths.dataset)
     .rename(columns={"negativity": "negative"})
     .assign(likes=lambda df: df["interactions"])
 )
-
 
 # %% Basic information ===============================================================
 #
@@ -77,6 +77,8 @@ print(
 
 
 # %% Frequencies of political and negative news ======================================
+
+
 def describe(data, *keys, **kwargs):
     data = data.copy()
     keys = list(keys)
@@ -122,8 +124,8 @@ print(
     )
 )
 
-
 # %% Plot | Post types' frequencies ==================================================
+
 keys = ["country", "political", "negative"]
 counts = pd.concat(
     [dataset.assign(country="overall").groupby(keys).size(), dataset.groupby(keys).size()]
@@ -189,6 +191,7 @@ fig.savefig(figpath / "descriptives-post-types.pdf")
 
 
 # %% Engagement statistics ===========================================================
+
 keys = ["country", "political", "negative"]
 metrics = ["likes", "comments", "shares"]
 
@@ -234,16 +237,18 @@ inter = (
 )
 
 # %% Engagement statistics | By country ==============================================
+
 print(
-    inter.drop("std", axis=1, level=1)
-    .xs("overall", level="political")
-    .xs("overall", level="negativity")
-    .loc[[*countries.values(), "Overall"]]
-    .to_latex(escape=True, float_format="%.1f")
+    inter
+    # .drop("std", axis=1, level=1)
+    # .xs("overall", level="political")
+    # .xs("overall", level="negativity")
+    .loc[[*countries.values(), "Overall"]].to_latex(escape=True, float_format="%.1f")
 )
 
 
 # %% Engagement by country | CCDF plots ==============================================
+
 data = dataset[[*keys, *metrics]].copy()
 data = pd.concat([data.assign(country="overall"), data], ignore_index=True)
 data[metrics] += 1
@@ -265,6 +270,7 @@ for ax, metric in zip(axes.flat, metrics, strict=True):
         palette=palette,
         legend=False,
     )
+    metric = "reactions" if metric == "likes" else metric
     ax.set_title(metric.title())
     ax.set_yscale("log")
     ax.set_xlabel(None)
@@ -306,6 +312,7 @@ for ax, metric in zip(axes.flat, metrics, strict=True):
         palette=palette,
         legend=False,
     )
+    metric = "reactions" if metric == "likes" else metric
     ax.set_title(metric.title())
     ax.set_yscale("log")
     ax.set_xlabel(None)
@@ -325,7 +332,6 @@ axes.flatten()[0].legend(
 )
 fig.tight_layout()
 fig.savefig(figpath / "descriptives-engagement-polneg.pdf")
-
 
 # %% Outlet-level statistics =========================================================
 (
@@ -366,4 +372,35 @@ table = pd.concat([freq, inter], axis=1).loc[list(countries)].rename(index=count
 
 print(table.to_latex(escape=True, float_format="%.1f"))
 
-# %%
+# %% Reactions data completness ==================================================
+
+# rcols = dataset.columns[dataset.columns.str.startswith("reactions_")]
+# likes = dataset["likes"]
+# reactions = dataset[rcols].sum(axis=1)
+# mask = likes == reactions
+# df = pd.DataFrame({"likes": likes, "reactions": reactions})
+
+# rdiff = (likes - reactions).abs() / (likes + 1)
+
+# %% ---------------------------------------------------------------------------------
+
+# df[~mask].reactions.quantile([.95, .99, .999, 1])
+# df[rdiff > .1].query("reactions > 0")
+
+# %% --------------------------------------------------------------------------------
+
+# dataset["rdiff"] = rdiff
+
+# %% -------------------------------------------------
+
+# inconsistent = (
+#     dataset
+#     .assign(mask=lambda df: df["rdiff"] <= .1)
+#     .groupby(["country", "name", "year"])
+#     ["rdiff"]
+#     .mean()
+#     .reset_index()
+# )
+# inconsistent.to_excel(paths.root / "reactions-inconsistent.xlsx", index=False)
+
+# %% =================================================================================

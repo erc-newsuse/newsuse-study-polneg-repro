@@ -15,23 +15,25 @@ help:
 
 packages:
 	pip install -e .[dev]
+	pre-commit install
 	R -e 'remotes::install_version("glmmTMB", version = "1.1.10", repos = "http://cran.us.r-project.org", upgrade = "never")'
 
-init:
+structure:
 	git init
-	pre-commit install
 	mkdir -p data/raw
 	mkdir -p data/proc
+	mkdir -p data/ml
 	mkdir -p data/remote
 	mkdir -p scripts
 	dvc init --force
 	dvc remote add  --default polneg ${PWD}/data/remote --local --force
 	dvc config core.autostage true
-	rm data/raw/*.dvc
-	rm ml/datasets/*.dvc
+	rm -f data/raw/*.dvc
+	rm -f ml/datasets/*.dvc
 	dvc add data/raw/*
 	dvc add ml/datasets/*
-	packages
+
+init: structure packages
 
 clean: clean-build clean-misc
 

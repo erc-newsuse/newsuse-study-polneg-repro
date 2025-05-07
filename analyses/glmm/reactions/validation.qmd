@@ -1,5 +1,5 @@
 ---
-title: "Likes"
+title: "Reactions"
 subtitle: "Models' validation"
 author: "Szymon Talaga"
 date: last-modified
@@ -77,7 +77,7 @@ mpl.rcParams.update({
     for k, v in config.plotting.params.items()
 })
 
-figpath = paths.figures / "glmm" / "likes"
+figpath = paths.figures / "glmm" / "reactions"
 figpath.mkdir(parents=True, exist_ok=True)
 
 countries = config.countries.labels
@@ -313,7 +313,7 @@ sim <- simulate(glmm, nsim = 100L, seed = 303L) %>%
 
 ```{r}
 simdata <- bind_cols(
-    select(data, country, political, negativity, obs = likes),
+    select(data, country, political, negativity, obs = reactions),
     sim
 )
 
@@ -321,7 +321,7 @@ kdedata <- simdata %>%
     group_by(country, political, negativity) %>%
     summarize(
         obs = mean(obs),
-        sim = list(colMeans(pick(starts_with("sim_"))))
+        sim = list(colMeans(pick(starts_with("sim_")))),
     ) %>%
     ungroup %>%
     unnest(sim)
@@ -375,7 +375,7 @@ for pol, axrow in zip(polvals, axes, strict=True):
 for country, ax in zip(countries, axes[0], strict=True):
     ax.set_title(countries[country])
 
-fig.supxlabel("Expected engagement (likes)", y=0.06)
+fig.supxlabel("Expected engagement (reactions)", y=0.06)
 fig.tight_layout()
 fig.savefig(figpath / "simulation.pdf")
 ```
@@ -445,7 +445,7 @@ fig.legend(
     ncols=2,
 )
 
-fig.supxlabel("Engagement (likes)")
+fig.supxlabel("Engagement (reactions)")
 fig.supylabel("Complementary Cumulative Distribution Function")
 fig.tight_layout()
 fig.savefig(figpath / "simulation-ccdf.pdf")

@@ -21,7 +21,7 @@ paths = paths.__copy__(model=f"@ml/classifiers/{ARGS.model}")
 
 # %% Get data and model ------------------------------------------------------------------
 
-dataset = DataFrame.from_(paths.textdata)
+dataset = DataFrame.from_(paths.text)
 classifier = pipeline("text-classification", paths.model)
 
 # %% Classify ----------------------------------------------------------------------------

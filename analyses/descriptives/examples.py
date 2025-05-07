@@ -6,7 +6,7 @@ from project import config, paths
 countries = config.countries.labels
 
 data = DataFrame.from_(paths.dataset)[["key", "country", "political", "negativity"]].merge(
-    DataFrame.from_(paths.textdata), on="key", how="left"
+    DataFrame.from_(paths.text), on="key", how="left"
 )
 
 # %%

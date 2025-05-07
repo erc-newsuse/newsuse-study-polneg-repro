@@ -5,13 +5,13 @@ library(dplyr)
 library(tibble)
 library(glmmTMB)
 
-use_condaenv("study-polneg")
+use_condaenv("polneg-repro")
 
 project <- import("project")
 config  <- project$config
 paths   <- project$paths
 
-dirpath <- paths$glmm / "likes"
+dirpath <- paths$glmm / "reactions"
 dirpath$mkdir(parents = TRUE, exist_ok = TRUE)
 
 countries <- config$countries$order
@@ -23,7 +23,7 @@ dataset <- as.character(paths$dataset) %>%
     read_parquet %>%
     tibble %>%
     mutate(
-        likes = interactions,
+        reactions = as.integer(reactions),
         country = factor(country, levels = countries),
         political = factor(political, levels = c("OTHER", "POLITICAL")),
         negativity = factor(negativity, levels = c("OTHER", "NEGATIVE")),
@@ -64,7 +64,7 @@ fitglmm <- function(
 
 # %% Fit model 0 ---------------------------------------------------------------------
 
-frm <- frm0  <- likes ~ country * political * negativity +
+frm <- frm0  <- reactions ~ country * political * negativity +
     (1 + political * negativity | country:name) +
     (1 + political * negativity | country:year:month:day)
 zfrm <- ~0

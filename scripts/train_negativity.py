@@ -26,7 +26,7 @@ dataset = Dataset.from_disk(paths.dataset).tokenize(tokenizer, **config.model.to
 
 
 def model_init():
-    id2label = dict(enumerate(config.annotations.labels[DOMAIN]))
+    id2label = dict(enumerate(config.annotations[DOMAIN].labels))
     model = AutoModelForSequenceClassification.from_pretrained(
         config.model.base,
         num_labels=len(id2label),

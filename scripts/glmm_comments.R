@@ -5,7 +5,7 @@ library(dplyr)
 library(tibble)
 library(glmmTMB)
 
-use_condaenv("study-polneg")
+use_condaenv("polneg-repro")
 
 project <- import("project")
 config  <- project$config

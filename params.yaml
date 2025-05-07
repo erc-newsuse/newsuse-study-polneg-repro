@@ -1,19 +1,24 @@
 paths:
-  make!:       "newsuse.config:Paths"
-  data:        "data"
-  raw:         "@data/raw"
-  proc:        "@data/proc"
-  predictions: "@data/predictions"
-  fulldata:    "@proc/fulldata.parquet"
-  textdata:    "@proc/textdata.parquet"
-  dataset:     "@proc/dataset.parquet"
-  daily:       "@proc/daily.parquet"
-  quality:     "@proc/quality.parquet"
-  labels:      "@proc/cls.parquet"
-  ml:          "ml"
-  models:      "models"
-  glmm:        "@models/glmm"
-  figures:     "figures"
+  make!:           "newsuse.config:Paths"
+  data:            "data"
+  raw:             "@data/raw"
+  proc:            "@data/proc"
+  posts:           "@proc/posts.parquet"
+  text:            "@proc/posts-text.parquet"
+  dataset:         "@proc/dataset.parquet"
+  daily:           "@proc/daily.parquet"
+  quality:         "@proc/quality.parquet"
+  labels:          "@proc/cls.parquet"
+  articles_sample: "@proc/articles-sample.parquet"
+  predictions:     "@proc/predictions.parquet"
+  followers:       "@raw/followers.parquet"
+  ml:              "ml"
+  models:          "models"
+  glmm:            "@models/glmm"
+  figures:         "figures"
+  mldata:          "@data/ml"
+  negativity:      "@mldata/negativity"
+  political:       "@mldata/political"
 
 countries:
   order:
@@ -32,11 +37,12 @@ countries:
     uk:  United Kingdom
 
 annotations:
-  labels:
-    political:
+  political:
+    labels:
     - OTHER
     - POLITICAL
-    negativity:
+  negativity:
+    labels:
     - OTHER
     - NEGATIVE
 
@@ -58,10 +64,12 @@ dataset:
   - comments
   - shares
   - ini
-  - text
   - post_url
   min_posts_per_day: 2
   max_decile_difference: 10.0
+
+articles_sample:
+  groupsize: 10
 
 inference:
   alpha: 0.05

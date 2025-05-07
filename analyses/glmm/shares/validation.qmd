@@ -40,7 +40,7 @@ library(ggplot2)
 library(lubridate)
 library(glmmTMB)
 
-use_condaenv("newsuse-study-polneg")
+use_condaenv("polneg-repro")
 
 project <- import("project")
 config  <- project$config

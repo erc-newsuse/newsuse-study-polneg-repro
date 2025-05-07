@@ -8,7 +8,7 @@ from project import config, paths
 
 # %% Get raw data ------------------------------------------------------------------------
 
-data = DataFrame.from_(paths.fulldata)
+data = DataFrame.from_(paths.posts)
 
 # %% Compute data quality statistics -----------------------------------------------------
 
@@ -22,7 +22,7 @@ quality = (
 quality.index = pd.Series(quality["country"] + "@" + quality["name"])
 
 keys = ["pid"]
-cols = ["likes", "comments", "shares"]
+cols = ["reactions", "comments", "shares"]
 
 Q = data.groupby(keys)[cols].quantile(q=np.arange(1, 10) / 10)
 M = (

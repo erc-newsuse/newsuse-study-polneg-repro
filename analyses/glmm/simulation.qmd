@@ -39,7 +39,7 @@ library(glmmTMB)
 
 filter <- dplyr::filter
 
-use_condaenv("newsuse-study-polneg")
+use_condaenv("polneg-repro")
 
 project <- import("project")
 config  <- project$config
@@ -94,18 +94,18 @@ colors    = {
 
 ```{r}
 glmm_n <- readRDS(as.character(paths$glmm / "negativity" / "0.rds"))
-glmm_l <- readRDS(as.character(paths$glmm / "likes" / "0.rds"))
+glmm_r <- readRDS(as.character(paths$glmm / "reactions" / "0.rds"))
 glmm_c <- readRDS(as.character(paths$glmm / "comments" / "0.rds"))
 glmm_s <- readRDS(as.character(paths$glmm / "shares" / "0.rds"))
 
 rg_n <- ref_grid(glmm_n)
-rg_l <- ref_grid(glmm_l)
+rg_r <- ref_grid(glmm_r)
 rg_c <- ref_grid(glmm_c)
 rg_s <- ref_grid(glmm_s)
 
-countries  <- rg_l@levels$country
-political  <- rg_l@levels$political
-negativity <- rg_l@levels$negativity
+countries  <- rg_r@levels$country
+political  <- rg_r@levels$political
+negativity <- rg_r@levels$negativity
 ```
 
 # Simulation
@@ -191,26 +191,26 @@ ngrid <- bind_rows(
     ) %>%
     mutate(across(where(is.factor), as.character)) %>%
     mutate(
-        likes =    pmap(select(., 1:4), simulate(rg_l)),
-        comments = pmap(select(., 1:4), simulate(rg_c)),
-        shares =   pmap(select(., 1:4), simulate(rg_s)),
+        reactions = pmap(select(., 1:4), simulate(rg_r)),
+        comments =  pmap(select(., 1:4), simulate(rg_c)),
+        shares =    pmap(select(., 1:4), simulate(rg_s)),
     ) %>%
-    mutate(across(c(likes, comments, shares), rlang::ll(
+    mutate(across(c(reactions, comments, shares), rlang::ll(
         est = ~map_dbl(.x, ~.x[1L, "share"]),
         var = ~map_dbl(.x, ~.x[1L, "var"]),
     ))) %>%
-    select(-c(likes, comments, shares)) %>%
+    select(-c(reactions, comments, shares)) %>%
     select(
         everything(),
-        likes = likes_est,
-        likes_var,
+        reactions = reactions_est,
+        reactions_var,
         comments = comments_est,
         comments_var,
         shares = shares_est,
         shares_var,
     ) %>%
     mutate(country = replace_na(country, "overall")) %>%
-    mutate(across(c(likes, comments, shares), rlang::ll(
+    mutate(across(c(reactions, comments, shares), rlang::ll(
         lo = ~.x - zrange() *
             sqrt(pick(str_c(cur_column(), "_var"))[[1L]]),
         hi = ~.x + zrange() *
@@ -228,13 +228,13 @@ sgrid <- ngrid %>%
     ) %>%
     unnest(pp) %>%
     group_by(country, pp) %>%
-    summarize(across(matches("^(likes|comments|shares)(_var)?$"), ~{
+    summarize(across(matches("^(reactions|comments|shares)(_var)?$"), ~{
         stopifnot(length(pp) == 2L)
         p <- if_else(political == "POLITICAL", pp, 1 - pp)
         sum(p*.x)
     })) %>%
     ungroup %>%
-    mutate(across(c(likes, comments, shares), rlang::ll(
+    mutate(across(c(reactions, comments, shares), rlang::ll(
         lo = ~.x - zrange() *
             sqrt(pick(str_c(cur_column(), "_var"))[[1L]]),
         hi = ~.x + zrange() *
@@ -249,7 +249,7 @@ palette  = [colors["other"], colors["political"]]
 gap      = 0.05
 ymin     = "lower.CL"
 ymax     = "upper.CL"
-metrics  = ["likes", "comments", "shares"]
+metrics  = ["reactions", "comments", "shares"]
 dodgekw  = {"empty": "drop"}
 rangekw  = {"color": "black", "linewidth": 2}
 linekw   = {"linewidth": 3, "edgecolor": "black"}
@@ -370,7 +370,7 @@ fig, axes = plt.subplots(
 hue      = "country"
 hue_ord  = ["overall", *countries]
 palette  = ["black", *[colors[c] for c in countries]]
-metrics  = ["likes", "comments", "shares"]
+metrics  = ["reactions", "comments", "shares"]
 
 sgrid = (
     r.sgrid
@@ -449,7 +449,7 @@ fig.savefig(figpath / "sim-overall.pdf")
 ```{python}
 cilo = (r.alpha/2)*100
 cihi = 100-cilo
-metrics = ["likes", "comments", "shares"]
+metrics = ["reactions", "comments", "shares"]
 data = (
     pd.concat({
         metric.title(): (
@@ -483,7 +483,7 @@ data = (
 ```
 
 ```{python}
-metrics = ["likes", "comments", "shares"]
+metrics = ["reactions", "comments", "shares"]
 sgrid = r.sgrid
 sgrid = (
     pd.concat([

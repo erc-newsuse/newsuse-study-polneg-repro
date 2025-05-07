@@ -4,15 +4,30 @@ stages:
     cmd: python scripts/make_data.py
     deps:
     - scripts/make_data.py
-    - data/raw/posts-eu.parquet
-    - data/raw/posts-us.parquet
+    - data/raw/posts.parquet
+    - data/raw/posts-text.parquet
     params:
     - dataset.usecols
     outs:
-    - data/proc/fulldata.parquet:
+    - data/proc/posts.parquet:
         persist: true
-    - data/proc/textdata.parquet:
+    - data/proc/posts-text.parquet:
         persist: true
+
+  ml-datasets:
+    foreach:
+    - political
+    - negativity
+    do:
+      cmd: python scripts/ml/make_dataset_${item}.py
+      deps:
+      - scripts/ml/make_dataset_${item}.py
+      - data/ml/${item}
+      params:
+      - annotations.${item}
+      outs:
+      - ml/datasets/${item}:
+          persist: true
 
   train:
     foreach:
@@ -36,7 +51,7 @@ stages:
       deps:
       - scripts/make_labels.py
       - ml/classifiers/${item}
-      - data/proc/textdata.parquet
+      - data/proc/posts-text.parquet
       outs:
       - data/proc/cls-${item}.parquet:
           persist: true
@@ -55,7 +70,7 @@ stages:
     cmd: python scripts/make_daily.py
     deps:
     - scripts/make_daily.py
-    - data/proc/fulldata.parquet
+    - data/proc/posts.parquet
     params:
     - dataset.min_posts_per_day
     outs:
@@ -66,7 +81,7 @@ stages:
     cmd: python scripts/make_dataset.py
     deps:
     - scripts/make_dataset.py
-    - data/proc/fulldata.parquet
+    - data/proc/posts.parquet
     - data/proc/daily.parquet
     - data/proc/cls.parquet
     params:
@@ -81,7 +96,7 @@ stages:
   glmm:
     foreach:
     - negativity
-    - likes
+    - reactions
     - comments
     - shares
     do:
@@ -92,3 +107,24 @@ stages:
       outs:
       - models/glmm/${item}:
           persist: true
+
+  articles-sample:
+    cmd: python scripts/make_articles_sample.py
+    deps:
+    - scripts/make_articles_sample.py
+    - data/raw/articles-sample.xlsx
+    outs:
+    - data/proc/articles-sample.parquet:
+        persist: true
+
+  predictions:
+    cmd: Rscript scripts/make_predictions.R
+    deps:
+    - scripts/make_predictions.R
+    - data/proc/dataset.parquet
+    - models/glmm/reactions
+    - models/glmm/comments
+    - models/glmm/shares
+    outs:
+    - data/proc/predictions.parquet:
+        persist: true

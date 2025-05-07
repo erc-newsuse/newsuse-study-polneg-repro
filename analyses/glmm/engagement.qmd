@@ -38,7 +38,7 @@ library(reticulate)
 library(lubridate)
 library(glmmTMB)
 
-use_condaenv("study-polneg")
+use_condaenv("polneg-repro")
 
 project <- import("project")
 config  <- project$config
@@ -99,7 +99,7 @@ data <- as.character(paths$dataset) %>%
 ```
 
 ```{r}
-glmm_l <- readRDS(as.character(paths$glmm / "likes" / "0.rds"))
+glmm_r <- readRDS(as.character(paths$glmm / "reactions" / "0.rds"))
 glmm_c <- readRDS(as.character(paths$glmm / "comments" / "0.rds"))
 glmm_s <- readRDS(as.character(paths$glmm / "shares" / "0.rds"))
 gc()
@@ -108,7 +108,7 @@ gc()
 # Reference grids for the models
 
 ```{r}
-rgl <- ref_grid(glmm_l)
+rgr <- ref_grid(glmm_r)
 rgc <- ref_grid(glmm_c)
 rgs <- ref_grid(glmm_s)
 gc()
@@ -117,15 +117,15 @@ gc()
 # Estimated marginal means
 
 ```{r}
-countries <- rgl@levels$country
-polvals   <- str_to_lower(rgl@levels$political)
-negvals   <- str_to_lower(rgl@levels$negativity)
+countries <- rgr@levels$country
+polvals   <- str_to_lower(rgr@levels$political)
+negvals   <- str_to_lower(rgr@levels$negativity)
 
-emml  <- emmeans(rgl, ~country*political*negativity)
+emmr  <- emmeans(rgr, ~country*political*negativity)
 emmc  <- emmeans(rgc, ~country*political*negativity)
 emms  <- emmeans(rgs, ~country*political*negativity)
 
-emmla <- emmeans(rgl, ~political*negativity)
+emmra <- emmeans(rgr, ~political*negativity)
 emmca <- emmeans(rgc, ~political*negativity)
 emmsa <- emmeans(rgs, ~political*negativity)
 ```
@@ -134,8 +134,8 @@ emmsa <- emmeans(rgs, ~political*negativity)
 
 ```{r}
 by    <- c("country", "political")
-coefc <- coef(contrast(emml, by = by, method = "trt.vs.ctrl"))
-coefo <- emml %>%
+coefc <- coef(contrast(emmr, by = by, method = "trt.vs.ctrl"))
+coefo <- emmr %>%
     contrast(by = "country", interaction = "trt.vs.ctrl") %>%
     coef %>%
     mutate(across(starts_with("c."),~{
@@ -171,7 +171,7 @@ C <- select(
     starts_with("political:")
 )
 
-conl <- contrast(emml, method = C)
+conr <- contrast(emmr, method = C)
 conc <- contrast(emmc, method = C)
 cons <- contrast(emms, method = C)
 
@@ -182,7 +182,7 @@ cons <- contrast(emms, method = C)
     .after = 1L
 )
 
-eff_l <- .tidy(conl)
+eff_r <- .tidy(conr)
 eff_c <- .tidy(conc)
 eff_s <- .tidy(cons)
 ```
@@ -227,7 +227,7 @@ starkw    = {
 ```{python}
 from itertools import product
 
-metrics   = ["likes", "comments", "shares"]
+metrics   = ["reactions", "comments", "shares"]
 fig, axes = plt.subplots(
     nrows=len(metrics),
     figsize=(7, 9),
@@ -310,7 +310,7 @@ cihi = rf"{(1-r.alpha/2)*100:.1f}\%"
             .rename({"other": "non-political"}, level="political")
             .rename(lambda x: countries.get(x, r"\textbf{Overall}"), level="country")
         )
-        for m in ("likes", "comments", "shares")
+        for m in ("reactions", "comments", "shares")
     }, axis=1)
     .pipe(lambda df: print(
         df.style

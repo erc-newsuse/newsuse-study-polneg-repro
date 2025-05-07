@@ -18,7 +18,7 @@ data = dataset["validation"].to_pandas()
 performance(data)
 
 # %% Performance by country
-data.groupby("country").apply(performance, include_groups=False)
+data.groupby("group").apply(performance, include_groups=False)
 
 
 # %% Dataset statistics ==============================================================

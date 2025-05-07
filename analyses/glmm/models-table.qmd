@@ -38,7 +38,7 @@ library(reticulate)
 library(lubridate)
 library(glmmTMB)
 
-use_condaenv("study-polneg")
+use_condaenv("polneg-repro")
 
 project <- import("project")
 config  <- project$config
@@ -92,7 +92,7 @@ colors    = {"overall": "black", **config.plotting.color.semantics}
 
 ```{r}
 glmm_n <- readRDS(as.character(paths$glmm / "negativity" / "0.rds"))
-glmm_l <- readRDS(as.character(paths$glmm / "likes" / "0.rds"))
+glmm_r <- readRDS(as.character(paths$glmm / "reactions" / "0.rds"))
 glmm_c <- readRDS(as.character(paths$glmm / "comments" / "0.rds"))
 glmm_s <- readRDS(as.character(paths$glmm / "shares" / "0.rds"))
 gc()
@@ -141,7 +141,7 @@ tidy.glmmTMB <- function(mod, component = c("cond", "disp", "zi"), ...) {
 
 ```{r}
 Tn <- tidy(glmm_n)
-Tl <- tidy(glmm_l)
+Tr <- tidy(glmm_r)
 Tc <- tidy(glmm_c)
 Ts <- tidy(glmm_s)
 gc()
@@ -207,13 +207,13 @@ def format_pval(p, digits=3):
 
 mergekw = {"how": "left", "left_index": True, "right_index": True}
 tab = (
-    make_modeltable(r.Tl, "Likes")
+    make_modeltable(r.Tr, "Reactions")
     .merge(make_modeltable(r.Tc, "Comments"), **mergekw)
     .merge(make_modeltable(r.Ts, "Shares"), **mergekw)
     .merge(make_modeltable(r.Tn, "Negativity"), **mergekw)
     .droplevel(level=0)
     .loc[["cond", "disp"]]
-    [["Negativity", "Likes", "Comments", "Shares"]]
+    [["Negativity", "Reactions", "Comments", "Shares"]]
     .droplevel(level=["component"])
     .rename_axis(index={"group": "effect"})
     .pipe(lambda df: df.style.format(
