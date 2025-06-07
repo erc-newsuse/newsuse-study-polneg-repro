@@ -1,0 +1,130 @@
+stages:
+
+  # data:
+  #   cmd: python scripts/make_data.py
+  #   deps:
+  #   - scripts/make_data.py
+  #   - data/raw/posts.parquet
+  #   - data/raw/posts-text.parquet
+  #   params:
+  #   - dataset.usecols
+  #   outs:
+  #   - data/proc/posts.parquet:
+  #       persist: true
+  #   - data/proc/posts-text.parquet:
+  #       persist: true
+
+  # ml-datasets:
+  #   foreach:
+  #   - political
+  #   - negativity
+  #   do:
+  #     cmd: python scripts/ml/make_dataset_${item}.py
+  #     deps:
+  #     - scripts/ml/make_dataset_${item}.py
+  #     - data/ml/${item}
+  #     params:
+  #     - annotations.${item}
+  #     outs:
+  #     - ml/datasets/${item}:
+  #         persist: true
+
+  # train:
+  #   foreach:
+  #   - political
+  #   - negativity
+  #   do:
+  #     cmd: python scripts/train_${item}.py
+  #     deps:
+  #     - ml/datasets/${item}
+  #     - scripts/train_${item}.py
+  #     outs:
+  #     - ml/classifiers/${item}:
+  #         persist: true
+
+  # labels:
+  #   foreach:
+  #     - political
+  #     - negativity
+  #   do:
+  #     cmd: python scripts/make_labels.py --model='"${item}"'
+  #     deps:
+  #     - scripts/make_labels.py
+  #     - ml/classifiers/${item}
+  #     - data/proc/posts-text.parquet
+  #     outs:
+  #     - data/proc/cls-${item}.parquet:
+  #         persist: true
+
+  merge-labels:
+    cmd: python scripts/merge_labels.py
+    deps:
+    - scripts/merge_labels.py
+    - data/proc/cls-political.parquet
+    - data/proc/cls-negativity.parquet
+    outs:
+    - data/proc/cls.parquet:
+        persist: true
+
+  daily-counts:
+    cmd: python scripts/make_daily.py
+    deps:
+    - scripts/make_daily.py
+    - data/proc/posts.parquet
+    params:
+    - dataset.min_posts_per_day
+    outs:
+    - data/proc/daily.parquet:
+        persist: true
+
+  dataset:
+    cmd: python scripts/make_dataset.py
+    deps:
+    - scripts/make_dataset.py
+    - data/proc/posts.parquet
+    - data/proc/daily.parquet
+    - data/proc/cls.parquet
+    params:
+    - dataset.min_posts_per_day
+    - dataset.max_decile_difference
+    outs:
+    - data/proc/dataset.parquet:
+        persist: true
+    - data/proc/quality.parquet:
+        persist: true
+
+  glmm:
+    foreach:
+    - negativity
+    - reactions
+    - comments
+    - shares
+    do:
+      cmd: Rscript scripts/glmm_${item}.R
+      deps:
+      - scripts/glmm_${item}.R
+      - data/proc/dataset.parquet
+      outs:
+      - models/glmm/${item}:
+          persist: true
+
+  articles-sample:
+    cmd: python scripts/make_articles_sample.py
+    deps:
+    - scripts/make_articles_sample.py
+    - data/raw/articles-sample.xlsx
+    outs:
+    - data/proc/articles-sample.parquet:
+        persist: true
+
+  predictions:
+    cmd: Rscript scripts/make_predictions.R
+    deps:
+    - scripts/make_predictions.R
+    - data/proc/dataset.parquet
+    - models/glmm/reactions
+    - models/glmm/comments
+    - models/glmm/shares
+    outs:
+    - data/proc/predictions.parquet:
+        persist: true

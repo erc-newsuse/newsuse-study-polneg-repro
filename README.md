@@ -7,16 +7,17 @@ This is a repository for reproducing the results from the paper
 
 ## [Github repo](https://github.com/erc-newsuse/newsuse-study-polneg-repro)
 
-Code (without data) is archived in a Github repository.
+Code (without data) is archived in the
+[Github repository](https://github.com/erc-newsuse/newsuse-study-polneg-repro).
 
 ## Text data availability
 
-For legal reasons we do not distribute the exact content of the posts.
+For legal reasons we do not distribute the content of the posts.
 However, in all cases metadata allowing for identification of and access to
 individual posts is retained, so the dataset can be _rehydrated_ by filling
 the missing data after obtaining the content, i.e. through Facebook API,
 by scraping content of selected posts or obtaining it by any other means.
-We can also share the content data for private use upon a reasonable request.
+<!-- We can also share the content data for private use upon a reasonable request. -->
 
 > **NOTE.** Most importantly, all analyses in this study, other than model training
 > and post labeling, do not require text content and can be reproduced without it.
@@ -30,10 +31,17 @@ It uses a simplified set of computation stages defined `dvc.yaml`
 (run `dvc stage list` or `dvc dag` to see them) that uses a precomputed
 set of post labels (in `data/proc/cls.parquet` file).
 
-In order to reproduce the full pipeline for the data including post content
-rename `dvc-fulldata.yaml` to `dvc.yaml` and run `dvc repro`.
+In order to easily reproduce only the part of the pipeline depending
+on non-text data provided in the OSF repostory
+rename `dvc-dehydrated.yaml` to `dvc.yaml` and run `dvc repro`.
 
 > **NOTE.** Read _Reproduction_ section below for more details on how to run and inspect the pipeline.
+
+### Classifier model files
+
+Due to limitations of the OSF platform, the classifiers are not distributed
+in the OSF repository. However, they are available through the _Huggingface Hub_.
+See the _Classifiers_ section below for more details.
 
 ### Key fields
 
@@ -42,9 +50,14 @@ There are two key fields allowing, in principle, for rehydration of the Facebook
 1. `key` : it contains a unique Facebook post identifier (namespace prefix ending with `@`, i.e. `sotrender@`, needs to be removed to obatin the actual post ID)
 2. `post_url` : stores URLs pointing to individual posts
 
-> **NOTE.** In order to replicate both classifier training and post labeling the content data must be rehydrated both in the raw posts
-> data files (`posts-eu.parquet` and `posts-us.parquet`) as well as
-> in training datasets (`ml/classifiers/political` and `ml/classifiers/negativity`).
+### Rehydration
+
+In order to run the full pipeline using the rehydrated data
+create the following files in the following files:
+- `data/raw/posts-text.parquet` with columns `key`, `country` and `text` (the text content of the posts). The value in `key` and `country` columns should match the values in the `data/raw/posts.parquet` file.
+- `data/ml/political/text.parquet` with columns `split`, `key`, `text` (the text content of the posts used for training the political classifier). The value in `key` column should match the values in the `data/ml/data.parquet` file.
+- `data/ml/negativity/text.parquet` with columns `split`, `key`, `text` (the text content of the posts used for training the negativity classifier). The value in `key` column should match the values in the `data/ml/data.parquet` file.
+
 
 ## Reproduction
 
@@ -59,6 +72,9 @@ software libraries, is handled using
 conda env create -f environment.yaml
 conda activate polneg-repro
 make init
+# The last command is defined in `Makefile` and initializes
+# the state of the environment, including installing all
+# required Python and R packages and setting up GIT and DVC.
 ```
 
 ### Computation stages
@@ -74,18 +90,22 @@ dvc stage list  # list defined computation stages
 This should be the output:
 
 ```
-data                        Outputs data/proc/fulldata.parquet, data/proc/textdata.parquet
-train@political             Outputs ml/classifiers/political
-train@negativity            Outputs ml/classifiers/negativity
-labels@political            Outputs data/proc/cls-political.parquet
-labels@negativity           Outputs data/proc/cls-negativity.parquet
-merge-labels                Outputs data/proc/cls.parquet
-daily-counts                Outputs data/proc/daily.parquet
-dataset                     Outputs data/proc/dataset.parquet, data/proc/quality.parquet
-glmm@negativity             Outputs models/glmm/negativity
-glmm@likes                  Outputs models/glmm/likes
-glmm@comments               Outputs models/glmm/comments
-glmm@shares                 Outputs models/glmm/shares
+data                    Outputs data/proc/posts.parquet, data/proc/posts-text.parquet
+ml-datasets@political   Outputs ml/datasets/political
+ml-datasets@negativity  Outputs ml/datasets/negativity
+train@political         Outputs ml/classifiers/political
+train@negativity        Outputs ml/classifiers/negativity
+labels@political        Outputs data/proc/cls-political.parquet
+labels@negativity       Outputs data/proc/cls-negativity.parquet
+merge-labels            Outputs data/proc/cls.parquet
+daily-counts            Outputs data/proc/daily.parquet
+dataset                 Outputs data/proc/dataset.parquet, data/proc/quality.parquet
+glmm@negativity         Outputs models/glmm/negativity
+glmm@reactions          Outputs models/glmm/reactions
+glmm@comments           Outputs models/glmm/comments
+glmm@shares             Outputs models/glmm/shares
+articles-sample         Outputs data/proc/articles-sample.parquet
+predictions             Outputs data/proc/predictions.parquet
 ```
 
 One can also display a directed acyclic graph of relationships between the tasks.
@@ -112,6 +132,12 @@ Individual computation stages
 can be run simply using `dvc repro <name>`, where `<name>` is one or
 more stage names (separated by spaces).
 
+Importantly, a single stage can be run without running all the previous stages by using the following command:
+
+```bash
+dvc repro --single-item <name>
+```
+
 ## Main results
 
 The pipeline run by `dvc repro` converts raw data into final dataset(s)
@@ -121,8 +147,9 @@ classifiers and assigns classification labels to posts.
 In other words, it runs all the time-consuming computations.
 
 The actual analyses and plots from the paper are organized
-as [Quarto](https://quarto.org/) notebooks, which allow for easy mixing of Python
-and R code. Thus, results and figures can be reproduced by rerunning the code
+as either simple Python scripts or [Quarto](https://quarto.org/)
+notebooks, which allow for easy mixing of Python and R code.
+Thus, results and figures can be reproduced by rerunning the code
 from the notebooks.
 
 > **NOTE.** We used [matplotlib](https://matplotlib.org/) with TeX-based text rendering
@@ -163,5 +190,6 @@ used by `transformers` library from [HuggingFace](https://huggingface.co/),
 and should be compatible with `transformers>=4.44` and `torch>=2.4`.
 See the `scripts/make_labels.py` script for an example.
 
-They are also accessible through _Huggingface Hub_ [here](https://huggingface.co/sztal/erc-newsuse-political)
-and [there](https://huggingface.co/sztal/erc-newsuse-negativity).
+They are also accessible through _Huggingface Hub_:
+- [political](https://huggingface.co/sztal/erc-newsuse-political)
+- [negativity](https://huggingface.co/sztal/erc-newsuse-negativity).
