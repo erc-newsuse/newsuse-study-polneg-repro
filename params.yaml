@@ -9,6 +9,7 @@ paths:
   daily:           "@proc/daily.parquet"
   quality:         "@proc/quality.parquet"
   labels:          "@proc/cls.parquet"
+  sentiment:       "@proc/sentiment.parquet"
   articles_sample: "@proc/articles-sample.parquet"
   predictions:     "@proc/predictions.parquet"
   followers:       "@raw/followers.parquet"
@@ -70,6 +71,13 @@ dataset:
 
 articles_sample:
   groupsize: 10
+
+sentiment:
+  model: tabularisai/multilingual-sentiment-analysis
+  annotators:
+    - Szymon
+    - Magdalena
+    - Dominik
 
 inference:
   alpha: 0.05

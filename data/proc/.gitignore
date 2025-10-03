@@ -2,9 +2,11 @@
 /cls-political.parquet
 /cls-negativity.parquet
 /cls.parquet
+/sentiment.parquet
 /daily.parquet
 /posts.parquet
 /posts-text.parquet
 /quality.parquet
 /articles-sample.parquet
 /predictions.parquet
+/sentiment-sample.xlsx
