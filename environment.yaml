@@ -1,4 +1,4 @@
-name: polneg-repro
+name: newsuse-study-polneg
 channels:
   - conda-forge
   - pytorch
