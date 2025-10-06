@@ -2,6 +2,7 @@
 /figures
 
 # Root level
+.env
 .vscode
 _sandbox.py
 build/

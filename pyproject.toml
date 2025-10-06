@@ -22,7 +22,9 @@ dependencies = [
     "matplotlib>=3.9",
     "seaborn>=0.13",
     "newspaper3k>=0.2.8",
+    "openai>=1.109.1",
     "lxml[html_clean]",
+    "python-dotenv>=1.1.1",
 ]
 dynamic = ["version"]
 classifiers = [
@@ -104,6 +106,7 @@ ignore = [
     "SIM105",
     "RET504",
     "TID252",
+    "S101",
 ]
 
 [tool.ruff.lint.per-file-ignores]

@@ -10,3 +10,4 @@
 /articles-sample.parquet
 /predictions.parquet
 /sentiment-sample.xlsx
+/*.xlsx

@@ -20,6 +20,8 @@ paths:
   mldata:          "@data/ml"
   negativity:      "@mldata/negativity"
   political:       "@mldata/political"
+  prompts:         "@ml/prompts"
+  gpt:             "@proc/gpt/"
 
 countries:
   order:
@@ -71,6 +73,37 @@ dataset:
 
 articles_sample:
   groupsize: 10
+
+gpt:
+  header: &gpt_default_header
+    method: POST
+    url: /v1/responses
+  batch_size: &gpt_default_batch_size 1000
+  configurations: &gpt_default_configurations
+    gpt-4.1-mini:
+      temperature: 0.0
+    gpt-5: {}
+  sample: &gpt_default_sample
+    size_per_group: 2000
+    min_words: 5
+    countries:
+    - us
+    - pl
+    political:
+      - OTHER
+      - POLITICAL
+  negativity:
+    prompt: negativity.md
+    model: gpt-4.1-mini
+    header:
+      <<: *gpt_default_header
+    batch_size: *gpt_default_batch_size
+    configurations:
+      <<: *gpt_default_configurations
+    sample:
+      <<: *gpt_default_sample
+      seed: 432917
+      size_per_group: 50
 
 sentiment:
   model: tabularisai/multilingual-sentiment-analysis
