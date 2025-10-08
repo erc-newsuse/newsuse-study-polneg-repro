@@ -373,3 +373,24 @@ stages:
       md5: d079c59625d17c40e15adf2f52b2538d.dir
       size: 472191537
       nfiles: 1
+  posts:
+    cmd: python scripts/make_posts.py
+    deps:
+    - path: data/raw/posts/
+      hash: md5
+      md5: 7fd19c9db903de2885ce7570019a723a.dir
+      size: 904062817
+      nfiles: 6
+    - path: scripts/make_posts.py
+      hash: md5
+      md5: 7d952c8dc7d4e4ccfbf4306aec520de2
+      size: 2034
+    outs:
+    - path: data/proc/posts-text.parquet
+      hash: md5
+      md5: 7ca962b1817b9642169b3d42faca591a
+      size: 641896606
+    - path: data/proc/posts.parquet
+      hash: md5
+      md5: e2bdc346634b17aaf92feb2795a96e37
+      size: 287829916

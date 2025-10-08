@@ -1,0 +1,6 @@
+outs:
+- md5: 7fd19c9db903de2885ce7570019a723a.dir
+  size: 904062817
+  nfiles: 6
+  hash: md5
+  path: posts

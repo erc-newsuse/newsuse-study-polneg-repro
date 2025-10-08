@@ -89,6 +89,10 @@ gpt:
     countries:
     - us
     - pl
+    - uk
+    - irl
+    - esp
+    - fr
     political:
       - OTHER
       - POLITICAL
