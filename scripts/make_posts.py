@@ -4,7 +4,7 @@ import pandas as pd
 from newsuse.data import DataFrame, strings
 from tqdm.auto import tqdm
 
-from project import paths
+from project import config, paths
 
 # %% Make posts ----------------------------------------------------------------------
 
@@ -24,30 +24,32 @@ posts = (
     )
     .reset_index(level=0, names="country")
     .reset_index(drop=True)
-    .assign(date=lambda df: pd.to_datetime(df["date"]))
+    .rename(columns={"fb_post_id": "key", "likes": "reactions"})
+    .assign(
+        key=lambda df: "sotrender@" + df["key"],
+        date=lambda df: pd.to_datetime(df["date"]),
+    )
+    .query(f"date.ge('{config.posts.start_date}') & date.le('{config.posts.end_date}')")
+    .drop_duplicates(subset=["key"], ignore_index=True)
+    .drop(columns=["hour"])
+    .assign(
+        reactions=lambda df: df["reactions"].astype(int),
+        comments=lambda df: df["comments"].astype(int),
+        shares=lambda df: df["shares"].astype(int),
+    )
     .assign(
         text=lambda df: sanitize_strings(df["text"]),
         link_title=lambda df: sanitize_strings(df["link_title"]),
         link_content=lambda df: sanitize_strings(df["link_content"]),
     )
     .replace({"link_title": missing, "link_content": missing})
-    .rename(columns={"likes": "reactions"})
-    .assign(
-        reactions=lambda df: df["reactions"].astype(int),
-        comments=lambda df: df["comments"].astype(int),
-        shares=lambda df: df["shares"].astype(int),
-    )
 )
 
 # %% ---------------------------------------------------------------------------------
 
-posts.insert(0, "key", "sotrender@" + posts.pop("fb_post_id"))
-del posts["hour"]
 idx = posts.columns.tolist().index("text") + 1
 for col in ["post_url", "author", "link_content", "link_title"]:
     posts.insert(idx, col, posts.pop(col))
-
-# %% ---------------------------------------------------------------------------------
 
 # %% ---------------------------------------------------------------------------------
 

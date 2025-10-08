@@ -2,6 +2,8 @@ stages:
 
   posts:
     cmd: python scripts/make_posts.py
+    params:
+    - posts
     deps:
     - scripts/make_posts.py
     - data/raw/posts/
