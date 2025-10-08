@@ -86,13 +86,7 @@ gpt:
   sample: &gpt_default_sample
     size_per_group: 2000
     min_words: 5
-    countries:
-    - us
-    - pl
-    - uk
-    - irl
-    - esp
-    - fr
+    countries: []
     political:
       - OTHER
       - POLITICAL

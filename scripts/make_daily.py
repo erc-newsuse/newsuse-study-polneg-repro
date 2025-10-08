@@ -15,26 +15,26 @@ data = DataFrame.from_(
         "key",
         "country",
         "name",
-        "timestamp",
+        "date",
     ],
 )
 
 # %% Compute daily publication counts ----------------------------------------------------
 
-tsmin = data["timestamp"].min()
-tsmax = data["timestamp"].max()
+tmin = data["date"].min()
+tmax = data["date"].max()
 daterange = pd.date_range(
-    datetime(tsmin.year, tsmin.month, 1, tzinfo=UTC),
-    datetime(tsmax.year, tsmax.month + 1, 1, tzinfo=UTC) - timedelta(days=1),
+    datetime(tmin.year, tmin.month, 1, tzinfo=UTC),
+    datetime(tmax.year, tmax.month + 1, 1, tzinfo=UTC) - timedelta(days=1),
     freq="D",
 )
 
 daily = (
-    data[["country", "name", "timestamp"]]
-    .set_index("timestamp")
+    data[["country", "name", "date"]]
+    .set_index("date")
     .groupby(["country", "name"])
     .apply(
-        lambda df: (df.resample("D").size().to_frame("n").rename_axis("timestamp")),
+        lambda df: (df.resample("D").size().to_frame("n").rename_axis("date")),
         include_groups=False,
     )
     .reset_index()
@@ -42,10 +42,8 @@ daily = (
     .groupby(["country", "name"])
     .apply(
         lambda df: (
-            df.set_index("timestamp").reindex(
-                pd.date_range(
-                    df["timestamp"].min(), df["timestamp"].max(), freq="D", name="timestamp"
-                )
+            df.set_index("date").reindex(
+                pd.date_range(df["date"].min(), df["date"].max(), freq="D", name="date")
             )
         )[["n"]],
         include_groups=False,
