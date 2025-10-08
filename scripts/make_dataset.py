@@ -1,7 +1,6 @@
 # %% Setup -------------------------------------------------------------------------------
 
 import numpy as np
-import pandas as pd
 from newsuse.data import DataFrame
 
 from project import config, paths
@@ -19,9 +18,8 @@ quality = (
     .reset_index()
     .rename(columns={"n": "rate"})
 )
-quality.index = pd.Series(quality["country"] + "@" + quality["name"])
 
-keys = ["pid"]
+keys = ["country", "name"]
 cols = ["reactions", "comments", "shares"]
 
 Q = data.groupby(keys)[cols].quantile(q=np.arange(1, 10) / 10)
@@ -47,7 +45,7 @@ labels = DataFrame.from_(paths.labels).drop_duplicates("key", ignore_index=True)
 
 # %% Make dataset ------------------------------------------------------------------------
 
-dataset = data.query(f"~pid.isin({quality.query("bad").pid.tolist()})").merge(
+dataset = data.query(f"~pid.isin({quality.query('bad').pid.tolist()})").merge(
     labels, how="left", on="key"
 )
 

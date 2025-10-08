@@ -20,8 +20,16 @@ sample = (
     .pipe(
         lambda df: df[df["text"].str.strip().str.split().map(len).ge(opts.sample.min_words)]
     )
-    .query(f"country.isin({opts.sample.countries})")
-    .query(f"political.isin({opts.sample.political})")
+    .pipe(
+        lambda df: df
+        if not opts.sample.countries
+        else df[df["country"].isin(opts.sample.countries)]
+    )
+    .pipe(
+        lambda df: df
+        if not opts.sample.political
+        else df[df["political"].isin(opts.sample.political)]
+    )
     .groupby(["country", "political"])
     .sample(n=opts.sample.size_per_group, random_state=opts.sample.seed)
     .reset_index(drop=True)
@@ -55,8 +63,7 @@ body = {
 
 requests = []
 for key, row in sample.set_index("key").iterrows():
-    # text = f"TITLE:\n{row.title}\n\nTEXT:\n{row.text}"
-    text = f"TEXT:\n{row.text}"
+    text = f"TITLE:\n{row.title}\n\nTEXT:\n{row.text}"
     request = {
         "custom_id": key,
         "country": row.country,

@@ -33,17 +33,29 @@ posts = (
     .drop_duplicates(subset=["key"], ignore_index=True)
     .drop(columns=["hour"])
     .assign(
-        reactions=lambda df: df["reactions"].astype(int),
-        comments=lambda df: df["comments"].astype(int),
-        shares=lambda df: df["shares"].astype(int),
-    )
-    .assign(
         text=lambda df: sanitize_strings(df["text"]),
         link_title=lambda df: sanitize_strings(df["link_title"]),
         link_content=lambda df: sanitize_strings(df["link_content"]),
     )
     .replace({"link_title": missing, "link_content": missing})
 )
+
+# %% ---------------------------------------------------------------------------------
+
+intcols = [
+    "reactions",
+    "comments",
+    "shares",
+    "ini",
+    "reactions_ANGRY",
+    "reactions_HAHA",
+    "reactions_LIKE",
+    "reactions_LOVE",
+    "reactions_SAD",
+    "reactions_WOW",
+]
+for col in intcols:
+    posts[col] = posts[col].astype(int)
 
 # %% ---------------------------------------------------------------------------------
 

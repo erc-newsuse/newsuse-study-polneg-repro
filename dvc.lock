@@ -195,8 +195,8 @@ stages:
     deps:
     - path: data/proc/posts.parquet
       hash: md5
-      md5: 5813476888358703336265f65e6ed4cd
-      size: 287714578
+      md5: ff097d8c390693d6eaeef23f221886f5
+      size: 193295963
     - path: scripts/make_daily.py
       hash: md5
       md5: d6a33610670f7c935232f20651f4ecf3
@@ -207,8 +207,8 @@ stages:
     outs:
     - path: data/proc/daily.parquet
       hash: md5
-      md5: a20c755752a6c2fe1920e335e317fded
-      size: 374935
+      md5: 52e61e545d24fe48cf380a61f0acc656
+      size: 145913
   dataset:
     cmd: python scripts/make_dataset.py
     deps:
@@ -383,14 +383,19 @@ stages:
       nfiles: 6
     - path: scripts/make_posts.py
       hash: md5
-      md5: cdaf0d8ec75e36f18443377817b96990
-      size: 2263
+      md5: ff2ab2b30288e3fae2174c716b25d0d0
+      size: 2527
+    params:
+      params.yaml:
+        posts:
+          start_date: '2020-01-01'
+          end_date: '2024-04-01'
     outs:
     - path: data/proc/posts-text.parquet
       hash: md5
-      md5: fc1da515af5a41bb1a8f315e4096929b
-      size: 641896550
+      md5: 318a64a25d8890a8b9b1ec87f2171053
+      size: 476159164
     - path: data/proc/posts.parquet
       hash: md5
-      md5: 5813476888358703336265f65e6ed4cd
-      size: 287714578
+      md5: ff097d8c390693d6eaeef23f221886f5
+      size: 193295963
