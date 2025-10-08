@@ -212,22 +212,18 @@ stages:
   dataset:
     cmd: python scripts/make_dataset.py
     deps:
-    - path: data/proc/cls.parquet
-      hash: md5
-      md5: 97e245055c57000f0e841dc7803fdf41
-      size: 118261607
     - path: data/proc/daily.parquet
       hash: md5
-      md5: 447d8ac136cb67ff2dc22da5731c6f9c
-      size: 247136
+      md5: 52e61e545d24fe48cf380a61f0acc656
+      size: 145913
     - path: data/proc/posts.parquet
       hash: md5
-      md5: 5d0a18be409dbb6fa851c0077864029e
-      size: 271443044
+      md5: ff097d8c390693d6eaeef23f221886f5
+      size: 193295963
     - path: scripts/make_dataset.py
       hash: md5
-      md5: 4ccf97290eb3ed73f0c9994a6ba0186f
-      size: 2173
+      md5: bbd51108a2b1a6116500a1fbb9d9bc94
+      size: 1813
     params:
       params.yaml:
         dataset.max_decile_difference: 10.0
@@ -235,12 +231,12 @@ stages:
     outs:
     - path: data/proc/dataset.parquet
       hash: md5
-      md5: ced69356e7ad17799fda0a660e732b2b
-      size: 239708427
+      md5: 6f1273617fc32339260f7e00a6b2c35b
+      size: 189805692
     - path: data/proc/quality.parquet
       hash: md5
-      md5: 55e1f10fc2a6905e2ebaa2974936ffd9
-      size: 10981
+      md5: 1c45a8891fa1d5fcb6a2520944f14e39
+      size: 7222
   glmm@negativity:
     cmd: Rscript scripts/glmm_negativity.R
     deps:

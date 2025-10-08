@@ -13,20 +13,6 @@ stages:
     - data/proc/posts-text.parquet:
         persist: true
 
-  # data:
-  #   cmd: python scripts/make_data.py
-  #   deps:
-  #   - scripts/make_data.py
-  #   - data/raw/posts.parquet
-  #   - data/raw/posts-text.parquet
-  #   params:
-  #   - dataset.usecols
-  #   outs:
-  #   - data/proc/posts.parquet:
-  #       persist: true
-  #   - data/proc/posts-text.parquet:
-  #       persist: true
-
   daily-counts:
     cmd: python scripts/make_daily.py
     deps:
@@ -44,7 +30,6 @@ stages:
     - scripts/make_dataset.py
     - data/proc/posts.parquet
     - data/proc/daily.parquet
-    - data/proc/cls.parquet
     params:
     - dataset.min_posts_per_day
     - dataset.max_decile_difference
