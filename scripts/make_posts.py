@@ -31,6 +31,12 @@ posts = (
         link_content=lambda df: sanitize_strings(df["link_content"]),
     )
     .replace({"link_title": missing, "link_content": missing})
+    .rename(columns={"likes": "reactions"})
+    .assign(
+        reactions=lambda df: df["reactions"].astype(int),
+        comments=lambda df: df["comments"].astype(int),
+        shares=lambda df: df["shares"].astype(int),
+    )
 )
 
 # %% ---------------------------------------------------------------------------------

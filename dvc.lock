@@ -195,8 +195,8 @@ stages:
     deps:
     - path: data/proc/posts.parquet
       hash: md5
-      md5: e2bdc346634b17aaf92feb2795a96e37
-      size: 287829916
+      md5: 5813476888358703336265f65e6ed4cd
+      size: 287714578
     - path: scripts/make_daily.py
       hash: md5
       md5: d6a33610670f7c935232f20651f4ecf3
@@ -383,14 +383,14 @@ stages:
       nfiles: 6
     - path: scripts/make_posts.py
       hash: md5
-      md5: 7d952c8dc7d4e4ccfbf4306aec520de2
-      size: 2034
+      md5: cdaf0d8ec75e36f18443377817b96990
+      size: 2263
     outs:
     - path: data/proc/posts-text.parquet
       hash: md5
-      md5: 7ca962b1817b9642169b3d42faca591a
-      size: 641896606
+      md5: fc1da515af5a41bb1a8f315e4096929b
+      size: 641896550
     - path: data/proc/posts.parquet
       hash: md5
-      md5: e2bdc346634b17aaf92feb2795a96e37
-      size: 287829916
+      md5: 5813476888358703336265f65e6ed4cd
+      size: 287714578
