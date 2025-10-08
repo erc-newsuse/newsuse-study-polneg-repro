@@ -1,27 +1,26 @@
 paths:
-  make!:           "newsuse.config:Paths"
-  data:            "data"
-  raw:             "@data/raw"
-  proc:            "@data/proc"
-  posts:           "@proc/posts.parquet"
-  text:            "@proc/posts-text.parquet"
-  dataset:         "@proc/dataset.parquet"
-  daily:           "@proc/daily.parquet"
-  quality:         "@proc/quality.parquet"
-  labels:          "@proc/cls.parquet"
-  sentiment:       "@proc/sentiment.parquet"
-  articles_sample: "@proc/articles-sample.parquet"
-  predictions:     "@proc/predictions.parquet"
-  followers:       "@raw/followers.parquet"
-  ml:              "ml"
-  models:          "models"
-  glmm:            "@models/glmm"
-  figures:         "figures"
-  mldata:          "@data/ml"
-  negativity:      "@mldata/negativity"
-  political:       "@mldata/political"
-  prompts:         "@ml/prompts"
-  gpt:             "@proc/gpt/"
+  make!:            "newsuse.config:Paths"
+  data:             "data"
+  raw:              "@data/raw"
+  proc:             "@data/proc"
+  posts:            "@proc/posts.parquet"
+  text:             "@proc/posts-text.parquet"
+  dataset:          "@proc/dataset.parquet"
+  daily:            "@proc/daily.parquet"
+  quality:          "@proc/quality.parquet"
+  cls_political:    "@proc/cls-political.parquet"
+  labels:           "@proc/cls.parquet"
+  sentiment:        "@proc/sentiment.parquet"
+  articles_sample:  "@proc/articles-sample.parquet"
+  predictions:      "@proc/predictions.parquet"
+  followers:        "@raw/followers.parquet"
+  ml:               "ml"
+  models:           "models"
+  glmm:             "@models/glmm"
+  figures:          "figures"
+  mldata:           "@data/ml"
+  prompts:          "@ml/prompts"
+  gpt:              "@proc/gpt/"
 
 countries:
   order:
@@ -74,6 +73,12 @@ dataset:
   - post_url
   min_posts_per_day: 2
   max_decile_difference: 10.0
+
+classification:
+  political:
+    model:
+      source: huggingface
+      name: sztal/erc-newsuse-political
 
 articles_sample:
   groupsize: 10

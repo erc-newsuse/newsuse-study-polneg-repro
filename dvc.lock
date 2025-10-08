@@ -395,3 +395,23 @@ stages:
       hash: md5
       md5: ff097d8c390693d6eaeef23f221886f5
       size: 193295963
+  cls-political:
+    cmd: python scripts/make_cls_political.py
+    deps:
+    - path: data/proc/posts-text.parquet
+      hash: md5
+      md5: 318a64a25d8890a8b9b1ec87f2171053
+      size: 476159164
+    - path: data/proc/posts.parquet
+      hash: md5
+      md5: ff097d8c390693d6eaeef23f221886f5
+      size: 193295963
+    - path: scripts/make_cls_political.py
+      hash: md5
+      md5: 6b6e7e3ebf29da470477be502b8c2cfc
+      size: 1640
+    outs:
+    - path: data/proc/cls-political.parquet
+      hash: md5
+      md5: f2af3cb4045617a0e2f40f9f8e0ac5d3
+      size: 39615759

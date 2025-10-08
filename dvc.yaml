@@ -39,6 +39,16 @@ stages:
     - data/proc/quality.parquet:
         persist: true
 
+  cls-political:
+    cmd: python scripts/make_cls_political.py
+    deps:
+    - scripts/make_cls_political.py
+    - data/proc/posts.parquet
+    - data/proc/posts-text.parquet
+    outs:
+    - data/proc/cls-political.parquet:
+        persist: true
+
   glmm:
     foreach:
     - negativity
