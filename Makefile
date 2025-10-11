@@ -25,6 +25,9 @@ structure:
 	mkdir -p data/ml
 	mkdir -p data/remote
 	mkdir -p scripts
+
+
+dvc:
 	dvc init --force
 	dvc remote add  --default polneg ${PWD}/data/remote --local --force
 	dvc config core.autostage true
@@ -34,7 +37,7 @@ structure:
 	@if [ "`ls data/proc`" ]; then dvc add ml/datasets/*; fi
 	dvc commit
 
-init: structure packages
+init: structure packages dvc
 
 clean: clean-build clean-misc
 
