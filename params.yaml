@@ -178,7 +178,7 @@ plotting:
 
 ml:
   inference:
-    batch_size: 32
+    batch_size: ${eval:${oc.env:NEWSUSE_ML_INFERENCE_BATCH_SIZE,32}}
   tokenize:
     field: text
     padding: max_length

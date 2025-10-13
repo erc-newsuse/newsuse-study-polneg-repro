@@ -9,8 +9,9 @@ from .__about__ import __version__
 
 __all__ = ("__version__", "config", "paths")
 
+
+load_dotenv()
+
 root = Path(__file__).parent.parent
 config = Config(dvc.api.params_show()).resolve()
 paths = config.pop("paths")(root=root)
-
-load_dotenv()
