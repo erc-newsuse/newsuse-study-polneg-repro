@@ -408,10 +408,10 @@ stages:
       size: 193295963
     - path: scripts/make_cls_political.py
       hash: md5
-      md5: 6b6e7e3ebf29da470477be502b8c2cfc
-      size: 1640
+      md5: 35bb581ab816ede09134b19b29281b3b
+      size: 1628
     outs:
     - path: data/proc/cls-political.parquet
       hash: md5
-      md5: f2af3cb4045617a0e2f40f9f8e0ac5d3
-      size: 39615759
+      md5: 8c3ee58f622ae2d0403d5bfd94f0fbd6
+      size: 63871954
