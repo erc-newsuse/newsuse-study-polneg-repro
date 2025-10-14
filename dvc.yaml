@@ -1,11 +1,11 @@
 stages:
 
   posts:
-    cmd: python scripts/make_posts.py
+    cmd: python stages/make_posts.py
     params:
     - posts
     deps:
-    - scripts/make_posts.py
+    - stages/make_posts.py
     - data/raw/posts/
     outs:
     - data/proc/posts.parquet:
@@ -14,9 +14,9 @@ stages:
         persist: true
 
   daily-counts:
-    cmd: python scripts/make_daily.py
+    cmd: python stages/make_daily.py
     deps:
-    - scripts/make_daily.py
+    - stages/make_daily.py
     - data/proc/posts.parquet
     params:
     - dataset.min_posts_per_day
@@ -25,9 +25,9 @@ stages:
         persist: true
 
   dataset:
-    cmd: python scripts/make_dataset.py
+    cmd: python stages/make_dataset.py
     deps:
-    - scripts/make_dataset.py
+    - stages/make_dataset.py
     - data/proc/posts.parquet
     - data/proc/daily.parquet
     params:
@@ -40,9 +40,9 @@ stages:
         persist: true
 
   cls-political:
-    cmd: python scripts/make_cls_political.py
+    cmd: python stages/make_cls_political.py
     deps:
-    - scripts/make_cls_political.py
+    - stages/make_cls_political.py
     - data/proc/posts.parquet
     - data/proc/posts-text.parquet
     outs:
@@ -56,27 +56,27 @@ stages:
     - comments
     - shares
     do:
-      cmd: Rscript scripts/glmm_${item}.R
+      cmd: Rscript stages/glmm_${item}.R
       deps:
-      - scripts/glmm_${item}.R
+      - stages/glmm_${item}.R
       - data/proc/dataset.parquet
       outs:
       - models/glmm/${item}:
           persist: true
 
   articles-sample:
-    cmd: python scripts/make_articles_sample.py
+    cmd: python stages/make_articles_sample.py
     deps:
-    - scripts/make_articles_sample.py
+    - stages/make_articles_sample.py
     - data/raw/articles-sample.xlsx
     outs:
     - data/proc/articles-sample.parquet:
         persist: true
 
   # predictions:
-  #   cmd: Rscript scripts/make_predictions.R
+  #   cmd: Rscript stages/make_predictions.R
   #   deps:
-  #   - scripts/make_predictions.R
+  #   - stages/make_predictions.R
   #   - data/proc/dataset.parquet
   #   - models/glmm/reactions
   #   - models/glmm/comments
@@ -90,9 +90,9 @@ stages:
   #   - political
   #   - negativity
   #   do:
-  #     cmd: python scripts/ml/make_dataset_${item}.py
+  #     cmd: python stages/ml/make_dataset_${item}.py
   #     deps:
-  #     - scripts/ml/make_dataset_${item}.py
+  #     - stages/ml/make_dataset_${item}.py
   #     - data/ml/${item}
   #     params:
   #     - annotations.${item}
@@ -105,10 +105,10 @@ stages:
   #   - political
   #   - negativity
   #   do:
-  #     cmd: python scripts/train_${item}.py
+  #     cmd: python stages/train_${item}.py
   #     deps:
   #     - ml/datasets/${item}
-  #     - scripts/train_${item}.py
+  #     - stages/train_${item}.py
   #     outs:
   #     - ml/classifiers/${item}:
   #         persist: true
@@ -118,9 +118,9 @@ stages:
   #     - political
   #     - negativity
   #   do:
-  #     cmd: python scripts/make_labels.py --model='"${item}"'
+  #     cmd: python stages/make_labels.py --model='"${item}"'
   #     deps:
-  #     - scripts/make_labels.py
+  #     - stages/make_labels.py
   #     - ml/classifiers/${item}
   #     - data/proc/posts-text.parquet
   #     outs:
@@ -128,9 +128,9 @@ stages:
   #         persist: true
 
   # merge-labels:
-  #   cmd: python scripts/merge_labels.py
+  #   cmd: python stages/merge_labels.py
   #   deps:
-  #   - scripts/merge_labels.py
+  #   - stages/merge_labels.py
   #   - data/proc/cls-political.parquet
   #   - data/proc/cls-negativity.parquet
   #   outs:
