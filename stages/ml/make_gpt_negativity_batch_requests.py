@@ -15,21 +15,15 @@ opts = config.gpt.negativity
 # %% ---------------------------------------------------------------------------------
 
 sample = (
-    DataFrame.from_(paths.dataset, columns=["key", "country", "political"])
-    .merge(DataFrame.from_(paths.text), on="key", how="left")
-    .pipe(
-        lambda df: df[df["text"].str.strip().str.split().map(len).ge(opts.sample.min_words)]
+    DataFrame.from_(paths.posts, columns=["key", "country"])
+    .merge(DataFrame.from_(paths.cls_political, columns=["key", "political"]))
+    .merge(DataFrame.from_(paths.text))
+    .query("text.notnull() | title.notnull()")
+    .query(
+        "text.fillna('').str.len() + title.fillna('').str.len() "
+        f">= {opts.sample.min_words}"
     )
-    .pipe(
-        lambda df: df
-        if not opts.sample.countries
-        else df[df["country"].isin(opts.sample.countries)]
-    )
-    .pipe(
-        lambda df: df
-        if not opts.sample.political
-        else df[df["political"].isin(opts.sample.political)]
-    )
+    .reset_index(drop=True)
     .groupby(["country", "political"])
     .sample(n=opts.sample.size_per_group, random_state=opts.sample.seed)
     .reset_index(drop=True)
