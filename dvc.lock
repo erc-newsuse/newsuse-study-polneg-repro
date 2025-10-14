@@ -191,13 +191,13 @@ stages:
       md5: 97e245055c57000f0e841dc7803fdf41
       size: 118261607
   daily-counts:
-    cmd: python scripts/make_daily.py
+    cmd: python stages/make_daily.py
     deps:
     - path: data/proc/posts.parquet
       hash: md5
-      md5: ff097d8c390693d6eaeef23f221886f5
-      size: 193295963
-    - path: scripts/make_daily.py
+      md5: 21b7ad8a997c29c2518337d5caa3057d
+      size: 269870934
+    - path: stages/make_daily.py
       hash: md5
       md5: d6a33610670f7c935232f20651f4ecf3
       size: 1623
@@ -210,7 +210,7 @@ stages:
       md5: 52e61e545d24fe48cf380a61f0acc656
       size: 145913
   dataset:
-    cmd: python scripts/make_dataset.py
+    cmd: python stages/make_dataset.py
     deps:
     - path: data/proc/daily.parquet
       hash: md5
@@ -218,9 +218,9 @@ stages:
       size: 145913
     - path: data/proc/posts.parquet
       hash: md5
-      md5: ff097d8c390693d6eaeef23f221886f5
-      size: 193295963
-    - path: scripts/make_dataset.py
+      md5: 21b7ad8a997c29c2518337d5caa3057d
+      size: 269870934
+    - path: stages/make_dataset.py
       hash: md5
       md5: bbd51108a2b1a6116500a1fbb9d9bc94
       size: 1813
@@ -231,8 +231,8 @@ stages:
     outs:
     - path: data/proc/dataset.parquet
       hash: md5
-      md5: 6f1273617fc32339260f7e00a6b2c35b
-      size: 189805692
+      md5: 515c7bf14a2189efdb76f941bf339acd
+      size: 265347745
     - path: data/proc/quality.parquet
       hash: md5
       md5: 1c45a8891fa1d5fcb6a2520944f14e39
@@ -370,17 +370,17 @@ stages:
       size: 472191537
       nfiles: 1
   posts:
-    cmd: python scripts/make_posts.py
+    cmd: python stages/make_posts.py
     deps:
     - path: data/raw/posts/
       hash: md5
       md5: 7fd19c9db903de2885ce7570019a723a.dir
       size: 904062817
       nfiles: 6
-    - path: scripts/make_posts.py
+    - path: stages/make_posts.py
       hash: md5
-      md5: ff2ab2b30288e3fae2174c716b25d0d0
-      size: 2527
+      md5: 8d375ab91127078684c6717c929b7609
+      size: 2733
     params:
       params.yaml:
         posts:
@@ -389,29 +389,29 @@ stages:
     outs:
     - path: data/proc/posts-text.parquet
       hash: md5
-      md5: 318a64a25d8890a8b9b1ec87f2171053
-      size: 476159164
+      md5: ac82d44c49eec08b7e35c21343a60a6c
+      size: 552734108
     - path: data/proc/posts.parquet
       hash: md5
-      md5: ff097d8c390693d6eaeef23f221886f5
-      size: 193295963
+      md5: 21b7ad8a997c29c2518337d5caa3057d
+      size: 269870934
   cls-political:
-    cmd: python scripts/make_cls_political.py
+    cmd: python stages/make_cls_political.py
     deps:
     - path: data/proc/posts-text.parquet
       hash: md5
-      md5: 318a64a25d8890a8b9b1ec87f2171053
-      size: 476159164
+      md5: ac82d44c49eec08b7e35c21343a60a6c
+      size: 552734108
     - path: data/proc/posts.parquet
       hash: md5
-      md5: ff097d8c390693d6eaeef23f221886f5
-      size: 193295963
-    - path: scripts/make_cls_political.py
+      md5: 21b7ad8a997c29c2518337d5caa3057d
+      size: 269870934
+    - path: stages/make_cls_political.py
       hash: md5
       md5: 35bb581ab816ede09134b19b29281b3b
       size: 1628
     outs:
     - path: data/proc/cls-political.parquet
       hash: md5
-      md5: 8c3ee58f622ae2d0403d5bfd94f0fbd6
-      size: 63871954
+      md5: b5cb11b590ee40238d76156289cbc18d
+      size: 138848517

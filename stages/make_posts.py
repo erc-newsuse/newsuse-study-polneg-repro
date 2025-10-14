@@ -1,5 +1,6 @@
 # %% ---------------------------------------------------------------------------------
 
+import joblib
 import pandas as pd
 from newsuse.data import DataFrame, strings
 from tqdm.auto import tqdm
@@ -9,11 +10,6 @@ from project import config, paths
 # %% Make posts ----------------------------------------------------------------------
 
 missing = {"0": pd.NA, "": pd.NA}
-
-
-def sanitize_strings(s: pd.Series) -> pd.Series:
-    return pd.Series([t if pd.isnull(t) else strings.sanitize(t) for t in tqdm(s)])
-
 
 posts = (
     pd.concat(
@@ -26,19 +22,30 @@ posts = (
     .reset_index(drop=True)
     .rename(columns={"fb_post_id": "key", "likes": "reactions"})
     .assign(
-        key=lambda df: "sotrender@" + df["key"],
+        key=lambda df: "sotrender@" + df["key"].map(joblib.hash),
         date=lambda df: pd.to_datetime(df["date"]),
     )
     .query(f"date.ge('{config.posts.start_date}') & date.le('{config.posts.end_date}')")
     .drop_duplicates(subset=["key"], ignore_index=True)
     .drop(columns=["hour"])
-    .assign(
-        text=lambda df: sanitize_strings(df["text"]),
-        link_title=lambda df: sanitize_strings(df["link_title"]),
-        link_content=lambda df: sanitize_strings(df["link_content"]),
-    )
-    .replace({"link_title": missing, "link_content": missing})
+    .set_index("key")
+    .reset_index()
 )
+
+assert posts.key.is_unique, "Post keys are not unique."
+
+# %% ---------------------------------------------------------------------------------
+
+
+def sanitize_strings(s: pd.Series) -> pd.Series:
+    return pd.Series([t if pd.isnull(t) else strings.sanitize(t) for t in tqdm(s)])
+
+
+posts = posts.assign(
+    text=lambda df: sanitize_strings(df["text"]),
+    link_title=lambda df: sanitize_strings(df["link_title"]),
+    link_content=lambda df: sanitize_strings(df["link_content"]),
+).replace({"link_title": missing, "link_content": missing})
 
 # %% ---------------------------------------------------------------------------------
 
