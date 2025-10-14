@@ -415,3 +415,85 @@ stages:
       hash: md5
       md5: b5cb11b590ee40238d76156289cbc18d
       size: 138848517
+  gpt-batch-requests:
+    cmd: python stages/ml/make_gpt_negativity_batch_requests.py
+    deps:
+    - path: data/proc/cls-political.parquet
+      hash: md5
+      md5: b5cb11b590ee40238d76156289cbc18d
+      size: 138848517
+    - path: data/proc/posts-text.parquet
+      hash: md5
+      md5: ac82d44c49eec08b7e35c21343a60a6c
+      size: 552734108
+    - path: data/proc/posts.parquet
+      hash: md5
+      md5: 21b7ad8a997c29c2518337d5caa3057d
+      size: 269870934
+    - path: stages/ml/make_gpt_negativity_batch_requests.py
+      hash: md5
+      md5: 7ea3ec6e1ceca1d57c06007fa4bcb1ec
+      size: 2378
+    params:
+      params.yaml:
+        gpt.negativity:
+          prompt: negativity.md
+          model: gpt-4.1-mini
+          header:
+            method: POST
+            url: /v1/responses
+          batch_size: 1000
+          configurations:
+            gpt-4.1-mini:
+              temperature: 0.0
+            gpt-5: {}
+          sample:
+            size_per_group: 50
+            min_words: 5
+            countries: []
+            political:
+            - OTHER
+            - POLITICAL
+            seed: 432917
+    outs:
+    - path: data/proc/gpt/negativity-requests.jsonl.gz
+      hash: md5
+      md5: 9c9370e5e01c55b01ded504f836e6ab7
+      size: 119765
+  gpt-batch-jobs:
+    cmd: python stages/ml/make_gpt_negativity_batch_jobs.py
+    deps:
+    - path: data/proc/gpt/negativity-requests.jsonl.gz
+      hash: md5
+      md5: 9c9370e5e01c55b01ded504f836e6ab7
+      size: 119765
+    - path: stages/ml/make_gpt_negativity_batch_jobs.py
+      hash: md5
+      md5: 3fd47b56ecd26c95aaf0eb212c0451da
+      size: 3895
+    params:
+      params.yaml:
+        gpt.negativity:
+          prompt: negativity.md
+          model: gpt-4.1-mini
+          header:
+            method: POST
+            url: /v1/responses
+          batch_size: 1000
+          configurations:
+            gpt-4.1-mini:
+              temperature: 0.0
+            gpt-5: {}
+          sample:
+            size_per_group: 50
+            min_words: 5
+            countries: []
+            political:
+            - OTHER
+            - POLITICAL
+            seed: 432917
+    outs:
+    - path: data/proc/gpt/negativity-jobs.jsonl.gz
+      hash: md5
+      md5: c497a1564e5fe4c798da2a1c8e641411
+      size: 379

@@ -1,6 +1,10 @@
 # DVC tracked
 /figures
 
+# Ad-hoc files
+/*.xlsx
+/*.parquet
+
 # Root level
 .env
 .vscode

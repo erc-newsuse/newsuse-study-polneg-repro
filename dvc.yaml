@@ -49,6 +49,30 @@ stages:
     - data/proc/cls-political.parquet:
         persist: true
 
+  gpt-batch-requests:
+    cmd: python stages/ml/make_gpt_negativity_batch_requests.py
+    params:
+    - gpt.negativity
+    deps:
+    - stages/ml/make_gpt_negativity_batch_requests.py
+    - data/proc/posts.parquet
+    - data/proc/posts-text.parquet
+    - data/proc/cls-political.parquet
+    outs:
+    - data/proc/gpt/negativity-requests.jsonl.gz:
+        persist: true
+
+  gpt-batch-jobs:
+    cmd: python stages/ml/make_gpt_negativity_batch_jobs.py
+    params:
+    - gpt.negativity
+    deps:
+    - stages/ml/make_gpt_negativity_batch_jobs.py
+    - data/proc/gpt/negativity-requests.jsonl.gz
+    outs:
+    - data/proc/gpt/negativity-jobs.jsonl.gz:
+        persist: true
+
   glmm:
     foreach:
     - negativity
