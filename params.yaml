@@ -91,7 +91,11 @@ gpt:
   configurations: &gpt_default_configurations
     gpt-4.1-mini:
       temperature: 0.0
-    gpt-5: {}
+    gpt-5-nano:
+      text:
+        verbosity: low
+      reasoning:
+        effort: minimal
   sample: &gpt_default_sample
     size_per_group: 2000
     min_words: 5
@@ -101,7 +105,7 @@ gpt:
       - POLITICAL
   negativity:
     prompt: negativity.md
-    model: gpt-4.1-mini
+    model: gpt-5-nano
     header:
       <<: *gpt_default_header
     batch_size: *gpt_default_batch_size

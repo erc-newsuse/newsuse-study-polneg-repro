@@ -458,14 +458,14 @@ stages:
     outs:
     - path: data/proc/gpt/negativity-requests.jsonl.gz
       hash: md5
-      md5: 9c9370e5e01c55b01ded504f836e6ab7
+      md5: c171962e48c04c5a69de6eef62bff541
       size: 119765
   gpt-batch-jobs:
     cmd: python stages/ml/make_gpt_negativity_batch_jobs.py
     deps:
     - path: data/proc/gpt/negativity-requests.jsonl.gz
       hash: md5
-      md5: 9c9370e5e01c55b01ded504f836e6ab7
+      md5: c171962e48c04c5a69de6eef62bff541
       size: 119765
     - path: stages/ml/make_gpt_negativity_batch_jobs.py
       hash: md5
@@ -495,5 +495,5 @@ stages:
     outs:
     - path: data/proc/gpt/negativity-jobs.jsonl.gz
       hash: md5
-      md5: c497a1564e5fe4c798da2a1c8e641411
+      md5: 11fb6ef3f9a4761dc3a97b08fc1c387e
       size: 379

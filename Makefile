@@ -24,7 +24,7 @@ structure:
 	mkdir -p data/proc
 	mkdir -p data/ml
 	mkdir -p data/remote
-	mkdir -p scripts
+	mkdir -p stages
 
 
 dvc:

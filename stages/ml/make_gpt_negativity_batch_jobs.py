@@ -59,6 +59,27 @@ client = OpenAI()
 
 # %% ---------------------------------------------------------------------------------
 
+requests_stats = (
+    requests.groupby(["country"])
+    .size()
+    .reset_index(name="n_requests")
+    .to_dict(orient="records")
+)
+
+msg = "\nThe following jobs will be created:\n" + json.dumps(requests_stats, indent=4)
+print(msg)
+answer = input("Do you want to proceed? (y/n): ").strip().lower()
+if answer == "n":
+    print("Exiting without creating batch jobs.")
+    sys.exit(0)
+elif answer == "y":
+    print("Proceeding to create batch jobs...")
+else:
+    errmsg = f"Unexpected answer '{answer}', should be 'y' or 'n'"
+    raise ValueError(errmsg)
+
+# %% ---------------------------------------------------------------------------------
+
 header = opts.header
 batch_jobs = {}
 
