@@ -21,6 +21,7 @@ paths:
   mldata:           "@data/ml"
   prompts:          "@ml/prompts"
   gpt:              "@proc/gpt/"
+  annotations:      "annotations"
 
 countries:
   order:

@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 __all__ = ("NegativityClassification",)
 
-Score = Literal["negative", "neutral", "positive"]
+Score = Literal[-1, 0, 1]
 
 
 class NegativityClassification(BaseModel):

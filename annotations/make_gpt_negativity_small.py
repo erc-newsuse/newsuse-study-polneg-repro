@@ -81,7 +81,7 @@ workbook = sample.merge(output).merge(
 )
 
 annotators = ("Magdalena", "Erin", "Dominik", "Szymon")
-with pd.ExcelWriter(paths.root / "gpt-small.xlsx") as writer:
+with pd.ExcelWriter(paths.annotations / "gpt-small.xlsx") as writer:
     for annotator in annotators:
         workbook.to_(writer, sheet_name=annotator, index=False)
 
