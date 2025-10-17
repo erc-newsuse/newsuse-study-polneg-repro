@@ -77,7 +77,7 @@ majority.to_(paths.annotations / "majority.xlsx", index=False)
 # %% ---------------------------------------------------------------------------------
 
 labels = (
-    DataFrame.from_(paths.annotations / "gpt-small.xlsx")
+    DataFrame.from_(paths.annotations / "gpt.xlsx")
     .pipe(
         lambda df: df.drop(
             columns=[c for c in ["title", "text", "post_url"] if c in df.columns]
