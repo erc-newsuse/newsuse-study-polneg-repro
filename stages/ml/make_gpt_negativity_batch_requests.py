@@ -1,6 +1,7 @@
 # %% ---------------------------------------------------------------------------------
 
 
+import pandas as pd
 from newsuse.data import DataFrame
 from openai.lib._pydantic import to_strict_json_schema
 
@@ -11,6 +12,10 @@ COMPLETED = "completed"
 IN_PROGRESS = "in_progress"
 
 opts = config.gpt.negativity
+
+# %% ---------------------------------------------------------------------------------
+
+subsample_annotated = DataFrame.from_(paths.raw / "gpt-annotated-subsample.parquet")
 
 # %% ---------------------------------------------------------------------------------
 
@@ -27,6 +32,14 @@ sample = (
     .groupby(["country", "political"])
     .sample(n=opts.sample.size_per_group, random_state=opts.sample.seed)
     .reset_index(drop=True)
+)
+
+# %% ---------------------------------------------------------------------------------
+
+sample = (
+    pd.concat([sample, subsample_annotated])
+    .drop_duplicates(subset=["key"])
+    .sort_values(["country"], ignore_index=True)
 )
 
 # %% ---------------------------------------------------------------------------------

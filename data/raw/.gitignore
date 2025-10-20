@@ -3,3 +3,4 @@
 /posts-text.parquet
 /followers.parquet
 /posts
+/gpt-annotated-subsample.parquet
