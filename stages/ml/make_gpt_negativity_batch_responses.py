@@ -24,8 +24,8 @@ with gzip.open(paths.gpt / f"{DOMAIN}-jobs.jsonl.gz", "rt") as fh:
 
 output = []
 
-if (output_path := paths.gpt / f"{DOMAIN}-output.jsonl.gz").exists():
-    existing = DataFrame.from_(output_path)
+if (responses_path := paths.gpt / f"{DOMAIN}-responses.jsonl.gz").exists():
+    existing = DataFrame.from_(responses_path)
     output.extend(existing.to_dict(orient="records"))
 
 
@@ -55,12 +55,14 @@ output = (
 
 if output.error.notnull().any():
     mask = output.error.notnull()
-    msg = f"{mask.sum()} requests resulted in errors, " f"see output file '{output_path}'"
+    msg = (
+        f"{mask.sum()} requests resulted in errors, " f"see output file '{responses_path}'"
+    )
     raise RuntimeError(msg)
 
 # %% ---------------------------------------------------------------------------------
 
-output.to_(output_path)
+output.to_(responses_path)
 
 # %%  --------------------------------------------------------------------------------
 

@@ -73,6 +73,15 @@ stages:
     - data/proc/gpt/negativity-jobs.jsonl.gz:
         persist: true
 
+  gpt-batch-responses:
+    cmd: python stages/ml/make_gpt_negativity_batch_responses.py
+    deps:
+    - stages/ml/make_gpt_negativity_batch_responses.py
+    - data/proc/gpt/negativity-jobs.jsonl.gz
+    outs:
+    - data/proc/gpt/negativity-responses.jsonl.gz:
+        persist: true
+
   glmm:
     foreach:
     - negativity

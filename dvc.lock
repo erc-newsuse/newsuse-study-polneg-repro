@@ -452,7 +452,7 @@ stages:
               reasoning:
                 effort: minimal
           sample:
-            size_per_group: 2500
+            size_per_group: 2000
             min_words: 5
             countries: []
             political:
@@ -462,18 +462,18 @@ stages:
     outs:
     - path: data/proc/gpt/negativity-requests.jsonl.gz
       hash: md5
-      md5: b232aa429e64fd7dc123bce5a377a5c1
-      size: 5965398
+      md5: b4ea9deabc796843d4b6762ca83dd1d2
+      size: 4794140
   gpt-batch-jobs:
     cmd: python stages/ml/make_gpt_negativity_batch_jobs.py
     deps:
     - path: data/proc/gpt/negativity-requests.jsonl.gz
       hash: md5
-      md5: b232aa429e64fd7dc123bce5a377a5c1
-      size: 5965398
+      md5: b4ea9deabc796843d4b6762ca83dd1d2
+      size: 4794140
     - path: stages/ml/make_gpt_negativity_batch_jobs.py
       hash: md5
-      md5: 7eae257c424378769551bd85c2414a46
+      md5: b3ef7260866271e735f49b99981bf0a8
       size: 4710
     params:
       params.yaml:
@@ -493,7 +493,7 @@ stages:
               reasoning:
                 effort: minimal
           sample:
-            size_per_group: 2500
+            size_per_group: 2000
             min_words: 5
             countries: []
             political:
@@ -503,5 +503,21 @@ stages:
     outs:
     - path: data/proc/gpt/negativity-jobs.jsonl.gz
       hash: md5
-      md5: 11fb6ef3f9a4761dc3a97b08fc1c387e
-      size: 379
+      md5: 84024b0ba445611a067f5725860435ee
+      size: 613
+  gpt-batch-responses:
+    cmd: python stages/ml/make_gpt_negativity_batch_responses.py
+    deps:
+    - path: data/proc/gpt/negativity-jobs.jsonl.gz
+      hash: md5
+      md5: 84024b0ba445611a067f5725860435ee
+      size: 613
+    - path: stages/ml/make_gpt_negativity_batch_responses.py
+      hash: md5
+      md5: 5dcd26a09384039e9c622e6fbb0b405c
+      size: 2617
+    outs:
+    - path: data/proc/gpt/negativity-responses.jsonl.gz
+      hash: md5
+      md5: 94226c2a12b50a33b83a9f98b328a3e3
+      size: 4191718
