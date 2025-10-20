@@ -98,7 +98,7 @@ gpt:
       reasoning:
         effort: minimal
   sample: &gpt_default_sample
-    size_per_group: 2500
+    size_per_group: 2000
     min_words: 5
     countries: []
     political:

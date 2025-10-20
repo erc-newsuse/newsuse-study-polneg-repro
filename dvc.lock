@@ -469,12 +469,12 @@ stages:
     deps:
     - path: data/proc/gpt/negativity-requests.jsonl.gz
       hash: md5
-      md5: c171962e48c04c5a69de6eef62bff541
-      size: 119765
+      md5: b232aa429e64fd7dc123bce5a377a5c1
+      size: 5965398
     - path: stages/ml/make_gpt_negativity_batch_jobs.py
       hash: md5
-      md5: 3fd47b56ecd26c95aaf0eb212c0451da
-      size: 3895
+      md5: 7eae257c424378769551bd85c2414a46
+      size: 4710
     params:
       params.yaml:
         gpt.negativity:
@@ -483,19 +483,23 @@ stages:
           header:
             method: POST
             url: /v1/responses
-          batch_size: 1000
+          batch_size: 2500
           configurations:
             gpt-4.1-mini:
               temperature: 0.0
-            gpt-5: {}
+            gpt-5-nano:
+              text:
+                verbosity: low
+              reasoning:
+                effort: minimal
           sample:
-            size_per_group: 50
+            size_per_group: 2500
             min_words: 5
             countries: []
             political:
             - OTHER
             - POLITICAL
-            seed: 432917
+            seed: 31041
     outs:
     - path: data/proc/gpt/negativity-jobs.jsonl.gz
       hash: md5

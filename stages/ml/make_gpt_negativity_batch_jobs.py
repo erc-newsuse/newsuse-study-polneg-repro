@@ -6,6 +6,7 @@ import json
 import sys
 from itertools import batched
 
+import numpy as np
 from newsuse.data import DataFrame
 from openai import OpenAI
 
@@ -61,6 +62,11 @@ client = OpenAI()
 
 requests_stats = (
     requests.groupby(["country"])
+    .apply(
+        lambda df: df.assign(idx=np.arange(len(df)) // opts.batch_size),
+        include_groups=False,
+    )
+    .groupby(["country", "idx"])
     .size()
     .reset_index(name="n_requests")
     .to_dict(orient="records")
@@ -71,7 +77,7 @@ print(msg)
 answer = input("Do you want to proceed? (y/n): ").strip().lower()
 if answer == "n":
     print("Exiting without creating batch jobs.")
-    sys.exit(0)
+    sys.exit(1)
 elif answer == "y":
     print("Proceeding to create batch jobs...")
 else:
