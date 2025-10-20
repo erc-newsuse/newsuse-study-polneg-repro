@@ -17,7 +17,7 @@ text_field_idx = idx = 1 if opts.model == "gpt-5" else 0
 
 # %% ---------------------------------------------------------------------------------
 
-output = DataFrame.from_(paths.gpt / f"{DOMAIN}-output.jsonl.gz")[
+output = DataFrame.from_(paths.gpt / f"{DOMAIN}-responses.jsonl.gz")[
     ["custom_id", "country", "response"]
 ].rename(columns={"custom_id": "key"})
 

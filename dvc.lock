@@ -521,3 +521,19 @@ stages:
       hash: md5
       md5: 94226c2a12b50a33b83a9f98b328a3e3
       size: 4191718
+  gpt-batch-output:
+    cmd: python stages/ml/make_gpt_negativity_output.py
+    deps:
+    - path: data/proc/gpt/negativity-responses.jsonl.gz
+      hash: md5
+      md5: 94226c2a12b50a33b83a9f98b328a3e3
+      size: 4191718
+    - path: stages/ml/make_gpt_negativity_output.py
+      hash: md5
+      md5: e6929385b923fded798e1662607db215
+      size: 1782
+    outs:
+    - path: data/proc/gpt/negativity.parquet
+      hash: md5
+      md5: 967b292f1d011880dceb6ab6079af6e4
+      size: 508644
