@@ -25,6 +25,8 @@ dependencies = [
     "openai>=1.109.1",
     "lxml[html_clean]",
     "python-dotenv>=1.1.1",
+    "torch>=2.8.0",
+    "transformers>=4.45.2",
 ]
 dynamic = ["version"]
 classifiers = [
