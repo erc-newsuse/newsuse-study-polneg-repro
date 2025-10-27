@@ -111,6 +111,11 @@ class NewsuseNegativityClassifierConfig(PretrainedConfig):
         """Name or path of the base model."""
         return getattr(self.base, "_name_or_path", None)
 
+    @property
+    def targets(self) -> list[str]:
+        """List of target tasks."""
+        return list(self.id2label)
+
 
 class Pooler(nn.Sequential):
     """Pooling layer applied in-between feed forward and classification branches."""
@@ -199,7 +204,7 @@ class NewsuseNegativityClassifier(PreTrainedModel):
         self.heads = nn.ModuleDict(
             {
                 target: NewsuseNegativityClassifierHead(config, target)
-                for target in config.id2label
+                for target in config.targets
             }
         )
         self._use_gradient_checkpointing = False
@@ -231,7 +236,6 @@ class NewsuseNegativityClassifier(PreTrainedModel):
         self,
         input_ids: torch.Tensor | None = None,
         attention_mask: torch.Tensor | None = None,
-        labels: dict[str, torch.Tensor] | None = None,
         **kwargs: Any,
     ) -> SequenceClassifierOutput:
         """Forward pass through the model.
@@ -264,6 +268,8 @@ class NewsuseNegativityClassifier(PreTrainedModel):
         SequenceClassifierOutput or tuple
             SequenceClassifierOutput containing logits and optionally loss.
         """
+        if not (labels := kwargs.get("labels")):
+            labels = {t: kwargs.pop(t) for t in self.config.targets if t in kwargs}
         outputs = self.base(input_ids=input_ids, attention_mask=attention_mask, **kwargs)
         if isinstance(outputs, tuple):
             errmsg = "'forward' method requires 'return_dict=True'"
@@ -274,7 +280,7 @@ class NewsuseNegativityClassifier(PreTrainedModel):
 
         loss = None
         # Calculate multi-target loss if labels are provided
-        if labels is not None:
+        if labels:
             loss = self.compute_loss(logits, labels)
 
         return SequenceClassifierOutput(
@@ -293,7 +299,7 @@ class NewsuseNegativityClassifier(PreTrainedModel):
     def compute_loss(
         self,
         logits: Mapping[str, torch.Tensor],
-        labels: torch.Tensor,
+        labels: Mapping[str, int],
     ) -> torch.Tensor:
         """Compute multi-target ordinal loss.
 
@@ -309,13 +315,13 @@ class NewsuseNegativityClassifier(PreTrainedModel):
         dict[str, torch.Tensor]
             Mapping from target names to their respective losses.
         """
-        labels = torch.as_tensor(labels)
-        if labels.ndim == 1:
-            labels = labels[None, ...]
         loss = {}
-        for k, target in enumerate(logits):
+        for target in logits:
             num_classes = self.heads[target].num_classes
-            extended_labels = extend_ordinal_labels(labels[:, k], num_classes)
+            label = torch.as_tensor(labels[target])
+            if label.ndim == 0:
+                label = label[None, ...]
+            extended_labels = extend_ordinal_labels(label, num_classes)
             loss[target] = ordinal_loss(logits[target], extended_labels, num_classes)
         return sum(loss.values()) / len(loss)
 

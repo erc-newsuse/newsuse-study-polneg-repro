@@ -27,6 +27,7 @@ dependencies = [
     "python-dotenv>=1.1.1",
     "torch>=2.8.0",
     "transformers>=4.45.2",
+    "scikit-learn>=1.7.2",
 ]
 dynamic = ["version"]
 classifiers = [
