@@ -1,4 +1,8 @@
+from functools import singledispatch
+
+import numpy as np
 import torch
+from scipy.special import expit
 from torch import nn
 from torch.nn import functional as F
 
@@ -64,6 +68,7 @@ def extend_ordinal_labels(labels: torch.Tensor, num_classes: int) -> torch.Tenso
     return (ext % vlen < labels[:, None]).long()
 
 
+@singledispatch
 def ordinal_probs(logits: torch.Tensor) -> torch.Tensor:
     """Convert ordinal logits to class probabilities."""
     probs = F.sigmoid(logits)
@@ -71,6 +76,18 @@ def ordinal_probs(logits: torch.Tensor) -> torch.Tensor:
         (*probs.shape[:-1], probs.shape[-1] + 2),
         dtype=probs.dtype,
         device=logits.device,
+    )
+    surv[..., 0] = 1.0
+    surv[..., 1:-1] = probs
+    return surv[..., :-1] - surv[..., 1:]
+
+
+@ordinal_probs.register
+def _(logits: np.ndarray) -> np.ndarray:
+    probs = expit(-logits)
+    surv = np.zeros(
+        (*probs.shape[:-1], probs.shape[-1] + 2),
+        dtype=probs.dtype,
     )
     surv[..., 0] = 1.0
     surv[..., 1:-1] = probs

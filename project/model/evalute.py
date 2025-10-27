@@ -1,8 +1,13 @@
 from collections.abc import Callable, Mapping, Sequence
-from typing import Any
 
+import numpy as np
 import torch
 from scipy.stats import hmean
+from sklearn.metrics import f1_score
+from transformers import EvalPrediction
+
+from .model import NewsuseNegativityClassifierConfig
+from .ordinal import ordinal_probs
 
 MultiOutputT = Mapping[str, torch.Tensor]
 
@@ -12,54 +17,57 @@ class NewsuseNegativityEvaluator:
 
     Attributes
     ----------
+    config
+        Model configuration.
     metric
         Metric function to evaluate predictions.
-    **kwargs
-        Additional keyword arguments to pass to the metric function.
     """
 
     def __init__(
         self,
-        metric: Callable[[Sequence[Any], Sequence[Any], ...], float],
+        config: NewsuseNegativityClassifierConfig,
         *,
         reduction: Callable[[Sequence[float]], float] = hmean,
-        **kwargs: Any,
     ) -> None:
-        self.metric = metric
+        self.config = config
         self.reduction = reduction
-        self.kwargs = kwargs
 
-    def __call__(self, scores: MultiOutputT, labels: MultiOutputT) -> float:
+    def __call__(self, eval_pred: EvalPrediction) -> float:
         """Evaluate the model predictions.
 
         Parameters
         ----------
-        scores
-            Model output scores.
-        labels
-            Ground truth labels.
+        eval_pred
+            Evaluation prediction object containing model outputs and labels.
 
         Returns
         -------
         float
             The aggregated evaluation metric.
         """
-        metrics = self._compute_metrics(scores, labels)
+        metrics = self._compute_metrics(eval_pred)
         metrics = {"overall": self.reduction(list(metrics.values())), **metrics}
         return metrics
 
-    def _compute_metrics(
-        self, scores: MultiOutputT, labels: MultiOutputT
-    ) -> Mapping[str, float]:
+    def _compute_metrics(self, eval_pred: EvalPrediction) -> Mapping[str, float]:
         """Compute metrics for multiple outputs."""
-        assert list(scores) == (
-            list(labels),
-            "'scores' and 'labels' must have the same keys",
-        )
-        return {k: self._compute_metric(scores[k], labels[k]) for k in scores}
+        scores, labels = eval_pred
+        metrics = {}
+        for target, labs in zip(scores, labels, strict=True):
+            true = [self.config.label2id[target][label] for label in labs]
+            pred = ordinal_probs(scores[target]).argmax(axis=-1)
+            values = f1_score(true, pred, average=None)
+            target_scores = {}
+            for i, v in zip(np.unique(true), values, strict=True):
+                target_scores[f"{target}_f1_{i}"] = v.item()
+            target_scores = {
+                target: self.reduction(list(target_scores.values())).item(),
+                **target_scores,
+            }
+            metrics.update(target_scores)
+        return metrics
 
     def _compute_metric(self, scores: torch.Tensor, labels: torch.Tensor) -> float:
         """Compute the metric for the given scores and labels."""
-        y_pred = scores.cpu().numpy().argmax(axis=-1)
-        y_true = labels.cpu().numpy()
-        return self.metric(y_true, y_pred, **self.kwargs)
+        pred = scores.argmax(axis=-1)
+        return self.metric(labels, pred, **self.kwargs)

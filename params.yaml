@@ -196,10 +196,6 @@ ml:
     padding: max_length
     truncation: true
   training:
-    evaluation:
-      make!: project.model:NewsuseNegativityEvaluator
-      metric: project.metrics:h1_score
-      reduction: scipy.stats:hmean
     callbacks:
       - make!: transformers:EarlyStoppingCallback
         early_stopping_patience: 2
@@ -214,18 +210,50 @@ ml:
       metric_for_best_model: loss
       save_strategy: epoch
       eval_strategy: epoch
+      eval_on_start: true
       logging_strategy: epoch
       load_best_model_at_end: true
       overwrite_output_dir: true
-    hyper:
+  hyper:
+    study:
+      study_name: newsuse-negativity-model
+      direction: maximize
+      load_if_exists: ${eval:${oc.env:NEWSUSE_OPTUNA_RESUME,1}}
+    optimize:
       n_jobs: ${eval:${oc.env:NEWSUSE_OPTUNA_N_JOBS,1}}
-      n_trials: ${eval:${oc.env:NEWSUSE_OPTUNA_N_TRIALS,100}}
-      models:
-        - distilbert
-        - bert
-        - xlm-base
-        - xlm-large
-      space:
+      n_trials: ${eval:${oc.env:NEWSUSE_OPTUNA_N_TRIALS,30}}
+      show_progress_bar: true
+    space:
+      newsuse:
+        base:
+          type: categorical
+          choices:
+          - distilbert
+          - xlm-large
+        ordinal_logit_bias_scale:
+          type: float
+          low: 1.0
+          high: 8.0
+          step: 0.5
+        shared_n_layers:
+          type: int
+          low: 0
+          high: 4
+        head_n_layers:
+          type: int
+          low: 0
+          high: 4
+        head_poolers:
+          type: categorical
+          choices:
+          - true
+          - false
+        dropout:
+          type: float
+          low: 0.0
+          high: 0.3
+          step: 0.05
+      args:
         learning_rate:
           type: float
           low: 1e-7
@@ -235,7 +263,7 @@ ml:
           type: float
           low: 0
           high: 0.5
-          step: ${eval:1 / ${....arguments.num_train_epochs}}
+          step: ${eval:1 / ${ml.training.arguments.num_train_epochs}}
         weight_decay:
           type: float
           low: 0
@@ -250,13 +278,13 @@ ml:
         seed:
           type: categorical
           choices:
-          - 1965040122
-          - 2057176687
-          - 3887095350
-          - 478249731
-          - 685971017
-          - 1545849842
-          - 3325700108
-          - 2824374826
-          - 3584008421
-          - 78984196
+          - 923416180
+          - 947936097
+          - 913180696
+          - 107285332
+          - 325748676
+          - 1364790667
+          - 2894555970
+          - 365673098
+          - 415169889
+          - 3396084250
