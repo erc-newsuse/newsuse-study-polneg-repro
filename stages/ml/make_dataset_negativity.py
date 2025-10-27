@@ -1,44 +1,59 @@
 # %% ---------------------------------------------------------------------------------
 
+import datasets
+import numpy as np
+from datasets import Dataset, DatasetDict
 from newsuse.data import DataFrame
-from newsuse.ml import Dataset, DatasetDict
 
 from project import config, paths
 
-paths.negativity.mkdir(parents=True, exist_ok=True)
+target = "negativity"
+dirpath = paths.ml / "datasets"
 
-LABELS = list(config.annotations.negativity.labels)
+rng = np.random.default_rng(config.ml.dataset.negativity.seed)
+
+datasets.disable_caching()
 
 # %% ---------------------------------------------------------------------------------
 
-data = DataFrame.from_(paths.negativity / "data.parquet").merge(
-    DataFrame.from_(paths.negativity / "text.parquet"), on=["key", "split"], how="left"
+data = (
+    DataFrame.from_(paths.gpt / f"{target}-requests.jsonl.gz")
+    .rename(columns={"custom_id": "key"})
+    .assign(text=lambda df: df["body"].map(lambda s: s["input"]))[
+        ["key", "country", "text"]
+    ]
+    .merge(
+        DataFrame.from_(paths.gpt / f"{target}.parquet"), on=["key", "country"], how="inner"
+    )
+    .dropna(ignore_index=True)
 )
 
 # %% ---------------------------------------------------------------------------------
 
-dataset = data.pipe(
-    lambda df: DatasetDict(
-        {
-            key: Dataset.from_pandas(gdf.reset_index(drop=True).drop(columns="split"))
-            for key, gdf in df.groupby("split")
-        }
-    )
-).class_encode_column("label")
+index = data.index.to_numpy()
+rng.shuffle(index)
 
 # %% ---------------------------------------------------------------------------------
 
-info = dataset["train"].info
-info.features["label"].names = LABELS
+n_train = int(len(data) * config.ml.dataset.negativity.training)
+n_test = int(len(data) * config.ml.dataset.negativity.testing)
 
-dataset = dataset.update_info(info)
-
-# %% ---------------------------------------------------------------------------------
-
-# tweet = load_dataset("cardiffnlp/tweet_eval", "sentiment")
+index_train = index[:n_train]
+index_test = index[n_train : n_train + n_test]
+index_valid = index[n_train + n_test :]
 
 # %% ---------------------------------------------------------------------------------
 
-dataset.save_to_disk(paths.ml / "datasets" / "negativity")
+dataset = DatasetDict(
+    {
+        "train": Dataset.from_pandas(data.loc[index_train].reset_index(drop=True)),
+        "test": Dataset.from_pandas(data.loc[index_test].reset_index(drop=True)),
+        "valid": Dataset.from_pandas(data.loc[index_valid].reset_index(drop=True)),
+    }
+)
+
+# %% ---------------------------------------------------------------------------------
+
+dataset.save_to_disk(dirpath / target)
 
 # %% ---------------------------------------------------------------------------------

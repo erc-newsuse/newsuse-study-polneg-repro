@@ -182,22 +182,29 @@ plotting:
     lines.markeredgewidth: 1
 
 ml:
+  dataset:
+    defaults: &ml_dataset_defaults
+      training: 0.8
+      testing: 0.1
+      validation: 0.1
+    negativity:
+      <<: *ml_dataset_defaults
+      seed: 34280
   inference:
     batch_size: ${eval:${oc.env:NEWSUSE_ML_INFERENCE_BATCH_SIZE,32}}
   tokenize:
-    field: text
     padding: max_length
     truncation: true
-    batched: true
   training:
     evaluation:
-      make!: newsuse.ml:Evaluation
-      metric: f1
+      make!: project.model:NewsuseNegativityEvaluator
+      metric: project.metrics:h1_score
+      reduction: scipy.stats:hmean
     callbacks:
       - make!: transformers:EarlyStoppingCallback
         early_stopping_patience: 2
     arguments:
-      make!: newsuse.ml:TrainingArguments
+      make!: transformers:TrainingArguments
       num_train_epochs: ${eval:${oc.env:NEWSUSE_NUM_TRAIN_EPOCHS,10}}
       per_device_train_batch_size: ${eval:${oc.env:NEWSUSE_PER_DEVICE_TRAIN_BATCH_SIZE,16}}
       learning_rate: 1e-6
@@ -253,21 +260,3 @@ ml:
           - 2824374826
           - 3584008421
           - 78984196
-  models:
-    use: xlm-large
-    xlm-large:
-      name: xlm-large
-      base: FacebookAI/xlm-roberta-large
-      training:
-        evaluation: ${ml.training.evaluation}
-        callbacks: ${ml.training.callbacks}
-        arguments:
-          defaults!: ${ml.training.arguments}
-          learning_rate: 1e-6
-          lr_scheduler_type: cosine
-          warmup_ratio: 0.25
-          weight_decay: 0.004
-          seed: 1884749421
-          full_determinism: true
-      inference: ${ml.inference}
-      tokenize: ${ml.tokenize}

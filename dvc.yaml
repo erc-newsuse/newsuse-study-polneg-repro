@@ -91,6 +91,19 @@ stages:
     - data/proc/gpt/negativity.parquet:
         persist: true
 
+  negativity-dataset:
+    cmd: python stages/ml/make_dataset_negativity.py
+    params:
+    - ml.dataset.negativity
+    deps:
+    - stages/ml/make_dataset_negativity.py
+    - data/proc/dataset.parquet
+    - data/proc/posts-text.parquet
+    - data/proc/gpt/negativity.parquet
+    outs:
+    - ml/datasets/negativity:
+        persist: true
+
   glmm:
     foreach:
     - negativity

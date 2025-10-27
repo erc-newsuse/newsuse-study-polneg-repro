@@ -537,3 +537,35 @@ stages:
       hash: md5
       md5: 967b292f1d011880dceb6ab6079af6e4
       size: 508644
+  negativity-dataset:
+    cmd: python stages/ml/make_dataset_negativity.py
+    deps:
+    - path: data/proc/dataset.parquet
+      hash: md5
+      md5: 515c7bf14a2189efdb76f941bf339acd
+      size: 265347745
+    - path: data/proc/gpt/negativity.parquet
+      hash: md5
+      md5: 967b292f1d011880dceb6ab6079af6e4
+      size: 508644
+    - path: data/proc/posts-text.parquet
+      hash: md5
+      md5: ac82d44c49eec08b7e35c21343a60a6c
+      size: 552734108
+    - path: stages/ml/make_dataset_negativity.py
+      hash: md5
+      md5: 2b4b5e4bba39d5669ae72927e0f3a214
+      size: 1902
+    params:
+      params.yaml:
+        ml.dataset.negativity:
+          training: 0.8
+          testing: 0.1
+          validation: 0.1
+          seed: 34280
+    outs:
+    - path: ml/datasets/negativity
+      hash: md5
+      md5: c0bda053558eeb4a6544afe9c8258849.dir
+      size: 7208856
+      nfiles: 10
