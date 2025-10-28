@@ -54,7 +54,7 @@ class NewsuseNegativityEvaluator:
         scores, labels = eval_pred
         metrics = {}
         for target, labs in zip(scores, labels, strict=True):
-            true = [self.config.label2id[target][label] for label in labs]
+            true = np.asarray([self.config.label2id[target][label] for label in labs])
             pred = ordinal_probs(scores[target]).argmax(axis=-1)
             values = f1_score(true, pred, average=None)
             target_scores = {}

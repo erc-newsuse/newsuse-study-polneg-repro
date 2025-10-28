@@ -16,8 +16,8 @@ target = "negativity"
 
 # %% ---------------------------------------------------------------------------------
 
-base_model_name = "distilbert/distilbert-base-multilingual-cased"
-# base_model_name = "FacebookAI/xlm-roberta-large"
+# base_model_name = "distilbert/distilbert-base-multilingual-cased"
+base_model_name = "FacebookAI/xlm-roberta-large"
 model_config = NewsuseNegativityClassifierConfig(base_model_name)
 model = NewsuseNegativityClassifier(model_config)
 tokenizer = AutoTokenizer.from_pretrained(model_config.base_name_or_path)

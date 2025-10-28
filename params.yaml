@@ -202,6 +202,7 @@ ml:
     arguments:
       make!: transformers:TrainingArguments
       num_train_epochs: ${eval:${oc.env:NEWSUSE_NUM_TRAIN_EPOCHS,10}}
+      per_device_eval_batch_size: ${eval:${oc.env:NEWSUSE_PER_DEVICE_EVAL_BATCH_SIZE,32}}
       per_device_train_batch_size: ${eval:${oc.env:NEWSUSE_PER_DEVICE_TRAIN_BATCH_SIZE,16}}
       learning_rate: 1e-6
       seed: 303

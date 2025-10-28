@@ -55,17 +55,20 @@ def ordinal_loss(
     num_classes: int,
 ) -> torch.Tensor:
     """Compute ordinal loss for the logits and labels."""
-    return sum(
+    loss = sum(
         F.cross_entropy(torch.column_stack([-logits[:, i], logits[:, i]]), labels[:, i])
         for i in range(num_classes - 1)
     )
+    return loss
 
 
 def extend_ordinal_labels(labels: torch.Tensor, num_classes: int) -> torch.Tensor:
     """Convert integer ordinal labels to extended binary vector format."""
+    labels = labels - labels.min(0).values
     vlen = num_classes - 1
     ext = torch.arange(vlen * labels.size(0), device=labels.device).reshape(-1, vlen)
-    return (ext % vlen < labels[:, None]).long()
+    elabs = (ext % vlen < labels[:, None]).long()
+    return elabs
 
 
 @singledispatch
@@ -84,11 +87,11 @@ def ordinal_probs(logits: torch.Tensor) -> torch.Tensor:
 
 @ordinal_probs.register
 def _(logits: np.ndarray) -> np.ndarray:
-    probs = expit(-logits)
-    surv = np.zeros(
+    probs = expit(logits)
+    cmf = np.zeros(
         (*probs.shape[:-1], probs.shape[-1] + 2),
         dtype=probs.dtype,
     )
-    surv[..., 0] = 1.0
-    surv[..., 1:-1] = probs
-    return surv[..., :-1] - surv[..., 1:]
+    cmf[..., 0] = 1.0
+    cmf[..., 1:-1] = probs
+    return cmf[..., :-1] - cmf[..., 1:]
