@@ -14,11 +14,12 @@ paths:
   articles_sample:  "@proc/articles-sample.parquet"
   predictions:      "@proc/predictions.parquet"
   followers:        "@raw/followers.parquet"
+  hyper_negativity: "@proc/hyper-negativity.parquet"
+  mldata:           "@data/ml"
   ml:               "ml"
   models:           "models"
   glmm:             "@models/glmm"
   figures:          "figures"
-  mldata:           "@data/ml"
   prompts:          "@ml/prompts"
   gpt:              "@proc/gpt/"
   annotations:      "annotations"
@@ -118,7 +119,6 @@ gpt:
       seed: 31041
 
 sentiment:
-  model: tabularisai/multilingual-sentiment-analysis
   annotators:
     - Szymon
     - Magdalena
@@ -192,14 +192,14 @@ ml:
       seed: 34280
   inference:
     batch_size: ${eval:${oc.env:NEWSUSE_ML_INFERENCE_BATCH_SIZE,32}}
-  tokenize:
+  tokenize: &ml_tokenize_defaults
     padding: max_length
     truncation: true
-  training:
+  training: &ml_training_defaults
     callbacks:
       - make!: transformers:EarlyStoppingCallback
         early_stopping_patience: 2
-    arguments:
+    arguments: &ml_training_arguments_defaults
       make!: transformers:TrainingArguments
       num_train_epochs: ${eval:${oc.env:NEWSUSE_NUM_TRAIN_EPOCHS,10}}
       per_device_eval_batch_size: ${eval:${oc.env:NEWSUSE_PER_DEVICE_EVAL_BATCH_SIZE,32}}
@@ -216,76 +216,100 @@ ml:
       load_best_model_at_end: true
       overwrite_output_dir: true
   hyper:
-    study:
-      study_name: newsuse-negativity-model
-      direction: maximize
-      load_if_exists: ${eval:${oc.env:NEWSUSE_OPTUNA_RESUME,1}}
-    optimize:
-      n_jobs: ${eval:${oc.env:NEWSUSE_OPTUNA_N_JOBS,1}}
-      n_trials: ${eval:${oc.env:NEWSUSE_OPTUNA_N_TRIALS,30}}
-      show_progress_bar: true
-    space:
-      newsuse:
-        base:
-          type: categorical
-          choices:
-          - distilbert
-          - xlm-large
-        ordinal_logit_bias_scale:
-          type: float
-          low: 1.0
-          high: 8.0
-          step: 0.5
-        shared_n_layers:
-          type: int
-          low: 0
-          high: 4
-        head_n_layers:
-          type: int
-          low: 0
-          high: 4
-        head_poolers:
-          type: categorical
-          choices:
-          - true
-          - false
-        dropout:
-          type: float
-          low: 0.0
-          high: 0.3
-          step: 0.05
-      args:
-        learning_rate:
-          type: float
-          low: 1e-7
-          high: 1e-4
-          log: true
-        warmup_ratio:
-          type: float
-          low: 0
-          high: 0.5
-          step: ${eval:1 / ${ml.training.arguments.num_train_epochs}}
-        weight_decay:
-          type: float
-          low: 0
-          high: 0.01
-          step: 0.002
-        lr_scheduler_type:
-          type: categorical
-          choices:
-          - linear
-          - cosine
-          - cosine_with_restarts
-        seed:
-          type: categorical
-          choices:
-          - 923416180
-          - 947936097
-          - 913180696
-          - 107285332
-          - 325748676
-          - 1364790667
-          - 2894555970
-          - 365673098
-          - 415169889
-          - 3396084250
+    defaults: &ml_hyper_defaults
+      study: &ml_hyper_study_defaults
+        direction: maximize
+        load_if_exists: ${eval:${oc.env:NEWSUSE_OPTUNA_RESUME,1}}
+      optimize:
+        n_jobs: ${eval:${oc.env:NEWSUSE_OPTUNA_N_JOBS,1}}
+        n_trials: ${eval:${oc.env:NEWSUSE_OPTUNA_N_TRIALS,50}}
+        show_progress_bar: true
+      space:
+        newsuse:
+          base:
+            type: categorical
+            choices:
+            - distilbert
+            - xlm-large
+          ordinal_logit_bias_scale:
+            type: float
+            low: 1.0
+            high: 8.0
+            step: 0.5
+          shared_n_layers:
+            type: int
+            low: 0
+            high: 4
+          head_n_layers:
+            type: int
+            low: 0
+            high: 4
+          head_poolers:
+            type: categorical
+            choices:
+            - true
+            - false
+          dropout:
+            type: float
+            low: 0.0
+            high: 0.3
+            step: 0.05
+        args:
+          learning_rate:
+            type: float
+            low: 1e-7
+            high: 1e-4
+            log: true
+          warmup_ratio:
+            type: float
+            low: 0
+            high: 0.5
+            step: ${eval:1 / ${ml.training.arguments.num_train_epochs}}
+          weight_decay:
+            type: float
+            low: 0
+            high: 0.01
+            step: 0.002
+          lr_scheduler_type:
+            type: categorical
+            choices:
+            - linear
+            - cosine
+            - cosine_with_restarts
+          seed:
+            type: categorical
+            choices:
+            - 923416180
+            - 947936097
+            - 913180696
+            - 107285332
+            - 325748676
+            - 1364790667
+            - 2894555970
+            - 365673098
+            - 415169889
+            - 3396084250
+    negativity:
+      <<: *ml_hyper_defaults
+      study:
+        study_name: newsuse-negativity-model
+        <<: *ml_hyper_study_defaults
+  models:
+    negativity:
+      defaults: &ml_model_negativity_defaults
+        base: {}
+        newsuse: {}
+        tokenize:
+          <<: *ml_tokenize_defaults
+        training:
+          <<: *ml_training_defaults
+          arguments:
+            <<: *ml_training_arguments_defaults
+      distilbert:
+        name: distilbert
+        checkpoint: distilbert-base-multilingual-cased
+        <<: *ml_model_negativity_defaults
+      xlm-large:
+        name: xlm-large
+        checkpoint: xlm-roberta-large
+        <<: *ml_model_negativity_defaults

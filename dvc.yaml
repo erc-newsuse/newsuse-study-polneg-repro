@@ -49,7 +49,7 @@ stages:
     - data/proc/cls-political.parquet:
         persist: true
 
-  gpt-batch-requests:
+  negativity-batch-requests:
     cmd: python stages/ml/make_gpt_negativity_batch_requests.py
     params:
     - gpt.negativity
@@ -62,7 +62,7 @@ stages:
     - data/proc/gpt/negativity-requests.jsonl.gz:
         persist: true
 
-  gpt-batch-jobs:
+  negativity-batch-jobs:
     cmd: python stages/ml/make_gpt_negativity_batch_jobs.py
     params:
     - gpt.negativity
@@ -73,7 +73,7 @@ stages:
     - data/proc/gpt/negativity-jobs.jsonl.gz:
         persist: true
 
-  gpt-batch-responses:
+  negativity-batch-responses:
     cmd: python stages/ml/make_gpt_negativity_batch_responses.py
     deps:
     - stages/ml/make_gpt_negativity_batch_responses.py
@@ -82,7 +82,7 @@ stages:
     - data/proc/gpt/negativity-responses.jsonl.gz:
         persist: true
 
-  gpt-batch-output:
+  negativity-batch-output:
     cmd: python stages/ml/make_gpt_negativity_output.py
     deps:
     - stages/ml/make_gpt_negativity_output.py
@@ -102,6 +102,18 @@ stages:
     - data/proc/gpt/negativity.parquet
     outs:
     - ml/datasets/negativity:
+        persist: true
+
+  negativity-train:
+    cmd: python stages/ml/hyper_negativity.py
+    params:
+    - ml.hyper.negativity
+    - ml.models.negativity
+    deps:
+    - stages/ml/hyper_negativity.py
+    - ml/datasets/negativity
+    outs:
+    - data/proc/hyper-negativity.parquet:
         persist: true
 
   glmm:
