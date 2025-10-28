@@ -85,7 +85,7 @@ def objective(trial: optuna.Trial) -> float:
     # Save the model if best
     state = trial.study.trials_dataframe(attrs=["value"])
     best_value = state["value"].astype(float).fillna(nullscore).max()
-    if f1 >= best_value:
+    if f1 > best_value:
         path = paths.ml / "models" / target / base
         if path.exists():
             rmtree(path)
