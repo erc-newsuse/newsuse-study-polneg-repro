@@ -691,3 +691,140 @@ stages:
       hash: md5
       md5: 94226c2a12b50a33b83a9f98b328a3e3
       size: 4191718
+  negativity-train:
+    cmd: python stages/ml/hyper_negativity.py
+    deps:
+    - path: ml/datasets/negativity
+      hash: md5
+      md5: c0bda053558eeb4a6544afe9c8258849.dir
+      size: 7208856
+      nfiles: 10
+    - path: stages/ml/hyper_negativity.py
+      hash: md5
+      md5: eec5bab3c4e060affe396030af5ad5c4
+      size: 4214
+    params:
+      params.yaml:
+        ml.hyper.negativity:
+          study:
+            direction: maximize
+            load_if_exists: ${eval:${oc.env:NEWSUSE_OPTUNA_RESUME,1}}
+            study_name: newsuse-negativity-model
+          optimize:
+            n_jobs: ${eval:${oc.env:NEWSUSE_OPTUNA_N_JOBS,1}}
+            n_trials: ${eval:${oc.env:NEWSUSE_OPTUNA_N_TRIALS,50}}
+            show_progress_bar: true
+          space:
+            newsuse:
+              base:
+                type: categorical
+                choices:
+                - distilbert
+                - xlm-large
+              ordinal_logit_bias_scale:
+                type: float
+                low: 1.0
+                high: 8.0
+                step: 0.5
+              shared_n_layers:
+                type: int
+                low: 0
+                high: 4
+              head_n_layers:
+                type: int
+                low: 0
+                high: 4
+              head_poolers:
+                type: categorical
+                choices:
+                - true
+                - false
+              dropout:
+                type: float
+                low: 0.0
+                high: 0.3
+                step: 0.05
+            args:
+              learning_rate:
+                type: float
+                low: 1e-07
+                high: 0.0001
+                log: true
+              warmup_ratio:
+                type: float
+                low: 0
+                high: 0.5
+                step: ${eval:1 / ${ml.training.arguments.num_train_epochs}}
+              weight_decay:
+                type: float
+                low: 0
+                high: 0.01
+                step: 0.002
+              lr_scheduler_type:
+                type: categorical
+                choices:
+                - linear
+                - cosine
+                - cosine_with_restarts
+              seed:
+                type: categorical
+                choices:
+                - 923416180
+                - 947936097
+                - 913180696
+                - 107285332
+                - 325748676
+                - 1364790667
+                - 2894555970
+                - 365673098
+                - 415169889
+                - 3396084250
+        ml.models.negativity:
+          defaults:
+            base: &id001 {}
+            newsuse: &id002 {}
+            tokenize: &id003
+              padding: max_length
+              truncation: true
+            training: &id004
+              callbacks:
+              - make!: transformers:EarlyStoppingCallback
+                early_stopping_patience: 2
+              arguments:
+                make!: transformers:TrainingArguments
+                num_train_epochs: ${eval:${oc.env:NEWSUSE_NUM_TRAIN_EPOCHS,10}}
+                per_device_eval_batch_size:
+                  ${eval:${oc.env:NEWSUSE_PER_DEVICE_EVAL_BATCH_SIZE,32}}
+                per_device_train_batch_size:
+                  ${eval:${oc.env:NEWSUSE_PER_DEVICE_TRAIN_BATCH_SIZE,16}}
+                learning_rate: 1e-06
+                seed: 303
+                gradient_checkpointing:
+                  ${eval:${oc.env:NEWSUSE_GRADIENT_CHECKPOINTING,1}}
+                fp16: ${eval:${oc.env:NEWSUSE_FP16,1}}
+                metric_for_best_model: loss
+                save_strategy: epoch
+                eval_strategy: epoch
+                eval_on_start: true
+                logging_strategy: epoch
+                load_best_model_at_end: true
+                overwrite_output_dir: true
+          distilbert:
+            base: *id001
+            newsuse: *id002
+            tokenize: *id003
+            training: *id004
+            name: distilbert
+            checkpoint: distilbert-base-multilingual-cased
+          xlm-large:
+            base: *id001
+            newsuse: *id002
+            tokenize: *id003
+            training: *id004
+            name: xlm-large
+            checkpoint: xlm-roberta-large
+    outs:
+    - path: data/proc/hyper-negativity.parquet
+      hash: md5
+      md5: 9ad5e1cb556831dcbbe76e07b93ef536
+      size: 13934

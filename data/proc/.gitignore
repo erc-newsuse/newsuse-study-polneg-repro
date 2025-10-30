@@ -11,3 +11,4 @@
 /predictions.parquet
 /sentiment-sample.xlsx
 /*.xlsx
+/hyper-negativity.parquet
