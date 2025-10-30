@@ -44,9 +44,9 @@ class NewsuseNegativityClassifierConfig(PretrainedConfig):
         Name or path of the base model.
     ordinal_logit_bias_scale
         Scale of the bias term in the ordinal logit layers.
-    shared_layers
+    num_shared_layers
         Number of shared layers in the classification model.
-    head_layers
+    num_head_layers
         Number of layers in each classification head.
     head_poolers
         Use tanh poolers at the end of feed forward networks within each head.
@@ -65,8 +65,8 @@ class NewsuseNegativityClassifierConfig(PretrainedConfig):
         base: PretrainedConfig | Mapping[str, Any] | str | None = None,
         *,
         ordinal_logit_bias_scale: float = 2.0,
-        shared_layers: int = 0,
-        head_layers: int = 1,
+        num_shared_layers: int = 0,
+        num_head_layers: int = 1,
         head_poolers: bool = False,
         dropout: float = 0.1,
         layer_norm_eps: float = 1e-5,
@@ -76,25 +76,27 @@ class NewsuseNegativityClassifierConfig(PretrainedConfig):
         if ordinal_logit_bias_scale <= 0:
             errmsg = "'ordinal_logit_bias_scale' must be positive."
             raise ValueError(errmsg)
-        super().__init__(**kwargs)
+        super().__init__()
         # Set base model config
         if base is None:
-            self.base = PretrainedConfig()
+            self.base = PretrainedConfig(**kwargs)
         elif isinstance(base, PretrainedConfig):
             self.base = base
+            self.base.update(kwargs)
         elif isinstance(base, Mapping):
             base = deepcopy(base)
+            base.update(kwargs)
             _name_or_path = base.pop("_name_or_path")
             self.base = AutoConfig.from_pretrained(_name_or_path, **base)
         elif isinstance(base, str):
-            self.base = AutoConfig.from_pretrained(base)
+            self.base = AutoConfig.from_pretrained(base, **kwargs)
         else:
             errmsg = f"unsupported base config type: '{type(base)}'"
             raise TypeError(errmsg)
         # Set model config parameters
         self.ordinal_logit_bias_scale = ordinal_logit_bias_scale
-        self.shared_layers = shared_layers
-        self.head_layers = head_layers
+        self.num_shared_layers = num_shared_layers
+        self.num_head_layers = num_head_layers
         self.head_poolers = head_poolers
         self.dropout = dropout
         self.layer_norm_eps = layer_norm_eps
@@ -152,7 +154,9 @@ class NewsuseNegativityClassifierHead(nn.Module):
         super().__init__()
         self.target = target
         self._use_gradient_checkpointing = False
-        self.ff = nn.ModuleList([FeedForward(config) for _ in range(config.head_layers)])
+        self.ff = nn.ModuleList(
+            [FeedForward(config) for _ in range(config.num_head_layers)]
+        )
         self.pooler = Pooler(config) if config.head_poolers else nn.Identity()
         self.ordinal = OrdinalLogit(
             config.base.hidden_size,
@@ -203,7 +207,9 @@ class NewsuseNegativityClassifier(PreTrainedModel):
         self.base = AutoModel.from_pretrained(
             (d := self.config.base.to_dict()).pop("_name_or_path"), **d
         )
-        self.ff = nn.ModuleList([FeedForward(config) for _ in range(config.shared_layers)])
+        self.ff = nn.ModuleList(
+            [FeedForward(config) for _ in range(config.num_shared_layers)]
+        )
         self.heads = nn.ModuleDict(
             {
                 target: NewsuseNegativityClassifierHead(config, target)

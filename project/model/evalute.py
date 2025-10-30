@@ -51,11 +51,12 @@ class NewsuseNegativityEvaluator:
 
     def _compute_metrics(self, eval_pred: EvalPrediction) -> Mapping[str, float]:
         """Compute metrics for multiple outputs."""
-        scores, labels = eval_pred
+        logits, labels = eval_pred
+        logits = torch.swapaxes(torch.tensor(logits), 0, 1)
         metrics = {}
-        for target, labs in zip(scores, labels, strict=True):
+        for target, logit, labs in zip(self.config.targets, logits, labels, strict=True):
             true = np.asarray([self.config.label2id[target][label] for label in labs])
-            pred = ordinal_probs(scores[target]).argmax(axis=-1)
+            pred = ordinal_probs(logit).argmax(axis=-1)
             values = f1_score(true, pred, average=None)
             target_scores = {}
             for i, v in zip(np.unique(true), values, strict=True):

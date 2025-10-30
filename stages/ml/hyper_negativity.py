@@ -22,11 +22,11 @@ from project.model import (
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 datasets.disable_caching()
 
-target = "negativity"
+domain = "negativity"
 
 # %% ---------------------------------------------------------------------------------
 
-dataset = datasets.load_from_disk(paths.ml / "datasets" / target)
+dataset = datasets.load_from_disk(paths.ml / "datasets" / domain)
 
 # %% ---------------------------------------------------------------------------------
 
@@ -34,7 +34,7 @@ dataset = datasets.load_from_disk(paths.ml / "datasets" / target)
 def objective(trial: optuna.Trial) -> float:
     torch.cuda.empty_cache()  # Clear CUDA memory before each trial
     # Fetch hyperparameter combinations
-    hyper = config.ml.hyper[target]
+    hyper = config.ml.hyper[domain]
     specs = [hyper.space.newsuse, hyper.space.args]
     spaces = [{}, {}]
     for spec, space in zip(specs, spaces, strict=True):
@@ -44,7 +44,7 @@ def objective(trial: optuna.Trial) -> float:
     newsuse_space, args_space = spaces
     # Initialize model configs
     base = newsuse_space.pop("base")
-    model_config = config.ml.models[target][base]
+    model_config = config.ml.models[domain][base]
     base_config = AutoConfig.from_pretrained(model_config.checkpoint, **model_config.base)
     # Build newsuse config
     newsuse_config = NewsuseNegativityClassifierConfig(
@@ -86,7 +86,7 @@ def objective(trial: optuna.Trial) -> float:
     state = trial.study.trials_dataframe(attrs=["value"])
     best_value = state["value"].astype(float).fillna(nullscore).max()
     if f1 > best_value:
-        path = paths.ml / "models" / target / base
+        path = paths.ml / "models" / domain / base
         if path.exists():
             rmtree(path)
         path.mkdir(parents=True, exist_ok=True)
@@ -100,12 +100,12 @@ def objective(trial: optuna.Trial) -> float:
 # %% ---------------------------------------------------------------------------------
 
 storage = f"sqlite:///{paths.root / 'optuna.db'}"
-opts = {**config.ml.hyper[target].study, "storage": storage}
+opts = {**config.ml.hyper[domain].study, "storage": storage}
 
 # %% Optimize hyperparameters --------------------------------------------------------
 
 study = optuna.create_study(**opts)
-study.optimize(objective, **config.ml.hyper[target].optimize)
+study.optimize(objective, **config.ml.hyper[domain].optimize)
 
 # %% ---------------------------------------------------------------------------------
 
