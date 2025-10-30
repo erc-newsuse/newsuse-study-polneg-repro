@@ -26,6 +26,7 @@ dependencies = [
     "lxml[html_clean]",
     "python-dotenv>=1.1.1",
     "torch>=2.8.0",
+    "dlordinal>=2.4.4",
     "transformers>=4.45.2",
     "scikit-learn>=1.7.2",
 ]

@@ -70,7 +70,7 @@ class NewsuseNegativityClassifierConfig(PretrainedConfig):
         head_poolers: bool = False,
         dropout: float = 0.1,
         layer_norm_eps: float = 1e-5,
-        id2label: Mapping[str, Mapping[int, str]] | None = None,
+        id2label: Mapping[str, Mapping[int, int]] | None = None,
         **kwargs: Any,
     ) -> None:
         if ordinal_logit_bias_scale <= 0:
@@ -100,9 +100,12 @@ class NewsuseNegativityClassifierConfig(PretrainedConfig):
         self.layer_norm_eps = layer_norm_eps
         # Keep the original order of targets
         self.id2label = id2label or dict(ID2LABEL)
-        self.id2label = {k: self.id2label[k] for k in ID2LABEL}
+        self.id2label = {
+            target: {int(k): int(v) for k, v in self.id2label[target].items()}
+            for target in ID2LABEL
+        }
         self.label2id = {
-            feature: {label: i for i, label in mapping.items()}
+            feature: {int(label): int(i) for i, label in mapping.items()}
             for feature, mapping in self.id2label.items()
         }
 
@@ -276,7 +279,8 @@ class NewsuseNegativityClassifier(PreTrainedModel):
             raise ValueError(errmsg)
         pooled_output = self._get_pooled_output(outputs)
         hidden = self.feed_forward(pooled_output)
-        logits = {target: head(hidden) for target, head in self.heads.items()}
+        # logits = {target: head(hidden) for target, head in self.heads.items()}
+        logits = torch.stack([head(hidden) for head in self.heads.values()], dim=1)
 
         loss = None
         # Calculate multi-target loss if labels are provided
@@ -298,7 +302,7 @@ class NewsuseNegativityClassifier(PreTrainedModel):
 
     def compute_loss(
         self,
-        logits: Mapping[str, torch.Tensor],
+        logits: torch.Tensor,
         labels: Mapping[str, int],
     ) -> torch.Tensor:
         """Compute multi-target ordinal loss.
@@ -315,15 +319,16 @@ class NewsuseNegativityClassifier(PreTrainedModel):
         dict[str, torch.Tensor]
             Mapping from target names to their respective losses.
         """
-        loss = {}
-        for target in logits:
+        loss = 0.0
+        logits = torch.swapaxes(logits, 0, 1)
+        for target, target_logits in zip(self.config.targets, logits, strict=True):
             num_classes = self.heads[target].num_classes
             label = torch.as_tensor(labels[target])
             if label.ndim == 0:
                 label = label[None, ...]
             extended_labels = extend_ordinal_labels(label, num_classes)
-            loss[target] = ordinal_loss(logits[target], extended_labels, num_classes)
-        return sum(loss.values()) / len(loss)
+            loss += ordinal_loss(target_logits, extended_labels, num_classes)
+        return loss / len(self.config.targets)
 
     def gradient_checkpointing_enable(self, *args: Any, **kwargs: Any) -> None:
         self.base.gradient_checkpointing_enable(*args, **kwargs)

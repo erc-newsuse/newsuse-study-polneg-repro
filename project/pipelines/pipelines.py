@@ -18,7 +18,7 @@ PipeParamsT = tuple[dict[str, Any], dict[str, Any], dict[str, Any]]
 def pipeline(task: str, model: Any, *args: Any, **kwargs: Any) -> transformers.Pipeline:
     kwargs = {"device": "cuda" if torch.cuda.is_available() else "cpu", **kwargs}
     pipe = transformers.pipeline(task, model, *args, **kwargs)
-    if task == "text-classification":
+    if task in ("text-classification", "text-multi-classification"):
         kwargs = {
             "truncation": True,
             "padding": "max_length",
@@ -56,13 +56,14 @@ class TextMultiClassificationPipeline(Pipeline):
         self,
         model_outputs: ModelOutput,
         *,
-        top_k: int | None = None,
+        top_k: int | None = 1,
         **kwargs: Any,  # noqa
     ) -> PipeOutputT:
         """Post-process the model outputs to return multi-target classification results."""
+        logits = torch.swapaxes(model_outputs["logits"], 0, 1)
         scores = {
-            target: self.compute_scores(self.model, logits)
-            for target, logits in model_outputs["logits"].items()
+            target: self.compute_scores(self.model, lp)
+            for target, lp in zip(self.model.config.targets, logits, strict=True)
         }
         output = {
             target: [
