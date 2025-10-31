@@ -554,8 +554,8 @@ stages:
       size: 552734108
     - path: stages/ml/make_dataset_negativity.py
       hash: md5
-      md5: 2b4b5e4bba39d5669ae72927e0f3a214
-      size: 1902
+      md5: c7d2ff99f28b671c24961ffc7688505c
+      size: 2080
     params:
       params.yaml:
         ml.dataset.negativity:
@@ -566,8 +566,8 @@ stages:
     outs:
     - path: ml/datasets/negativity
       hash: md5
-      md5: c0bda053558eeb4a6544afe9c8258849.dir
-      size: 7208856
+      md5: 4120d3e79a2e46a85e7accfd0e882cd7.dir
+      size: 6887928
       nfiles: 10
   negativity-batch-output:
     cmd: python stages/ml/make_gpt_negativity_output.py

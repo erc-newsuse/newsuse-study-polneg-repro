@@ -1,5 +1,7 @@
 # %% ---------------------------------------------------------------------------------
 
+import re
+
 import datasets
 import numpy as np
 from datasets import Dataset, DatasetDict
@@ -14,6 +16,8 @@ rng = np.random.default_rng(config.ml.dataset.negativity.seed)
 
 datasets.disable_caching()
 
+rx_headers = re.compile(r"^(TITLE:|TEXT:)\n", re.MULTILINE)
+
 # %% ---------------------------------------------------------------------------------
 
 data = (
@@ -26,6 +30,7 @@ data = (
         DataFrame.from_(paths.gpt / f"{target}.parquet"), on=["key", "country"], how="inner"
     )
     .dropna(ignore_index=True)
+    .assign(text=lambda df: df["text"].str.replace(rx_headers, "", regex=True).str.strip())
 )
 
 # %% ---------------------------------------------------------------------------------
