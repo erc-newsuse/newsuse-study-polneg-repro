@@ -546,16 +546,16 @@ stages:
       size: 265347745
     - path: data/proc/gpt/negativity.parquet
       hash: md5
-      md5: 967b292f1d011880dceb6ab6079af6e4
-      size: 508644
+      md5: 300e4bacff37f9af6da12ec497b6be9c
+      size: 505612
     - path: data/proc/posts-text.parquet
       hash: md5
       md5: ac82d44c49eec08b7e35c21343a60a6c
       size: 552734108
     - path: stages/ml/make_dataset_negativity.py
       hash: md5
-      md5: c7d2ff99f28b671c24961ffc7688505c
-      size: 2080
+      md5: 2bab25a019ed7eb9c3725cbf5bb08e21
+      size: 2066
     params:
       params.yaml:
         ml.dataset.negativity:
@@ -566,16 +566,16 @@ stages:
     outs:
     - path: ml/datasets/negativity
       hash: md5
-      md5: 4120d3e79a2e46a85e7accfd0e882cd7.dir
-      size: 6887928
+      md5: 1204b28b0265943718c9884e6d2092c9.dir
+      size: 6821688
       nfiles: 10
   negativity-batch-output:
     cmd: python stages/ml/make_gpt_negativity_output.py
     deps:
     - path: data/proc/gpt/negativity-responses.jsonl.gz
       hash: md5
-      md5: 94226c2a12b50a33b83a9f98b328a3e3
-      size: 4191718
+      md5: e2ca371cd4fe7184ee139e39414e9745
+      size: 4180489
     - path: stages/ml/make_gpt_negativity_output.py
       hash: md5
       md5: e6929385b923fded798e1662607db215
@@ -583,8 +583,8 @@ stages:
     outs:
     - path: data/proc/gpt/negativity.parquet
       hash: md5
-      md5: 967b292f1d011880dceb6ab6079af6e4
-      size: 508644
+      md5: 300e4bacff37f9af6da12ec497b6be9c
+      size: 505612
   negativity-batch-requests:
     cmd: python stages/ml/make_gpt_negativity_batch_requests.py
     deps:
@@ -602,8 +602,8 @@ stages:
       size: 269870934
     - path: stages/ml/make_gpt_negativity_batch_requests.py
       hash: md5
-      md5: 11fef345564c75a9f33f246a9f146fcf
-      size: 2805
+      md5: e8a17e6dd71deaf34a872e7167d80f36
+      size: 3042
     params:
       params.yaml:
         gpt.negativity:
@@ -632,15 +632,15 @@ stages:
     outs:
     - path: data/proc/gpt/negativity-requests.jsonl.gz
       hash: md5
-      md5: b4ea9deabc796843d4b6762ca83dd1d2
-      size: 4794140
+      md5: 851e8c9b6ae032ace36924f48aee174f
+      size: 4785613
   negativity-batch-jobs:
     cmd: python stages/ml/make_gpt_negativity_batch_jobs.py
     deps:
     - path: data/proc/gpt/negativity-requests.jsonl.gz
       hash: md5
-      md5: b4ea9deabc796843d4b6762ca83dd1d2
-      size: 4794140
+      md5: 851e8c9b6ae032ace36924f48aee174f
+      size: 4785613
     - path: stages/ml/make_gpt_negativity_batch_jobs.py
       hash: md5
       md5: b3ef7260866271e735f49b99981bf0a8
@@ -673,15 +673,15 @@ stages:
     outs:
     - path: data/proc/gpt/negativity-jobs.jsonl.gz
       hash: md5
-      md5: 84024b0ba445611a067f5725860435ee
-      size: 613
+      md5: b6a5ad8e2a635db5c57dc20b2f52db2a
+      size: 617
   negativity-batch-responses:
     cmd: python stages/ml/make_gpt_negativity_batch_responses.py
     deps:
     - path: data/proc/gpt/negativity-jobs.jsonl.gz
       hash: md5
-      md5: 84024b0ba445611a067f5725860435ee
-      size: 613
+      md5: b6a5ad8e2a635db5c57dc20b2f52db2a
+      size: 617
     - path: stages/ml/make_gpt_negativity_batch_responses.py
       hash: md5
       md5: 5dcd26a09384039e9c622e6fbb0b405c
@@ -689,8 +689,8 @@ stages:
     outs:
     - path: data/proc/gpt/negativity-responses.jsonl.gz
       hash: md5
-      md5: 94226c2a12b50a33b83a9f98b328a3e3
-      size: 4191718
+      md5: e2ca371cd4fe7184ee139e39414e9745
+      size: 4180489
   negativity-train:
     cmd: python stages/ml/hyper_negativity.py
     deps:

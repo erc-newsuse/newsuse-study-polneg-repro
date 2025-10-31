@@ -70,7 +70,15 @@ body = {
 
 requests = []
 for key, row in sample.set_index("key").iterrows():
-    text = f"TITLE:\n{row.title}\n\nTEXT:\n{row.text}"
+    title = row.title if pd.notnull(row.title) else ""
+    if title:
+        title = f"TITLE:\n{title}"
+    content = row.text if pd.notnull(row.text) else ""
+    if content:
+        content = f"TEXT:\n{content}"
+    text = (f"{title}\n\n{content}").strip()
+    if not text:
+        continue
     request = {
         "custom_id": key,
         "country": row.country,
