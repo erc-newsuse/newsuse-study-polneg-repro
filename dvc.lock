@@ -696,13 +696,13 @@ stages:
     deps:
     - path: ml/datasets/negativity
       hash: md5
-      md5: c0bda053558eeb4a6544afe9c8258849.dir
-      size: 7208856
+      md5: 1204b28b0265943718c9884e6d2092c9.dir
+      size: 6821688
       nfiles: 10
     - path: stages/ml/hyper_negativity.py
       hash: md5
-      md5: eec5bab3c4e060affe396030af5ad5c4
-      size: 4214
+      md5: a8d13267b1afa3a265ab5e675b490a46
+      size: 4196
     params:
       params.yaml:
         ml.hyper.negativity:
@@ -726,11 +726,11 @@ stages:
                 low: 1.0
                 high: 8.0
                 step: 0.5
-              shared_n_layers:
+              num_shared_layers:
                 type: int
                 low: 0
                 high: 4
-              head_n_layers:
+              num_head_layers:
                 type: int
                 low: 0
                 high: 4
@@ -814,17 +814,15 @@ stages:
             newsuse: *id002
             tokenize: *id003
             training: *id004
-            name: distilbert
             checkpoint: distilbert-base-multilingual-cased
           xlm-large:
             base: *id001
             newsuse: *id002
             tokenize: *id003
             training: *id004
-            name: xlm-large
             checkpoint: xlm-roberta-large
     outs:
     - path: data/proc/hyper-negativity.parquet
       hash: md5
-      md5: 9ad5e1cb556831dcbbe76e07b93ef536
-      size: 13934
+      md5: 404cc65acdc93c580426e02a041fe516
+      size: 13943

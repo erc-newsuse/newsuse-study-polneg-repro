@@ -19,7 +19,7 @@ from project.model import (
     NewsuseNegativityEvaluator,
 )
 
-os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+os.environ["PYTORCH_ALLOC_CONF"] = "expandable_segments:True"
 datasets.disable_caching()
 
 domain = "negativity"
@@ -61,7 +61,7 @@ def objective(trial: optuna.Trial) -> float:
         return NewsuseNegativityClassifier(newsuse_config)
 
     with TemporaryDirectory() as tmpdir:
-        dirpath = Path(tmpdir) / model_config.name
+        dirpath = Path(tmpdir) / base
         # Run training
         args = model_config.training.arguments(
             dirpath, label_names=newsuse_config.targets, **args_space
