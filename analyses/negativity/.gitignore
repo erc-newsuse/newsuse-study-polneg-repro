@@ -1,1 +1,5 @@
-/negativity-openai-dataset.jsonl
+/*.jsonl
+/*.json
+/*.parquet
+/*.csv
+/*.xlsx
