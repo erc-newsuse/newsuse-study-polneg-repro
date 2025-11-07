@@ -23,15 +23,17 @@ users = [u for u in studio.users.list() if u.organization_membership.active]
 
 # %% ---------------------------------------------------------------------------------
 
-mw_user = next(u for u in users if u.username == "magdalena.wojcieszak")
+prefix = "prompt_1_ew"
+user = next(u for u in users if u.username == "e.wertz")
+country = "fr"
 
 # %% ---------------------------------------------------------------------------------
 
-mw = (
-    DataFrame.from_(here / "Negativity-MW.csv")
-    .query("country.eq('esp')")
-    .reset_index(drop=True)[["key", "prompt_1_mw_event", "prompt_1_mw_sentiment"]]
-    .rename(columns={"prompt_1_mw_event": "event", "prompt_1_mw_sentiment": "sentiment"})
+user_data = (
+    DataFrame.from_(here / "Negativity-OpenAI.csv")
+    .query(f"country.eq('{country}')")
+    .reset_index(drop=True)[["key", f"{prefix}_event", f"{prefix}_sentiment"]]
+    .rename(columns={f"{prefix}_event": "event", f"{prefix}_sentiment": "sentiment"})
 )
 
 # %% ---------------------------------------------------------------------------------
@@ -46,9 +48,11 @@ df = (
     data.assign(key=lambda df: df["data"].map(lambda x: x["key"]))
     .set_index("key")
     .reset_index()
-    .merge(mw, on="key", how="left")
+    .merge(user_data, on="key", how="left")
     .dropna(subset=targets, ignore_index=True)
 )
+
+# %% ---------------------------------------------------------------------------------
 
 for _, row in track(df.iterrows(), total=len(df)):
     ann = row.annotations
@@ -64,7 +68,7 @@ for _, row in track(df.iterrows(), total=len(df)):
     studio.annotations.create(
         id=row.id,
         result=result,
-        completed_by=mw_user.id,
+        completed_by=user.id,
     )
 
 # %% ---------------------------------------------------------------------------------
