@@ -2,9 +2,17 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-__all__ = ("NegativityClassification",)
+__all__ = ("NegativityClassification", "EventClassification", "SentimentClassification")
 
 Score = Literal[-1, 0, 1]
+
+
+class EventClassification(BaseModel):
+    event: Score
+
+
+class SentimentClassification(BaseModel):
+    sentiment: Score
 
 
 class NegativityClassification(BaseModel):

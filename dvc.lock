@@ -574,53 +574,38 @@ stages:
     deps:
     - path: data/proc/gpt/negativity-responses.jsonl.gz
       hash: md5
-      md5: e2ca371cd4fe7184ee139e39414e9745
-      size: 4180489
+      md5: 70e09745561d3c4a51bd2d9a7c988fc2
+      size: 2148205
     - path: stages/ml/make_gpt_negativity_output.py
       hash: md5
-      md5: e6929385b923fded798e1662607db215
-      size: 1782
+      md5: 6810f1953a3fa6b307eeb1202ebe9977
+      size: 3002
     outs:
     - path: data/proc/gpt/negativity.parquet
       hash: md5
-      md5: 300e4bacff37f9af6da12ec497b6be9c
-      size: 505612
+      md5: 6ef5f02b0e568a309971a0504e00e131
+      size: 17476
   negativity-batch-requests:
     cmd: python stages/ml/make_gpt_negativity_batch_requests.py
     deps:
-    - path: data/proc/cls-political.parquet
+    - path: data/proc/gpt/negativity-ground-truth.parquet
       hash: md5
-      md5: b5cb11b590ee40238d76156289cbc18d
-      size: 138848517
-    - path: data/proc/posts-text.parquet
-      hash: md5
-      md5: ac82d44c49eec08b7e35c21343a60a6c
-      size: 552734108
-    - path: data/proc/posts.parquet
-      hash: md5
-      md5: 21b7ad8a997c29c2518337d5caa3057d
-      size: 269870934
+      md5: 617797f970ecae7e2bd94f5e65d5cc23
+      size: 70211
     - path: stages/ml/make_gpt_negativity_batch_requests.py
       hash: md5
-      md5: e8a17e6dd71deaf34a872e7167d80f36
-      size: 3042
+      md5: c0ab107bb0c1dedfca179f372dad9b7c
+      size: 2964
     params:
       params.yaml:
         gpt.negativity:
-          prompt: negativity.md
-          model: gpt-4.1-mini
+          prompts:
+          - event.md
+          - sentiment.md
           header:
             method: POST
             url: /v1/responses
           batch_size: 2500
-          configurations:
-            gpt-4.1-mini:
-              temperature: 0.0
-            gpt-5-nano:
-              text:
-                verbosity: low
-              reasoning:
-                effort: minimal
           sample:
             size_per_group: 2000
             min_words: 5
@@ -629,39 +614,52 @@ stages:
             - OTHER
             - POLITICAL
             seed: 31041
+          params:
+            gpt-5:
+              model:
+              - gpt-5
+              - gpt-5-mini
+              - gpt-5-nano
+              reasoning:
+              - effort: minimal
+              - effort: low
+              - effort: medium
+              - effort: high
+              text:
+              - verbosity: low
+            gpt-4.1:
+              model:
+              - gpt-4.1
+              - gpt-4.1-mini
+              - gpt-4.1-nano
+              temperature:
+              - 0.0
     outs:
     - path: data/proc/gpt/negativity-requests.jsonl.gz
       hash: md5
-      md5: 851e8c9b6ae032ace36924f48aee174f
-      size: 4785613
+      md5: 1924b3da278f23e7ac5e02d40591c4ed
+      size: 2469113
   negativity-batch-jobs:
     cmd: python stages/ml/make_gpt_negativity_batch_jobs.py
     deps:
     - path: data/proc/gpt/negativity-requests.jsonl.gz
       hash: md5
-      md5: 851e8c9b6ae032ace36924f48aee174f
-      size: 4785613
+      md5: 1924b3da278f23e7ac5e02d40591c4ed
+      size: 2469113
     - path: stages/ml/make_gpt_negativity_batch_jobs.py
       hash: md5
-      md5: b3ef7260866271e735f49b99981bf0a8
-      size: 4710
+      md5: a369f1cd70d4ef134b79d83bbbc8bee8
+      size: 4280
     params:
       params.yaml:
         gpt.negativity:
-          prompt: negativity.md
-          model: gpt-4.1-mini
+          prompts:
+          - event.md
+          - sentiment.md
           header:
             method: POST
             url: /v1/responses
           batch_size: 2500
-          configurations:
-            gpt-4.1-mini:
-              temperature: 0.0
-            gpt-5-nano:
-              text:
-                verbosity: low
-              reasoning:
-                effort: minimal
           sample:
             size_per_group: 2000
             min_words: 5
@@ -670,18 +668,38 @@ stages:
             - OTHER
             - POLITICAL
             seed: 31041
+          params:
+            gpt-5:
+              model:
+              - gpt-5
+              - gpt-5-mini
+              - gpt-5-nano
+              reasoning:
+              - effort: minimal
+              - effort: low
+              - effort: medium
+              - effort: high
+              text:
+              - verbosity: low
+            gpt-4.1:
+              model:
+              - gpt-4.1
+              - gpt-4.1-mini
+              - gpt-4.1-nano
+              temperature:
+              - 0.0
     outs:
     - path: data/proc/gpt/negativity-jobs.jsonl.gz
       hash: md5
-      md5: b6a5ad8e2a635db5c57dc20b2f52db2a
-      size: 617
+      md5: d9fbedfcd94ed5f7dd49ca15d887bb01
+      size: 1028
   negativity-batch-responses:
     cmd: python stages/ml/make_gpt_negativity_batch_responses.py
     deps:
     - path: data/proc/gpt/negativity-jobs.jsonl.gz
       hash: md5
-      md5: b6a5ad8e2a635db5c57dc20b2f52db2a
-      size: 617
+      md5: d9fbedfcd94ed5f7dd49ca15d887bb01
+      size: 1028
     - path: stages/ml/make_gpt_negativity_batch_responses.py
       hash: md5
       md5: 5dcd26a09384039e9c622e6fbb0b405c
@@ -689,8 +707,8 @@ stages:
     outs:
     - path: data/proc/gpt/negativity-responses.jsonl.gz
       hash: md5
-      md5: e2ca371cd4fe7184ee139e39414e9745
-      size: 4180489
+      md5: 70e09745561d3c4a51bd2d9a7c988fc2
+      size: 2148205
   negativity-train:
     cmd: python stages/ml/hyper_negativity.py
     deps:
@@ -826,3 +844,19 @@ stages:
       hash: md5
       md5: 404cc65acdc93c580426e02a041fe516
       size: 13943
+  negativity-ground-truth:
+    cmd: python stages/ml/make_negativity_ground_truth.py
+    deps:
+    - path: data/raw/negativity-ground-truth.json.gz
+      hash: md5
+      md5: 06d761628373a3729167f67eae13a3d0
+      size: 251811
+    - path: stages/ml/make_negativity_ground_truth.py
+      hash: md5
+      md5: f385aebda2734209b2249198e08261fc
+      size: 1340
+    outs:
+    - path: data/proc/gpt/negativity-ground-truth.parquet
+      hash: md5
+      md5: 617797f970ecae7e2bd94f5e65d5cc23
+      size: 70211

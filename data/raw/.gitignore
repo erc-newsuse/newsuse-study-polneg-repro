@@ -4,3 +4,4 @@
 /followers.parquet
 /posts
 /gpt-annotated-subsample.parquet
+/negativity-ground-truth.json.gz

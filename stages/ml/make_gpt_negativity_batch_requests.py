@@ -1,92 +1,83 @@
 # %% ---------------------------------------------------------------------------------
 
+from copy import deepcopy
+from itertools import product
 
-import pandas as pd
+import joblib
 from newsuse.data import DataFrame
+from newsuse.dotpath import dotimport
+from omegaconf import OmegaConf
 from openai.lib._pydantic import to_strict_json_schema
 
 from project import config, paths
-from project.gpt import NegativityClassification
 
 COMPLETED = "completed"
 IN_PROGRESS = "in_progress"
 
-opts = config.gpt.negativity
+domain = "negativity"
+opts = config.gpt[domain]
 
 # %% ---------------------------------------------------------------------------------
 
-subsample_annotated = DataFrame.from_(paths.raw / "gpt-annotated-subsample.parquet")
+ground_truth = DataFrame.from_(paths.gpt / f"{domain}-ground-truth.parquet")
 
-# %% ---------------------------------------------------------------------------------
+# %% Build parametrs -----------------------------------------------------------------
 
-sample = (
-    DataFrame.from_(paths.posts, columns=["key", "country"])
-    .merge(DataFrame.from_(paths.cls_political, columns=["key", "political"]))
-    .merge(DataFrame.from_(paths.text))
-    .query("text.notnull() | title.notnull()")
-    .query(
-        "text.fillna('').str.len() + title.fillna('').str.len() "
-        f">= {opts.sample.min_words}"
+parameters = []
+for params in config.gpt.params.values():
+    params = OmegaConf.to_object(params)
+    parameters.extend(
+        dict(zip(params, values, strict=True)) for values in product(*params.values())
     )
-    .reset_index(drop=True)
-    .groupby(["country", "political"])
-    .sample(n=opts.sample.size_per_group, random_state=opts.sample.seed)
-    .reset_index(drop=True)
-)
 
-# %% ---------------------------------------------------------------------------------
-
-sample = (
-    pd.concat([sample, subsample_annotated])
-    .drop_duplicates(subset=["key"])
-    .sort_values(["country"], ignore_index=True)
-)
-
-# %% ---------------------------------------------------------------------------------
-
-assert sample.key.is_unique, "Sample keys are not unique"
-
-# %% ---------------------------------------------------------------------------------
-
-with (paths.prompts / opts.prompt).open() as fh:
-    instructions = fh.read().strip()
+msg = f"\nCreating requests for {len(parameters)} unique parameter sets."
+print(msg)
 
 # %% Make requests -------------------------------------------------------------------
 
-header = opts.header
-body = {
-    "instructions": instructions,
-    "text": {
-        "format": {
-            "type": "json_schema",
-            "name": "negativity_classification",
-            "schema": to_strict_json_schema(NegativityClassification),
-            "strict": True,
-        },
-    },
-    "model": opts.model,
-    **opts.configurations[opts.model],
+header = config.gpt.header
+text_format = {
+    "type": "json_schema",
+    "name": "quality_assessment",
+    "strict": True,
 }
 
+prompts = {}
+for prompt in opts.prompts:
+    target = prompt.removesuffix(".md")
+    with (paths.prompts / domain / prompt).open() as fh:
+        prompts[target] = fh.read().strip()
+
+# %% ---------------------------------------------------------------------------------
+
 requests = []
-for key, row in sample.set_index("key").iterrows():
-    title = row.title if pd.notnull(row.title) else ""
-    if title:
-        title = f"TITLE:\n{title}"
-    content = row.text if pd.notnull(row.text) else ""
-    if content:
-        content = f"TEXT:\n{content}"
-    text = (f"{title}\n\n{content}").strip()
-    if not text:
-        continue
-    request = {
-        "custom_id": key,
-        "country": row.country,
-        "political": row.political,
-        **header,
-        "body": {"input": text, **body},
-    }
-    requests.append(request)
+for target in prompts:
+    output_model = dotimport(f"project.gpt:{target.title()}Classification")
+    for params in parameters:
+        params_id = joblib.hash(tuple(params.items()))
+        request_params = deepcopy(params)
+        tfrm = {**text_format, "schema": to_strict_json_schema(output_model)}
+        request_params.setdefault("text", {}).update(format=tfrm)
+        for key, row in ground_truth.set_index("key").iterrows():
+            text = [
+                f"TITLE:\n{row.title}" if row.title else "",
+                f"TEXT:\n{row.text}" if row.text else "",
+            ]
+            text = "\n\n".join(text).strip()
+            if not text:
+                continue
+            body = {"input": text, "instructions": prompts[target], **request_params}
+            request = {
+                "custom_id": f"{key}__{params_id}__{target}",
+                "key": key,
+                "params_id": params_id,
+                "params": params,
+                "country": row.country,
+                "target": target,
+                **header,
+                "body": body,
+            }
+            requests.append(request)
 
 requests = DataFrame(requests)
 

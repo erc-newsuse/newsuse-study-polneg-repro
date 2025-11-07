@@ -61,4 +61,42 @@ performance = DataFrame(
     index=pd.Series(targets, name="target"),
 )
 
+# %% Validation on ground truth labels -----------------------------------------------
+
+ground_truth = DataFrame.from_(paths.gpt / f"{domain}-ground-truth.parquet").assign(
+    text=lambda df: df.pop("title") + "\n\n" + df.pop("text")
+)
+
+# %% ---------------------------------------------------------------------------------
+
+results = DataFrame(
+    tqdm(
+        pipe(KeyDataset(ground_truth, "text"), batch_size=16),
+        total=len(ground_truth),
+    ),
+)
+
+# %% ---------------------------------------------------------------------------------
+
+output = pd.concat(
+    [
+        DataFrame(results[t].tolist()).rename(columns={"label": t, "score": f"{t}_score"})
+        for t in targets
+    ],
+    axis=1,
+).set_index(ground_truth.index)
+
+# %% ---------------------------------------------------------------------------------
+
+performance = DataFrame(
+    [
+        {
+            "amae": amae_score(ground_truth[t], output[t]),
+            "f1": hmean(f1_score(ground_truth[t], output[t], average=None)),
+        }
+        for t in targets
+    ],
+    index=pd.Series(targets, name="target"),
+)
+
 # %% ---------------------------------------------------------------------------------

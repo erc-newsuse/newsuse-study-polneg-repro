@@ -90,14 +90,6 @@ gpt:
     method: POST
     url: /v1/responses
   batch_size: &gpt_default_batch_size 2500
-  configurations: &gpt_default_configurations
-    gpt-4.1-mini:
-      temperature: 0.0
-    gpt-5-nano:
-      text:
-        verbosity: low
-      reasoning:
-        effort: minimal
   sample: &gpt_default_sample
     size_per_group: 2000
     min_words: 5
@@ -105,24 +97,38 @@ gpt:
     political:
       - OTHER
       - POLITICAL
+  params: &gpt_default_params
+    gpt-5:
+      model:
+        - gpt-5
+        - gpt-5-mini
+        - gpt-5-nano
+      reasoning:
+        - effort: minimal
+        - effort: low
+        - effort: medium
+        - effort: high
+      text:
+        - verbosity: low
+    gpt-4.1:
+      model:
+        - gpt-4.1
+        - gpt-4.1-mini
+        - gpt-4.1-nano
+      temperature:
+        - 0.0
   negativity:
-    prompt: negativity.md
-    # model: gpt-5-nano
-    model: gpt-4.1-mini
+    prompts:
+      - event.md
+      - sentiment.md
     header:
       <<: *gpt_default_header
     batch_size: *gpt_default_batch_size
-    configurations:
-      <<: *gpt_default_configurations
     sample:
       <<: *gpt_default_sample
       seed: 31041
-
-sentiment:
-  annotators:
-    - Szymon
-    - Magdalena
-    - Dominik
+    params:
+      <<: *gpt_default_params
 
 inference:
   alpha: 0.05

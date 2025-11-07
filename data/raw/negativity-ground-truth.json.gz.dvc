@@ -1,0 +1,5 @@
+outs:
+- md5: 06d761628373a3729167f67eae13a3d0
+  size: 251811
+  hash: md5
+  path: negativity-ground-truth.json.gz

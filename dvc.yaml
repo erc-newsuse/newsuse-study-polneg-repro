@@ -49,15 +49,22 @@ stages:
     - data/proc/cls-political.parquet:
         persist: true
 
+  negativity-ground-truth:
+    cmd: python stages/ml/make_negativity_ground_truth.py
+    deps:
+    - stages/ml/make_negativity_ground_truth.py
+    - data/raw/negativity-ground-truth.json.gz
+    outs:
+    - data/proc/gpt/negativity-ground-truth.parquet:
+        persist: true
+
   negativity-batch-requests:
     cmd: python stages/ml/make_gpt_negativity_batch_requests.py
     params:
     - gpt.negativity
     deps:
     - stages/ml/make_gpt_negativity_batch_requests.py
-    - data/proc/posts.parquet
-    - data/proc/posts-text.parquet
-    - data/proc/cls-political.parquet
+    - data/proc/gpt/negativity-ground-truth.parquet
     outs:
     - data/proc/gpt/negativity-requests.jsonl.gz:
         persist: true
