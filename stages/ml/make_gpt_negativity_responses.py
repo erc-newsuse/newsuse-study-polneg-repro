@@ -15,7 +15,7 @@ DOMAIN = "negativity"
 
 # %% ---------------------------------------------------------------------------------
 
-with gzip.open(paths.gpt / f"{DOMAIN}-experiment-jobs.jsonl.gz", "rt") as fh:
+with gzip.open(paths.gpt / f"{DOMAIN}-jobs.jsonl.gz", "rt") as fh:
     batch_jobs = json.load(fh)
 
 
@@ -23,7 +23,7 @@ with gzip.open(paths.gpt / f"{DOMAIN}-experiment-jobs.jsonl.gz", "rt") as fh:
 
 output = []
 
-if (responses_path := paths.gpt / f"{DOMAIN}-experiment-responses.jsonl.gz").exists():
+if (responses_path := paths.gpt / f"{DOMAIN}-responses.jsonl.gz").exists():
     existing = DataFrame.from_(responses_path)
     output.extend(existing.to_dict(orient="records"))
 

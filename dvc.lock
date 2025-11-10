@@ -538,24 +538,24 @@ stages:
       md5: 967b292f1d011880dceb6ab6079af6e4
       size: 508644
   negativity-dataset:
-    cmd: python stages/ml/make_dataset_negativity.py
+    cmd: python stages/ml/make_negativity_dataset.py
     deps:
-    - path: data/proc/dataset.parquet
+    - path: data/proc/gpt/negativity-ground-truth.parquet
       hash: md5
-      md5: 515c7bf14a2189efdb76f941bf339acd
-      size: 265347745
+      md5: 617797f970ecae7e2bd94f5e65d5cc23
+      size: 70211
+    - path: data/proc/gpt/negativity-requests.jsonl.gz
+      hash: md5
+      md5: 6f23d9df3cf28b0af128e2ebb6f2a63c
+      size: 6364801
     - path: data/proc/gpt/negativity.parquet
       hash: md5
-      md5: 300e4bacff37f9af6da12ec497b6be9c
-      size: 505612
-    - path: data/proc/posts-text.parquet
+      md5: 945ef88c6c54e034b9df9274b45eb0a6
+      size: 374769
+    - path: stages/ml/make_negativity_dataset.py
       hash: md5
-      md5: ac82d44c49eec08b7e35c21343a60a6c
-      size: 552734108
-    - path: stages/ml/make_dataset_negativity.py
-      hash: md5
-      md5: 2bab25a019ed7eb9c3725cbf5bb08e21
-      size: 2066
+      md5: 77426f177723ae166aba5b11a85928da
+      size: 2217
     params:
       params.yaml:
         ml.dataset.negativity:
@@ -566,8 +566,8 @@ stages:
     outs:
     - path: ml/datasets/negativity
       hash: md5
-      md5: 1204b28b0265943718c9884e6d2092c9.dir
-      size: 6821688
+      md5: 17b9c428af77ca6f90f4aaeecac1fe7f.dir
+      size: 5492577
       nfiles: 10
   negativity-batch-output:
     cmd: python stages/ml/make_gpt_negativity_output.py
@@ -873,22 +873,7 @@ stages:
       size: 2975
     params:
       params.yaml:
-        gpt.negativity:
-          prompts:
-          - event.md
-          - sentiment.md
-          header:
-            method: POST
-            url: /v1/responses
-          batch_size: 2500
-          sample:
-            size_per_group: 2000
-            min_words: 5
-            countries: []
-            political:
-            - OTHER
-            - POLITICAL
-            seed: 31041
+        gpt.negativity.experiment:
           params:
             gpt-5:
               model:
@@ -909,6 +894,13 @@ stages:
               - gpt-4.1-nano
               temperature:
               - 0.0
+          prompts:
+          - event.md
+          - sentiment.md
+          header:
+            method: POST
+            url: /v1/responses
+          batch_size: 2500
     outs:
     - path: data/proc/gpt/negativity-experiment-requests.jsonl.gz
       hash: md5
@@ -923,26 +915,11 @@ stages:
       size: 2469124
     - path: stages/ml/make_gpt_negativity_experiment_jobs.py
       hash: md5
-      md5: e282d65512bc2d83bc1ba25ecee22eed
-      size: 4297
+      md5: c1c3c99e6858a2c9773d7ad212d96c98
+      size: 4319
     params:
       params.yaml:
-        gpt.negativity:
-          prompts:
-          - event.md
-          - sentiment.md
-          header:
-            method: POST
-            url: /v1/responses
-          batch_size: 2500
-          sample:
-            size_per_group: 2000
-            min_words: 5
-            countries: []
-            political:
-            - OTHER
-            - POLITICAL
-            seed: 31041
+        gpt.negativity.experiment:
           params:
             gpt-5:
               model:
@@ -963,6 +940,13 @@ stages:
               - gpt-4.1-nano
               temperature:
               - 0.0
+          prompts:
+          - event.md
+          - sentiment.md
+          header:
+            method: POST
+            url: /v1/responses
+          batch_size: 2500
     outs:
     - path: data/proc/gpt/negativity-experiment-jobs.jsonl.gz
       hash: md5
@@ -977,8 +961,8 @@ stages:
       size: 1028
     - path: stages/ml/make_gpt_negativity_experiment_responses.py
       hash: md5
-      md5: 3bbe08d1802ad0af57af45fe08e95259
-      size: 2628
+      md5: 63a9bbd7f66a10e7c5979b13db68ab22
+      size: 2638
     outs:
     - path: data/proc/gpt/negativity-experiment-responses.jsonl.gz
       hash: md5
@@ -993,10 +977,136 @@ stages:
       size: 2148205
     - path: stages/ml/make_gpt_negativity_experiment_output.py
       hash: md5
-      md5: 2af14590b79e23c21cb11dc7ef0c19f4
-      size: 3013
+      md5: feb0707c667736b227958a68e0335923
+      size: 3035
     outs:
     - path: data/proc/gpt/negativity-experiment.parquet
       hash: md5
       md5: 6ef5f02b0e568a309971a0504e00e131
       size: 17476
+  negativity-requests:
+    cmd: python stages/ml/make_gpt_negativity_requests.py
+    deps:
+    - path: data/proc/cls-political.parquet
+      hash: md5
+      md5: b5cb11b590ee40238d76156289cbc18d
+      size: 138848517
+    - path: data/proc/dataset.parquet
+      hash: md5
+      md5: 515c7bf14a2189efdb76f941bf339acd
+      size: 265347745
+    - path: data/proc/posts-text.parquet
+      hash: md5
+      md5: ac82d44c49eec08b7e35c21343a60a6c
+      size: 552734108
+    - path: stages/ml/make_gpt_negativity_requests.py
+      hash: md5
+      md5: db7ce94465ea67a00669f551cd09e2d8
+      size: 3275
+    params:
+      params.yaml:
+        gpt.negativity.batch:
+          defaults:
+            params: &id005
+              model: gpt-5
+              reasoning:
+                effort: medium
+              text:
+                verbosity: low
+          header:
+            method: POST
+            url: /v1/responses
+          batch_size: 2500
+          sample:
+            size_per_group: 1500
+            min_words: 5
+            countries: []
+            political:
+            - OTHER
+            - POLITICAL
+            seed: 535017
+          targets:
+            event:
+              params: *id005
+            sentiment:
+              params: *id005
+    outs:
+    - path: data/proc/gpt/negativity-requests.jsonl.gz
+      hash: md5
+      md5: 6f23d9df3cf28b0af128e2ebb6f2a63c
+      size: 6364801
+  negativity-jobs:
+    cmd: python stages/ml/make_gpt_negativity_jobs.py
+    deps:
+    - path: data/proc/gpt/negativity-requests.jsonl.gz
+      hash: md5
+      md5: 6f23d9df3cf28b0af128e2ebb6f2a63c
+      size: 6364801
+    - path: stages/ml/make_gpt_negativity_jobs.py
+      hash: md5
+      md5: 725341e8fc1373126c25085c1b4cba86
+      size: 4139
+    params:
+      params.yaml:
+        gpt.negativity.batch:
+          defaults:
+            params: &id006
+              model: gpt-5
+              reasoning:
+                effort: medium
+              text:
+                verbosity: low
+          header:
+            method: POST
+            url: /v1/responses
+          batch_size: 2500
+          sample:
+            size_per_group: 1500
+            min_words: 5
+            countries: []
+            political:
+            - OTHER
+            - POLITICAL
+            seed: 535017
+          targets:
+            event:
+              params: *id006
+            sentiment:
+              params: *id006
+    outs:
+    - path: data/proc/gpt/negativity-jobs.jsonl.gz
+      hash: md5
+      md5: 52719470ccc272c495962be664be8484
+      size: 774
+  negativity-responses:
+    cmd: python stages/ml/make_gpt_negativity_responses.py
+    deps:
+    - path: data/proc/gpt/negativity-jobs.jsonl.gz
+      hash: md5
+      md5: 52719470ccc272c495962be664be8484
+      size: 774
+    - path: stages/ml/make_gpt_negativity_responses.py
+      hash: md5
+      md5: be42cf18931a2e70df11aed8ae137f9d
+      size: 2616
+    outs:
+    - path: data/proc/gpt/negativity-responses.jsonl.gz
+      hash: md5
+      md5: 4fa499f60e2c97d2038daf082f15161f
+      size: 5931498
+  negativity-output:
+    cmd: python stages/ml/make_gpt_negativity_output.py
+    deps:
+    - path: data/proc/gpt/negativity-responses.jsonl.gz
+      hash: md5
+      md5: 4fa499f60e2c97d2038daf082f15161f
+      size: 5931498
+    - path: stages/ml/make_gpt_negativity_output.py
+      hash: md5
+      md5: e62edd259f3e7f72ec3a3b4ac1e5e124
+      size: 1561
+    outs:
+    - path: data/proc/gpt/negativity.parquet
+      hash: md5
+      md5: 945ef88c6c54e034b9df9274b45eb0a6
+      size: 374769

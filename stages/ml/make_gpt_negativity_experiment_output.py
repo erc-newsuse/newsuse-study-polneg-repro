@@ -25,12 +25,12 @@ output_models = {
 
 # %% ---------------------------------------------------------------------------------
 
-responses = DataFrame.from_(paths.gpt / f"{DOMAIN}-responses.jsonl.gz")[
+responses = DataFrame.from_(paths.gpt / f"{DOMAIN}-experiment-responses.jsonl.gz")[
     ["custom_id", "response"]
 ].rename(columns={"custom_id": "key"})
 
 meta = (
-    DataFrame.from_(paths.gpt / f"{DOMAIN}-requests.jsonl.gz")[
+    DataFrame.from_(paths.gpt / f"{DOMAIN}-experiment-requests.jsonl.gz")[
         ["key", "country", "params_id", "params"]
     ]
     .drop_duplicates(subset=["key", "params_id"], ignore_index=True)

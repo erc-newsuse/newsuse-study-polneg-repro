@@ -61,7 +61,7 @@ stages:
   negativity-experiment-requests:
     cmd: python stages/ml/make_gpt_negativity_experiment_requests.py
     params:
-    - gpt.negativity
+    - gpt.negativity.experiment
     deps:
     - stages/ml/make_gpt_negativity_experiment_requests.py
     - data/proc/gpt/negativity-ground-truth.parquet
@@ -72,7 +72,7 @@ stages:
   negativity-experiment-jobs:
     cmd: python stages/ml/make_gpt_negativity_experiment_jobs.py
     params:
-    - gpt.negativity
+    - gpt.negativity.experiment
     deps:
     - stages/ml/make_gpt_negativity_experiment_jobs.py
     - data/proc/gpt/negativity-experiment-requests.jsonl.gz
@@ -98,15 +98,57 @@ stages:
     - data/proc/gpt/negativity-experiment.parquet:
         persist: true
 
+  negativity-requests:
+    cmd: python stages/ml/make_gpt_negativity_requests.py
+    params:
+    - gpt.negativity.batch
+    deps:
+    - stages/ml/make_gpt_negativity_requests.py
+    - data/proc/dataset.parquet
+    - data/proc/cls-political.parquet
+    - data/proc/posts-text.parquet
+    outs:
+    - data/proc/gpt/negativity-requests.jsonl.gz:
+        persist: true
+
+  negativity-jobs:
+    cmd: python stages/ml/make_gpt_negativity_jobs.py
+    params:
+    - gpt.negativity.batch
+    deps:
+    - stages/ml/make_gpt_negativity_jobs.py
+    - data/proc/gpt/negativity-requests.jsonl.gz
+    outs:
+    - data/proc/gpt/negativity-jobs.jsonl.gz:
+        persist: true
+
+  negativity-responses:
+    cmd: python stages/ml/make_gpt_negativity_responses.py
+    deps:
+    - stages/ml/make_gpt_negativity_responses.py
+    - data/proc/gpt/negativity-jobs.jsonl.gz
+    outs:
+    - data/proc/gpt/negativity-responses.jsonl.gz:
+        persist: true
+
+  negativity-output:
+    cmd: python stages/ml/make_gpt_negativity_output.py
+    deps:
+    - stages/ml/make_gpt_negativity_output.py
+    - data/proc/gpt/negativity-responses.jsonl.gz
+    outs:
+    - data/proc/gpt/negativity.parquet:
+        persist: true
+
   negativity-dataset:
-    cmd: python stages/ml/make_dataset_negativity.py
+    cmd: python stages/ml/make_negativity_dataset.py
     params:
     - ml.dataset.negativity
     deps:
-    - stages/ml/make_dataset_negativity.py
-    - data/proc/dataset.parquet
-    - data/proc/posts-text.parquet
+    - stages/ml/make_negativity_dataset.py
     - data/proc/gpt/negativity.parquet
+    - data/proc/gpt/negativity-ground-truth.parquet
+    - data/proc/gpt/negativity-requests.jsonl.gz
     outs:
     - ml/datasets/negativity:
         persist: true

@@ -15,15 +15,15 @@ COMPLETED = "completed"
 IN_PROGRESS = "in_progress"
 
 domain = "negativity"
-opts = config.gpt[domain]
+opts = config.gpt[domain].batch
 
 # %% ---------------------------------------------------------------------------------
 
-requests = DataFrame.from_(paths.gpt / f"{domain}-experiment-requests.jsonl.gz")
+requests = DataFrame.from_(paths.gpt / f"{domain}-requests.jsonl.gz")
 
 # %% Check for existing responses ----------------------------------------------------
 
-gpt_batch_responses_path = paths.gpt / f"{domain}-experiment-responses.jsonl.gz"
+gpt_batch_responses_path = paths.gpt / f"{domain}-responses.jsonl.gz"
 if gpt_batch_responses_path.exists():
     responses = DataFrame.from_(gpt_batch_responses_path)
     ids = list(
@@ -66,7 +66,7 @@ client = OpenAI()
 header = config.gpt.header
 batch_jobs = {}
 
-for params_id, data in requests.groupby("params_id"):
+for target, data in requests.groupby("target"):
     for idx, batch_index in enumerate(batched(data.index, opts.batch_size)):
         batch_index = list(batch_index)
         batch = data.loc[batch_index]
@@ -74,9 +74,7 @@ for params_id, data in requests.groupby("params_id"):
             continue
         # Use an in-memory bytes buffer instead of a temporary file
         buffer = io.BytesIO()
-        country = list(batch.pop("country"))[0]
-        params_id = list(batch.pop("params_id"))[0]
-        for col in ["key", "target", "params"]:
+        for col in ["key", "target", "country"]:
             if col in batch.columns:
                 del batch[col]
         # Write each request as a JSON line to the buffer
@@ -91,9 +89,8 @@ for params_id, data in requests.groupby("params_id"):
             purpose="batch",
         )
         metadata = {
-            "description": f"[{country}|{idx}] article quality assessment input file",
-            "country": country,
-            "params_id": params_id,
+            "description": f"[{target}|{idx}] article quality assessment input file",
+            "target": target,
             "idx": str(idx),
         }
         batch_job = client.batches.create(
@@ -102,7 +99,7 @@ for params_id, data in requests.groupby("params_id"):
             completion_window="24h",
             metadata=metadata,
         )
-        batch_jobs.setdefault(params_id, {})[idx] = {
+        batch_jobs.setdefault(target, {})[idx] = {
             "batch_id": batch_job.id,
             "batch_file_id": batch_file.id,
             "status": batch_job.status,
@@ -114,9 +111,7 @@ print("\nCreated batch jobs:\n" + json.dumps(batch_jobs, indent=4))
 # %% ---------------------------------------------------------------------------------
 
 paths.gpt.mkdir(parents=True, exist_ok=True)
-with gzip.open(
-    paths.gpt / f"{domain}-experiment-jobs.jsonl.gz", "wt", encoding="utf-8"
-) as fh:
+with gzip.open(paths.gpt / f"{domain}-jobs.jsonl.gz", "wt", encoding="utf-8") as fh:
     json.dump(batch_jobs, fh)
 
 # %% ----------------------------------------------------------------------------------

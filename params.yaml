@@ -90,45 +90,58 @@ gpt:
     method: POST
     url: /v1/responses
   batch_size: &gpt_default_batch_size 2500
-  sample: &gpt_default_sample
-    size_per_group: 2000
-    min_words: 5
-    countries: []
-    political:
-      - OTHER
-      - POLITICAL
-  params: &gpt_default_params
-    gpt-5:
-      model:
-        - gpt-5
-        - gpt-5-mini
-        - gpt-5-nano
-      reasoning:
-        - effort: minimal
-        - effort: low
-        - effort: medium
-        - effort: high
-      text:
-        - verbosity: low
-    gpt-4.1:
-      model:
-        - gpt-4.1
-        - gpt-4.1-mini
-        - gpt-4.1-nano
-      temperature:
-        - 0.0
   negativity:
-    prompts:
-      - event.md
-      - sentiment.md
-    header:
-      <<: *gpt_default_header
-    batch_size: *gpt_default_batch_size
-    sample:
-      <<: *gpt_default_sample
-      seed: 31041
-    params:
-      <<: *gpt_default_params
+    experiment:
+      params:
+        gpt-5:
+          model:
+            - gpt-5
+            - gpt-5-mini
+            - gpt-5-nano
+          reasoning:
+            - effort: minimal
+            - effort: low
+            - effort: medium
+            - effort: high
+          text:
+            - verbosity: low
+        gpt-4.1:
+          model:
+            - gpt-4.1
+            - gpt-4.1-mini
+            - gpt-4.1-nano
+          temperature:
+            - 0.0
+      prompts:
+        - event.md
+        - sentiment.md
+      header:
+        <<: *gpt_default_header
+      batch_size: *gpt_default_batch_size
+    batch:
+      defaults: &gpt_batch_defaults
+        params:
+          model: gpt-5
+          reasoning:
+            effort: medium
+          text:
+            verbosity: low
+      header:
+          <<: *gpt_default_header
+      batch_size: *gpt_default_batch_size
+      sample:
+        size_per_group: 1500
+        min_words: 5
+        countries: []
+        political:
+          - OTHER
+          - POLITICAL
+        seed: 535017
+      targets:
+        event:
+          <<: *gpt_batch_defaults
+        sentiment:
+          <<: *gpt_batch_defaults
 
 inference:
   alpha: 0.05
