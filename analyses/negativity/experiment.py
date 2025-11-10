@@ -1,5 +1,6 @@
 # %% ---------------------------------------------------------------------------------
 
+import pandas as pd
 from dlordinal.metrics import accuracy_off1
 from newsuse.data import DataFrame
 from sklearn.metrics import f1_score
@@ -69,5 +70,34 @@ for model in output.index.get_level_values("model").unique():
     f1.append(scores)
 f1 = DataFrame(f1).set_index("model")
 f1_best = f1.idxmax()
+
+# %% Best models AMAE model by country -----------------------------------------------
+
+amae_country = []
+for model in amae_best:
+    model_output = output.loc[model]
+    model_target = ground_truth.loc[model_output.index]
+    for country in model_output.index.get_level_values("country").unique():
+        country_output = model_output.loc[country]
+        country_target = model_target.loc[country]
+        scores = {"model": model, "country": country}
+        for target in targets:
+            scores[target] = amae_score(country_output[target], country_target[target])
+        amae_country.append(scores)
+
+amae_country = DataFrame(amae_country).set_index(["model", "country"])
+amae_overall = (
+    amae_country.groupby("model")
+    .mean()
+    .assign(country="overall")
+    .set_index("country", append=True)
+)
+amae_country = (
+    pd.concat([amae_overall, amae_country])
+    .swaplevel(axis=0)
+    .loc[[*amae_country.index.get_level_values("country").unique(), "overall"]]
+    .swaplevel(axis=0)
+    .loc[amae_country.index.get_level_values("model").unique()]
+)
 
 # %% ---------------------------------------------------------------------------------
