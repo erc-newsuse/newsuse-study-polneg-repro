@@ -154,15 +154,15 @@ stages:
         persist: true
 
   negativity-train:
-    cmd: python stages/ml/hyper_negativity.py
+    cmd: python stages/ml/negativity_hyper.py
     params:
     - ml.hyper.negativity
     - ml.models.negativity
     deps:
-    - stages/ml/hyper_negativity.py
+    - stages/ml/negativity_hyper.py
     - ml/datasets/negativity
     outs:
-    - data/proc/hyper-negativity.parquet:
+    - data/proc/negativity-hyper.parquet:
         persist: true
 
   glmm:

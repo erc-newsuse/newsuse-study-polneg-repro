@@ -1,5 +1,6 @@
 # DVC tracked
 /figures
+/optuna.db
 
 # Ad-hoc files
 /*.xlsx
