@@ -114,7 +114,9 @@ print("\nCreated batch jobs:\n" + json.dumps(batch_jobs, indent=4))
 # %% ---------------------------------------------------------------------------------
 
 paths.gpt.mkdir(parents=True, exist_ok=True)
-with gzip.open(paths.gpt / f"{domain}-jobs.jsonl.gz", "wt", encoding="utf-8") as fh:
+with gzip.open(
+    paths.gpt / f"{domain}-experiment-jobs.jsonl.gz", "wt", encoding="utf-8"
+) as fh:
     json.dump(batch_jobs, fh)
 
 # %% ----------------------------------------------------------------------------------

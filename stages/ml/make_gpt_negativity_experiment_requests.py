@@ -84,6 +84,6 @@ requests = DataFrame(requests)
 # %% ---------------------------------------------------------------------------------
 
 paths.gpt.mkdir(parents=True, exist_ok=True)
-requests.to_(paths.gpt / "negativity-requests.jsonl.gz")
+requests.to_(paths.gpt / "negativity-experiment-requests.jsonl.gz")
 
 # %% ---------------------------------------------------------------------------------

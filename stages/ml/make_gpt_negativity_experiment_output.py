@@ -92,6 +92,6 @@ output.columns = output.columns.tolist()
 
 # %% ---------------------------------------------------------------------------------
 
-output.to_(paths.gpt / f"{DOMAIN}.parquet")
+output.to_(paths.gpt / f"{DOMAIN}-experiment.parquet")
 
 # %% ---------------------------------------------------------------------------------
