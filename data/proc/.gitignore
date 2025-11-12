@@ -12,3 +12,4 @@
 /sentiment-sample.xlsx
 /*.xlsx
 /hyper-negativity.parquet
+/negativity-hyper.parquet

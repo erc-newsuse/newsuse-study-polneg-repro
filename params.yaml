@@ -14,7 +14,6 @@ paths:
   articles_sample:  "@proc/articles-sample.parquet"
   predictions:      "@proc/predictions.parquet"
   followers:        "@raw/followers.parquet"
-  hyper_negativity: "@proc/hyper-negativity.parquet"
   mldata:           "@data/ml"
   ml:               "ml"
   models:           "models"
@@ -23,6 +22,7 @@ paths:
   prompts:          "@ml/prompts"
   gpt:              "@proc/gpt/"
   annotations:      "annotations"
+  negativity_hyper: "@proc/negativity-hyper.parquet"
 
 countries:
   order:

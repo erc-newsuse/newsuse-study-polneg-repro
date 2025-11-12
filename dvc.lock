@@ -710,16 +710,16 @@ stages:
       md5: 70e09745561d3c4a51bd2d9a7c988fc2
       size: 2148205
   negativity-train:
-    cmd: python stages/ml/hyper_negativity.py
+    cmd: python stages/ml/negativity_hyper.py
     deps:
     - path: ml/datasets/negativity
       hash: md5
-      md5: 1204b28b0265943718c9884e6d2092c9.dir
-      size: 6821688
+      md5: 17b9c428af77ca6f90f4aaeecac1fe7f.dir
+      size: 5492577
       nfiles: 10
-    - path: stages/ml/hyper_negativity.py
+    - path: stages/ml/negativity_hyper.py
       hash: md5
-      md5: a8d13267b1afa3a265ab5e675b490a46
+      md5: acd54bd49993f4a21dbe728197e43c2e
       size: 4196
     params:
       params.yaml:
@@ -840,10 +840,10 @@ stages:
             training: *id004
             checkpoint: xlm-roberta-large
     outs:
-    - path: data/proc/hyper-negativity.parquet
+    - path: data/proc/negativity-hyper.parquet
       hash: md5
-      md5: 404cc65acdc93c580426e02a041fe516
-      size: 13943
+      md5: 29952ad86d88e4c03afb9b00c3d926a8
+      size: 13938
   negativity-ground-truth:
     cmd: python stages/ml/make_negativity_ground_truth.py
     deps:

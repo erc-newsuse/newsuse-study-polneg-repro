@@ -110,6 +110,6 @@ study.optimize(objective, **config.ml.hyper[domain].optimize)
 # %% ---------------------------------------------------------------------------------
 
 results = DataFrame(study.trials_dataframe())
-results.to_(paths.hyper_negativity)
+results.to_(paths.negativity_hyper)
 
 # %% ---------------------------------------------------------------------------------
