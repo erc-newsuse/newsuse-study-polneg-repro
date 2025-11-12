@@ -1,7 +1,9 @@
 # %% ---------------------------------------------------------------------------------
 
 import datasets
+import matplotlib.pyplot as plt  # noqa
 import pandas as pd
+import seaborn as sns  # noqa
 from dlordinal.metrics import accuracy_off1
 from newsuse.data import DataFrame
 from scipy.stats import hmean
@@ -109,5 +111,44 @@ performance_gt = DataFrame(
 )
 
 print(performance_gt.to_markdown(floatfmt=".3f"))
+
+# %% ---------------------------------------------------------------------------------
+
+countries = ground_truth["country"].unique()
+output_gt["country"] = ground_truth["country"]
+
+fig, axes = plt.subplots(
+    nrows=len(countries),
+    ncols=len(targets),
+    figsize=(7, 2 * len(countries)),
+)
+
+for axrow, country in zip(axes, countries, strict=True):
+    axrow[0].set_title(country.upper())
+    for target, ax in zip(targets, axrow, strict=True):
+        odist = (
+            output_gt.loc[output_gt["country"] == country, target]
+            .value_counts(normalize=True)
+            .sort_index()
+        )
+        tdist = (
+            ground_truth.loc[ground_truth["country"] == country, target]
+            .value_counts(normalize=True)
+            .sort_index()
+        )
+        df = (
+            DataFrame({"output": odist, "target": tdist})
+            .melt(ignore_index=False)
+            .reset_index()
+        )
+        sns.barplot(
+            data=df,
+            x=target,
+            y="value",
+            hue="variable",
+            ax=ax,
+        )
+
+fig.tight_layout()
 
 # %% ---------------------------------------------------------------------------------
