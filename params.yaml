@@ -148,58 +148,6 @@ inference:
   conf: ${eval:1-${.alpha}}
   adjust: holm
 
-plotting:
-  style:  tableau-colorblind10
-  usetex: true
-  color:
-    palette:
-      gold:       "#ecc00f"
-      red:        "#f10d71"
-      green:      "#7adf06"
-      blue:       "#5bbdff"
-      brown:      "#ae6f4a"
-      teal:       "#1cdae4"
-      purple:     "#c618cc"
-      white:      "white"
-      gray:       "#bdbaba"
-      black:      "black"
-    semantics:
-      other:         ${..palette.gray}
-      political:     ${..palette.gold}
-      negative:      ${..palette.red}
-      non-political: ${.other}
-      non-negative:  ${.other}
-      negativity:    ${.negative}
-      overall:       ${..palette.black}
-      us:            ${..palette.blue}
-      esp:           ${..palette.gold}
-      fr:            ${..palette.gray}
-      pl:            ${..palette.red}
-      irl:           ${..palette.green}
-      uk:            ${..palette.brown}
-  params:
-    font.family:           sans-serif
-    font.sans-serif:       Montserrat
-    text.usetex:           ${..usetex}
-    text.latex.preamble:   \usepackage{amsmath,amsfonts,amssymb,sfmath,xcolor}
-    figure.figsize:        [5, 5]
-    figure.labelsize:      x-large
-    figure.titlesize:      xx-large
-    figure.titleweight:    bold
-    savefig.bbox:          tight
-    axes.grid:             true
-    axes.axisbelow:        true
-    axes.titleweight:      bold
-    axes.titlesize:        large
-    axes.labelsize:        large
-    axes.prop_cycle:
-      make!:               matplotlib:cycler
-      color:               ${oc.dict.values:plotting.color.palette}
-    scatter.marker:        o
-    scatter.edgecolors:    black
-    lines.markeredgecolor: black
-    lines.markeredgewidth: 1
-
 ml:
   dataset:
     defaults: &ml_dataset_defaults
@@ -330,3 +278,55 @@ ml:
       xlm-large:
         checkpoint: xlm-roberta-large
         <<: *ml_model_negativity_defaults
+
+plotting:
+  style:  tableau-colorblind10
+  usetex: true
+  color:
+    palette:
+      gold:       "#ecc00f"
+      red:        "#f10d71"
+      green:      "#7adf06"
+      blue:       "#5bbdff"
+      brown:      "#ae6f4a"
+      teal:       "#1cdae4"
+      purple:     "#c618cc"
+      white:      "white"
+      gray:       "#bdbaba"
+      black:      "black"
+    semantics:
+      other:         ${..palette.gray}
+      political:     ${..palette.gold}
+      negative:      ${..palette.red}
+      non-political: ${.other}
+      non-negative:  ${.other}
+      negativity:    ${.negative}
+      overall:       ${..palette.black}
+      us:            ${..palette.blue}
+      esp:           ${..palette.gold}
+      fr:            ${..palette.gray}
+      pl:            ${..palette.red}
+      irl:           ${..palette.green}
+      uk:            ${..palette.brown}
+  params:
+    font.family:           sans-serif
+    font.sans-serif:       Montserrat
+    text.usetex:           ${..usetex}
+    text.latex.preamble:   \usepackage{amsmath,amsfonts,amssymb,sfmath,xcolor}
+    figure.figsize:        [5, 5]
+    figure.labelsize:      x-large
+    figure.titlesize:      xx-large
+    figure.titleweight:    bold
+    savefig.bbox:          tight
+    axes.grid:             true
+    axes.axisbelow:        true
+    axes.titleweight:      bold
+    axes.titlesize:        large
+    axes.labelsize:        large
+    axes.prop_cycle:
+      make!:               matplotlib:cycler
+      color:               ${oc.dict.values:plotting.color.palette}
+    scatter.marker:        o
+    scatter.edgecolors:    black
+    lines.markeredgecolor: black
+    lines.markeredgewidth: 1

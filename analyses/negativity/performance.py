@@ -2,6 +2,7 @@
 
 import datasets
 import pandas as pd
+from dlordinal.metrics import accuracy_off1
 from newsuse.data import DataFrame
 from scipy.stats import hmean
 from sklearn.metrics import f1_score
@@ -10,7 +11,7 @@ from transformers import AutoModel, AutoTokenizer
 
 import project.model  # noqa
 from project import paths
-from project.metrics import amae_score
+from project.metrics import amae_score, o1_score
 from project.pipelines import KeyDataset, pipeline
 
 domain = "negativity"
@@ -18,7 +19,7 @@ targets = ["event", "sentiment"]
 
 # %% ---------------------------------------------------------------------------------
 
-hyper = DataFrame.from_(paths.proc / f"hyper-{domain}.parquet")
+hyper = DataFrame.from_(paths.proc / f"{domain}-hyper.parquet")
 best_model = hyper.loc[hyper.value.idxmax()].params_base
 
 # %% ---------------------------------------------------------------------------------
@@ -54,12 +55,16 @@ performance = DataFrame(
     [
         {
             "amae": amae_score(validation[t], output[t]),
-            "f1": hmean(f1_score(validation[t], output[t], average=None)),
+            "f1": hmean(f1_score(validation[t], output[t], average="macro")),
+            "o1": o1_score(validation[t], output[t]),
+            "acc1": accuracy_off1(validation[t], output[t]),
         }
         for t in targets
     ],
     index=pd.Series(targets, name="target"),
 )
+
+print(performance.to_markdown(floatfmt=".3f"))
 
 # %% Validation on ground truth labels -----------------------------------------------
 
@@ -69,7 +74,7 @@ ground_truth = DataFrame.from_(paths.gpt / f"{domain}-ground-truth.parquet").ass
 
 # %% ---------------------------------------------------------------------------------
 
-results = DataFrame(
+results_gt = DataFrame(
     tqdm(
         pipe(KeyDataset(ground_truth, "text"), batch_size=16),
         total=len(ground_truth),
@@ -78,9 +83,11 @@ results = DataFrame(
 
 # %% ---------------------------------------------------------------------------------
 
-output = pd.concat(
+output_gt = pd.concat(
     [
-        DataFrame(results[t].tolist()).rename(columns={"label": t, "score": f"{t}_score"})
+        DataFrame(results_gt[t].tolist()).rename(
+            columns={"label": t, "score": f"{t}_score"}
+        )
         for t in targets
     ],
     axis=1,
@@ -88,15 +95,19 @@ output = pd.concat(
 
 # %% ---------------------------------------------------------------------------------
 
-performance = DataFrame(
+performance_gt = DataFrame(
     [
         {
-            "amae": amae_score(ground_truth[t], output[t]),
-            "f1": hmean(f1_score(ground_truth[t], output[t], average=None)),
+            "amae": amae_score(ground_truth[t], output_gt[t]),
+            "f1": hmean(f1_score(ground_truth[t], output_gt[t], average="macro")),
+            "o1": o1_score(ground_truth[t], output_gt[t]),
+            "acc1": accuracy_off1(ground_truth[t], output_gt[t]),
         }
         for t in targets
     ],
     index=pd.Series(targets, name="target"),
 )
+
+print(performance_gt.to_markdown(floatfmt=".3f"))
 
 # %% ---------------------------------------------------------------------------------
