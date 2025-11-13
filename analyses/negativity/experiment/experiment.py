@@ -10,7 +10,7 @@ from newsuse.data import DataFrame
 from sklearn.metrics import f1_score
 
 from project import paths
-from project.metrics import amae_score, o1_score
+from project.metrics import o1_score  # noqa
 
 domain = "negativity"
 targets = ["event", "sentiment"]
@@ -41,7 +41,7 @@ for model in output.index.get_level_values("model").unique():
     model_target = ground_truth.loc[model_output.index]
     scores = {"model": model}
     for target in targets:
-        scores[target] = amae_score(model_output[target], model_target[target])
+        scores[target] = f1_score(model_output[target], model_target[target])
     amae.append(scores)
 
 amae = DataFrame(amae).set_index("model")
@@ -57,7 +57,7 @@ for model in output.index.get_level_values("model").unique():
     model_target = ground_truth.loc[model_output.index]
     scores = {"model": model}
     for target in targets:
-        scores[target] = o1_score(model_output[target], model_target[target])
+        scores[target] = f1_score(model_output[target], model_target[target])
     o1.append(scores)
 
 o1 = DataFrame(o1).set_index("model")
@@ -110,7 +110,7 @@ print(metrics.reset_index().to_markdown(index=False, floatfmt=".3f"))
 
 # %% Best models AMAE model by country -----------------------------------------------
 
-amae_country = []
+f1_country = []
 for model in amae_best["model"]:
     model_output = output.loc[model]
     model_target = ground_truth.loc[model_output.index]
@@ -119,22 +119,26 @@ for model in amae_best["model"]:
         country_target = model_target.xs(country, level="country")
         scores = {"model": model, "country": country}
         for target in targets:
-            scores[target] = amae_score(country_output[target], country_target[target])
-        amae_country.append(scores)
+            scores[target] = f1_score(
+                country_output[target],
+                country_target[target],
+                average="macro",
+            )
+        f1_country.append(scores)
 
-amae_country = DataFrame(amae_country).set_index(["model", "country"])
-amae_overall = (
-    amae_country.groupby("model")
+f1_country = DataFrame(f1_country).set_index(["model", "country"])
+f1_overall = (
+    f1_country.groupby("model")
     .mean()
     .assign(country="overall")
     .set_index("country", append=True)
 )
-amae_country = (
-    pd.concat([amae_overall, amae_country])
+f1_country = (
+    pd.concat([f1_overall, f1_country])
     .swaplevel(axis=0)
-    .loc[[*amae_country.index.get_level_values("country").unique(), "overall"]]
+    .loc[[*f1_country.index.get_level_values("country").unique(), "overall"]]
     .swaplevel(axis=0)
-    .loc[amae_country.index.get_level_values("model").unique()]
+    .loc[f1_country.index.get_level_values("model").unique()]
 )
 
 # %% F1 score for events analysis ----------------------------------------------------
@@ -161,6 +165,62 @@ target_dist = DataFrame(
 dist = pd.concat({model: output_dist, "target": target_dist}).unstack(level=0)
 
 dist.to_(here / "gpt-marginal-distributions.xlsx")
+
+# %% ---------------------------------------------------------------------------------
+
+countries = output_dist.index.get_level_values("country").unique()
+fig, axes = plt.subplots(
+    nrows=len(countries),
+    ncols=len(targets),
+    figsize=(7, 2 * len(countries)),
+)
+
+for axrow, country in zip(axes, countries, strict=True):
+    axrow[0].set_ylabel(country.upper())
+    axrow[1].set_ylabel(None)
+    for ax, target in zip(axrow, targets, strict=True):
+        df = (
+            DataFrame(
+                {
+                    "target": target_dist.loc[country, target],
+                    model: output_dist.loc[country, target],
+                }
+            )
+            .melt(ignore_index=False)
+            .reset_index(names="label")
+        )
+        sns.barplot(
+            data=df,
+            x="label",
+            y="value",
+            hue="variable",
+            ax=ax,
+            legend=False,
+        )
+        ax.set_xlabel(None)
+
+for ax, target in zip(axes[0], targets, strict=True):
+    ax.set_title(target.capitalize())
+
+# Add custom legend
+handles = [
+    mpl.lines.Line2D(
+        [], [], color=sns.color_palette()[i], marker="s", linestyle="", label=target
+    )
+    for i, target in enumerate(["target", model])
+]
+fig.legend(
+    handles=handles,
+    labels=(fig_labels := ["target", model]),
+    loc="lower center",
+    title="",
+    ncols=len(fig_labels),
+    bbox_to_anchor=(0.5, -0.02),
+    frameon=False,
+)
+
+fig.tight_layout()
+
 
 # %% ---------------------------------------------------------------------------------
 
@@ -261,7 +321,7 @@ p5f1 = df.groupby("country").apply(
 
 p5amae = df.groupby("country").apply(
     lambda df: pd.Series(
-        amae_score(
+        f1_score(
             df["output"],
             df["target"],  # type: ignore
         ),
@@ -290,7 +350,7 @@ p5metrics = DataFrame(
 metrics = pd.Series(
     {
         "f1": f1_score(df["target"], df["output"], average="macro"),
-        "amae": amae_score(df["output"], df["target"]),
+        "amae": f1_score(df["output"], df["target"]),
         "acc1": accuracy_off1(df["output"], df["target"]),
     }
 )

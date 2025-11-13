@@ -1,5 +1,6 @@
 # %% ---------------------------------------------------------------------------------
 
+import json
 import os
 from typing import Any
 
@@ -10,16 +11,9 @@ from rich.progress import track
 
 from project import config, paths  # noqa
 
-MODEL_VERSION = "negativity-0.0"
+model_version = input("Enter model version/name: ")
 
-# %% ---------------------------------------------------------------------------------
-
-data = DataFrame.from_("polneg.json").pipe(
-    lambda df: pd.concat(
-        [df[["id"]], DataFrame(df.data.tolist())],
-        axis=1,
-    )
-)
+here = paths.root / "analyses" / "negativity"
 
 # %% ---------------------------------------------------------------------------------
 
@@ -30,6 +24,44 @@ studio = LabelStudio(
 project = studio.projects.get(id=int(os.environ["LABEL_STUDIO_NEGATIVITY_PROJECT_ID"]))
 users = list(studio.users.list())
 tasks = list(studio.tasks.list(project=project.id))
+
+targets = list(project.parsed_label_config)
+
+# %% ---------------------------------------------------------------------------------
+
+gpt = (
+    DataFrame.from_(here / "gpt" / "Negativity-GPT-Optimized.csv")[
+        ["key", "prompt_6_output"]
+    ]
+    .rename(columns={"prompt_6_output": "output"})
+    .assign(output=lambda df: df["output"].apply(json.loads))
+    .assign(
+        output=lambda df: df["output"].apply(
+            lambda x: json.loads(x["output"][-1]["content"][-1]["text"])
+        )
+    )
+    .assign(
+        event=lambda df: df["output"].apply(lambda x: x["event"]),
+        sentiment=lambda df: df["output"].apply(lambda x: x["sentiment"]),
+    )
+    .drop(columns=["output"])
+)
+
+# %% ---------------------------------------------------------------------------------
+
+data = (
+    DataFrame.from_(here / "polneg.json")
+    .pipe(
+        lambda df: pd.concat(
+            [df[["id"]], DataFrame(df.data.tolist())],
+            axis=1,
+        )
+    )
+    .drop(columns=["event", "sentiment"])
+    .merge(gpt, how="inner", on="key")
+)
+
+assert data.notnull().all().all(), "Data contains null values!"
 
 # %% ---------------------------------------------------------------------------------
 
@@ -54,11 +86,8 @@ for task_id, row in track(
 ):
     studio.predictions.create(
         task=task_id,
-        model_version=MODEL_VERSION,
-        result=[
-            make_annotation(row[target], target)
-            for target in list(project.parsed_label_config)
-        ],
+        model_version=model_version,
+        result=[make_annotation(row[target], target) for target in targets],
     )
 
 # %% ---------------------------------------------------------------------------------

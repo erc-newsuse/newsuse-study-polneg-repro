@@ -56,9 +56,9 @@ output = pd.concat(
 performance = DataFrame(
     [
         {
-            "amae": amae_score(validation[t], output[t]),
+            "amae": f1_score(validation[t], output[t]),
             "f1": hmean(f1_score(validation[t], output[t], average="macro")),
-            "o1": o1_score(validation[t], output[t]),
+            "o1": f1_score(validation[t], output[t]),
             "acc1": accuracy_off1(validation[t], output[t]),
         }
         for t in targets

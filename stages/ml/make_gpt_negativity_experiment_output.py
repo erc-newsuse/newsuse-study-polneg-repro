@@ -2,6 +2,7 @@
 
 import json
 import warnings
+from functools import reduce
 
 import numpy as np
 import pandas as pd
@@ -11,16 +12,18 @@ from pydantic import ValidationError
 from project import config, paths
 from project.gpt import (
     EventClassification,
+    NegativityClassification,
     SentimentClassification,
 )
 
 DOMAIN = "negativity"
 
-opts = config.gpt[DOMAIN]
+opts = config.gpt[DOMAIN].experiment
 
 output_models = {
     "event": EventClassification,
     "sentiment": SentimentClassification,
+    "negativity": NegativityClassification,
 }
 
 # %% ---------------------------------------------------------------------------------
@@ -54,8 +57,9 @@ results = []
 for key, response in responses[["key", "response"]].itertuples(index=False):
     text = response["body"]["output"][-1]["content"][0]["text"]
     try:
+        target = key.rsplit("__", 1)[-1]
         result = json.loads(text)
-        result = output_models[list(result)[0]].model_validate(result)
+        result = output_models[target].model_validate(result)
         results.append({"key": key, "output": result})
     except (json.JSONDecodeError, ValidationError) as exc:
         msg = f"Failed to process output '{text}' with error:\n{exc!r}"
@@ -80,15 +84,18 @@ output = (
         )
     )
     .set_index(["key", "params_id", "target"])
-    .map(lambda x: list(x.model_dump().values())[0])
-    .unstack("target")
-    .droplevel(0, axis=1)
+    .map(lambda x: x.model_dump())
+    .assign(
+        split=lambda df: df.index.get_level_values("target") != "negativity",
+    )
+    .set_index("split", append=True)
+    .groupby(level=["key", "params_id", "split"])
+    .apply(lambda df: (reduce(lambda x, y: x | y, df["output"], {})))
+    .map(NegativityClassification.model_validate)
+    .map(NegativityClassification.model_dump)
+    .pipe(lambda s: DataFrame(s.tolist(), index=s.index))
     .reset_index()
-    .merge(meta, how="left", on=["key", "params_id"])[
-        ["key", "country", "params_id", "model", "event", "sentiment"]
-    ]
 )
-output.columns = output.columns.tolist()
 
 # %% ---------------------------------------------------------------------------------
 

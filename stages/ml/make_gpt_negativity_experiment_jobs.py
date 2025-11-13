@@ -15,7 +15,7 @@ COMPLETED = "completed"
 IN_PROGRESS = "in_progress"
 
 domain = "negativity"
-opts = config.gpt[domain]
+opts = config.gpt[domain].batch
 
 # %% ---------------------------------------------------------------------------------
 

@@ -7,7 +7,7 @@ from newsuse.data import DataFrame
 from rich.progress import track
 
 from project import paths
-from project.metrics import amae_score
+from project.metrics import f1_score
 
 here = paths.root / "analyses" / "negativity"
 
@@ -61,7 +61,7 @@ for a1 in annotators:
         df1 = df1[mask]
         df2 = df2.loc[df1.index]
         for target in records:
-            record[target] = amae_score(df1[target], df2[target])
+            record[target] = f1_score(df1[target], df2[target])
         amae_scores.append(record)
 
 amae = DataFrame(amae_scores).set_index(["a1", "a2"])

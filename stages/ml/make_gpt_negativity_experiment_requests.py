@@ -15,7 +15,7 @@ COMPLETED = "completed"
 IN_PROGRESS = "in_progress"
 
 domain = "negativity"
-opts = config.gpt[domain]
+opts = config.gpt[domain].experiment
 
 # %% ---------------------------------------------------------------------------------
 
@@ -24,7 +24,7 @@ ground_truth = DataFrame.from_(paths.gpt / f"{domain}-ground-truth.parquet")
 # %% Build parametrs -----------------------------------------------------------------
 
 parameters = []
-for params in config.gpt.params.values():
+for params in opts.params.values():
     params = OmegaConf.to_object(params)
     parameters.extend(
         dict(zip(params, values, strict=True)) for values in product(*params.values())
