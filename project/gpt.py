@@ -5,6 +5,7 @@ from pydantic import BaseModel
 __all__ = ("NegativityClassification", "EventClassification", "SentimentClassification")
 
 Score = Literal[-1, 0, 1]
+# Score = Literal["NEGATIVE", "NEUTRAL", "POSITIVE"]
 
 
 class EventClassification(BaseModel):

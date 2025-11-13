@@ -14,7 +14,8 @@ from project.metrics import amae_score, o1_score
 
 domain = "negativity"
 targets = ["event", "sentiment"]
-here = paths.root / "analyses" / domain
+root = paths.root / "analyses" / domain
+here = root / "experiment"
 
 # %% ---------------------------------------------------------------------------------
 
@@ -25,9 +26,7 @@ ground_truth = (
 )
 
 output = (
-    DataFrame.from_(paths.gpt / f"{domain}-experiment.parquet")[
-        ["key", "country", "model", *targets]
-    ]
+    DataFrame.from_(here / "experiment.parquet")[["key", "country", "model", *targets]]
     .dropna()
     .set_index(["model", "key", "country"])
     .sort_index()
@@ -185,16 +184,33 @@ scores = pd.concat(scores, axis=1)
 
 # %% ---------------------------------------------------------------------------------
 
+
+def determine_valence(df: pd.DataFrame) -> pd.Series:
+    return np.where(
+        df[["event", "sentiment"]].ge(1).any(axis=1)
+        & df[["event", "sentiment"]].ge(0).all(axis=1),
+        1,
+        np.where(
+            df[["event", "sentiment"]].le(-1).any(axis=1)
+            & df[["event", "sentiment"]].le(0).all(axis=1),
+            -1,
+            0,
+        ),
+    )
+
+
 model_output = model_output.assign(
     negative_event=lambda df: (df["event"] == -1).astype("int64[pyarrow]"),
     negative_sentiment=lambda df: (df["sentiment"] == -1).astype("int64[pyarrow]"),
-    valence=lambda df: df["event"] + df["sentiment"],
+    # valence=lambda df: df["event"] + df["sentiment"],
+    valence=lambda df: determine_valence(df),
 )
 
 model_target = model_target.assign(
     negative_event=lambda df: (df["event"] == -1).astype("int64[pyarrow]"),
     negative_sentiment=lambda df: (df["sentiment"] == -1).astype("int64[pyarrow]"),
-    valence=lambda df: df["event"] + df["sentiment"],
+    # valence=lambda df: df["event"] + df["sentiment"],
+    valence=lambda df: determine_valence(df),
 )
 
 scores = {}
@@ -227,7 +243,8 @@ p5f1_raw = df.groupby("country").apply(
             df["output"],  # type: ignore
             average=None,
         ),
-        index=[-2, -1, 0, 1, 2],
+        index=[-1, 0, 1],
+        # index=[-2, -1, 0, 1, 2],
     )
 )
 
@@ -270,13 +287,21 @@ p5metrics = DataFrame(
     }
 )
 
+metrics = pd.Series(
+    {
+        "f1": f1_score(df["target"], df["output"], average="macro"),
+        "amae": amae_score(df["output"], df["target"]),
+        "acc1": accuracy_off1(df["output"], df["target"]),
+    }
+)
+
 # %% ---------------------------------------------------------------------------------
 
 output_dist = (
     model_output.assign(
-        valence=lambda df: np.where(
-            df["valence"] < 0, -1, np.where(df["valence"] > 0, 1, 0)
-        )
+        # valence=lambda df: np.where(
+        #     df["valence"] < 0, -1, np.where(df["valence"] > 0, 1, 0)
+        # )
     )
     .groupby("country")["valence"]
     .value_counts(normalize=True)
@@ -285,9 +310,9 @@ output_dist = (
 )
 target_dist = (
     model_target.assign(
-        valence=lambda df: np.where(
-            df["valence"] < 0, -1, np.where(df["valence"] > 0, 1, 0)
-        )
+        # valence=lambda df: np.where(
+        #     df["valence"] < 0, -1, np.where(df["valence"] > 0, 1, 0)
+        # )
     )
     .groupby("country")["valence"]
     .value_counts(normalize=True)
