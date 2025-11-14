@@ -1003,24 +1003,23 @@ stages:
       size: 552734108
     - path: stages/ml/make_gpt_negativity_requests.py
       hash: md5
-      md5: db7ce94465ea67a00669f551cd09e2d8
-      size: 3275
+      md5: 5410e2036b7c47ee66fed458fa152563
+      size: 2969
     params:
       params.yaml:
         gpt.negativity.batch:
-          defaults:
-            params: &id005
-              model: gpt-5
-              reasoning:
-                effort: medium
-              text:
-                verbosity: low
+          params:
+            model: gpt-5
+            reasoning: &id005
+              effort: medium
+            text: &id006
+              verbosity: medium
           header:
             method: POST
             url: /v1/responses
           batch_size: 2500
           sample:
-            size_per_group: 1500
+            size_per_group: 1000
             min_words: 5
             countries: []
             political:
@@ -1029,14 +1028,18 @@ stages:
             seed: 535017
           targets:
             event:
-              params: *id005
+              model: gpt-5
+              reasoning: *id005
+              text: *id006
             sentiment:
-              params: *id005
+              model: gpt-5
+              reasoning: *id005
+              text: *id006
     outs:
     - path: data/proc/gpt/negativity-requests.jsonl.gz
       hash: md5
-      md5: 6f23d9df3cf28b0af128e2ebb6f2a63c
-      size: 6364801
+      md5: b2a4977347d1db39c084f620ffe47be0
+      size: 2339059
   negativity-jobs:
     cmd: python stages/ml/make_gpt_negativity_jobs.py
     deps:
@@ -1052,7 +1055,7 @@ stages:
       params.yaml:
         gpt.negativity.batch:
           defaults:
-            params: &id006
+            params: &id007
               model: gpt-5
               reasoning:
                 effort: medium
@@ -1072,9 +1075,9 @@ stages:
             seed: 535017
           targets:
             event:
-              params: *id006
+              params: *id007
             sentiment:
-              params: *id006
+              params: *id007
     outs:
     - path: data/proc/gpt/negativity-jobs.jsonl.gz
       hash: md5

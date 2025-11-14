@@ -120,18 +120,17 @@ gpt:
         <<: *gpt_default_header
       batch_size: *gpt_default_batch_size
     batch:
-      defaults: &gpt_batch_defaults
-        params:
-          model: gpt-5
-          reasoning:
-            effort: medium
-          text:
-            verbosity: low
+      params: &gpt_batch_params
+        model: gpt-5
+        reasoning:
+          effort: medium
+        text:
+          verbosity: medium
       header:
           <<: *gpt_default_header
       batch_size: *gpt_default_batch_size
       sample:
-        size_per_group: 1500
+        size_per_group: 1000
         min_words: 5
         countries: []
         political:
@@ -140,9 +139,9 @@ gpt:
         seed: 535017
       targets:
         event:
-          <<: *gpt_batch_defaults
+          <<: *gpt_batch_params
         sentiment:
-          <<: *gpt_batch_defaults
+          <<: *gpt_batch_params
 
 inference:
   alpha: 0.05

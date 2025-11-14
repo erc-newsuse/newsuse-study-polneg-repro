@@ -2,19 +2,22 @@
 
 from copy import deepcopy
 
+import numpy as np
 import pandas as pd
 from newsuse.data import DataFrame
-from newsuse.dotpath import dotimport
 from omegaconf import OmegaConf
 from openai.lib._pydantic import to_strict_json_schema
 
 from project import config, paths
+from project.gpt import NegativityClassification
 
 COMPLETED = "completed"
 IN_PROGRESS = "in_progress"
 
 domain = "negativity"
 opts = config.gpt[domain].batch
+
+rng = np.random.default_rng(opts.sample.seed)
 
 # %% ---------------------------------------------------------------------------------
 
@@ -33,7 +36,7 @@ sample = (
     .pipe(lambda df: df[df["text"].str.split().map(len) >= opts.sample.min_words])
     .dropna(ignore_index=True)
     .groupby(["country", "political"])
-    .sample(n=opts.sample.size_per_group, random_state=opts.sample.seed)
+    .sample(n=opts.sample.size_per_group, random_state=rng)
     .pipe(
         lambda df: pd.concat([df, ground_truth], ignore_index=True).drop_duplicates(
             subset="key", keep="last"
@@ -47,41 +50,35 @@ sample = (
 header = config.gpt.header
 text_format = {
     "type": "json_schema",
-    "name": "quality_assessment",
+    "name": "negativity",
     "strict": True,
+    "schema": to_strict_json_schema(NegativityClassification),
 }
 
-prompts = {}
-for target in opts.targets:
-    with (paths.prompts / domain / f"{target}.md").open() as fh:
-        prompts[target] = fh.read().strip()
+with (paths.prompts / domain / "negativity.md").open() as fh:
+    prompt = fh.read().strip()
 
 # %% ---------------------------------------------------------------------------------
 
 requests = []
-for target, target_opts in opts.targets.items():
-    output_model = dotimport(f"project.gpt:{target.title()}Classification")
-    request_params = deepcopy(OmegaConf.to_object(target_opts.params))
-    tfrm = {**text_format, "schema": to_strict_json_schema(output_model)}
-    request_params.setdefault("text", {}).update(format=tfrm)
-    for key, row in sample.set_index("key").iterrows():
-        text = [
-            f"TITLE:\n{row.title}" if row.title else "",
-            f"TEXT:\n{row.text}" if row.text else "",
-        ]
-        text = "\n\n".join(text).strip()
-        if not text:
-            continue
-        body = {"input": text, "instructions": prompts[target], **request_params}
-        request = {
-            "custom_id": f"{key}__{target}",
-            "key": key,
-            "country": row.country,
-            "target": target,
-            **header,
-            "body": body,
-        }
-        requests.append(request)
+params = deepcopy(OmegaConf.to_object(opts.params))
+params.setdefault("text", {}).update({"format": text_format})
+for key, row in sample.set_index("key").iterrows():
+    text = [
+        f"TITLE:\n{row.title}" if row.title else "",
+        f"TEXT:\n{row.text}" if row.text else "",
+    ]
+    text = "\n\n".join(text).strip()
+    if not text:
+        continue
+    body = {"input": text, "instructions": prompt, **params}
+    request = {
+        "custom_id": key,
+        "country": row.country,
+        **header,
+        "body": body,
+    }
+    requests.append(request)
 
 requests = DataFrame(requests)
 
