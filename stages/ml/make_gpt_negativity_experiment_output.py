@@ -62,7 +62,7 @@ for key, response in responses[["key", "response"]].itertuples(index=False):
         result = output_models[target].model_validate(result)
         results.append({"key": key, "output": result})
     except (json.JSONDecodeError, ValidationError) as exc:
-        msg = f"Failed to process output '{text}' with error:\n{exc!r}"
+        msg = f"failed to process output '{text}' with error:\n{exc!r}"
         warnings.warn(msg, RuntimeWarning, stacklevel=2)
 results = DataFrame(results)
 

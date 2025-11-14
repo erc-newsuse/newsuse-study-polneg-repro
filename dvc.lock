@@ -542,8 +542,8 @@ stages:
     deps:
     - path: data/proc/gpt/negativity-ground-truth.parquet
       hash: md5
-      md5: 617797f970ecae7e2bd94f5e65d5cc23
-      size: 70211
+      md5: 9c5a88a0adeef2dc6ebb339bc3fd1670
+      size: 70213
     - path: data/proc/gpt/negativity-requests.jsonl.gz
       hash: md5
       md5: 6f23d9df3cf28b0af128e2ebb6f2a63c
@@ -849,8 +849,8 @@ stages:
     deps:
     - path: data/raw/negativity-ground-truth.json.gz
       hash: md5
-      md5: 06d761628373a3729167f67eae13a3d0
-      size: 251811
+      md5: 6d2197cada0d2586fa92b6100529073e
+      size: 266937
     - path: stages/ml/make_negativity_ground_truth.py
       hash: md5
       md5: f385aebda2734209b2249198e08261fc
@@ -858,15 +858,15 @@ stages:
     outs:
     - path: data/proc/gpt/negativity-ground-truth.parquet
       hash: md5
-      md5: 617797f970ecae7e2bd94f5e65d5cc23
-      size: 70211
+      md5: 9c5a88a0adeef2dc6ebb339bc3fd1670
+      size: 70213
   negativity-experiment-requests:
     cmd: python stages/ml/make_gpt_negativity_experiment_requests.py
     deps:
     - path: data/proc/gpt/negativity-ground-truth.parquet
       hash: md5
-      md5: 617797f970ecae7e2bd94f5e65d5cc23
-      size: 70211
+      md5: 9c5a88a0adeef2dc6ebb339bc3fd1670
+      size: 70213
     - path: stages/ml/make_gpt_negativity_experiment_requests.py
       hash: md5
       md5: 9dee67b53e118704386f0cf7faf9239b
@@ -979,7 +979,7 @@ stages:
       size: 3762354
     - path: stages/ml/make_gpt_negativity_experiment_output.py
       hash: md5
-      md5: 8503520addd5a99cdca842ebc2a823e6
+      md5: 1473f6e45fcd10cd4e5e6b9aaa3c3787
       size: 3349
     outs:
     - path: data/proc/gpt/negativity-experiment.parquet

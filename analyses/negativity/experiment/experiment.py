@@ -23,14 +23,60 @@ ground_truth = (
     DataFrame.from_(paths.gpt / f"{domain}-ground-truth.parquet")
     .drop(columns=["text", "title"])
     .set_index(["key", "country"])
+    .melt(ignore_index=False, var_name="target", value_name="label")
+    .set_index("target", append=True)["label"]
 )
 
+# %% ---------------------------------------------------------------------------------
+
+requests = (
+    DataFrame.from_(paths.gpt / f"{domain}-experiment-requests.jsonl.gz")[
+        ["key", "country", "params_id", "body", "target"]
+    ]
+    .assign(split=lambda df: df["target"] != "negativity")
+    .assign(
+        model=lambda df: df["body"].map(lambda x: x["model"]),
+        reasoning=lambda df: df["body"].map(lambda x: x.get("reasoning", {}).get("effort")),
+    )
+    .assign(
+        model=lambda df: np.where(
+            df["reasoning"].notnull(),
+            df["model"] + "[" + df["reasoning"] + "]",
+            df["model"],
+        )
+    )
+    .drop(columns=["body", "reasoning", "target"])
+    .drop_duplicates(ignore_index=True)
+)
+
+# %% ---------------------------------------------------------------------------------
+
 output = (
-    DataFrame.from_(here / "experiment.parquet")[["key", "country", "model", *targets]]
+    DataFrame.from_(here / "experiment.parquet")
     .dropna()
-    .set_index(["model", "key", "country"])
-    .sort_index()
+    .merge(requests, on=["key", "params_id", "split"])
+    .drop(columns=["params_id"])
+    .set_index(["split", "model", "country", "key"])
     .astype("int64[pyarrow]")
+    .dropna()
+    .melt(ignore_index=False, var_name="target", value_name="label")
+    .set_index("target", append=True)
+    .reset_index()
+    .merge(
+        ground_truth.reset_index(),
+        on=["key", "country", "target"],
+        suffixes=("", "_t"),
+    )
+    .set_index(["split", "model", "country", "key", "target"])
+    .sort_index()
+)
+
+# %% ---------------------------------------------------------------------------------
+
+groups = output.index.names
+
+f1_scores = output.groupby(level=groups).apply(
+    lambda df: f1_score(df["label_t"], df["label"], average="macro")
 )
 
 # %% ---------------------------------------------------------------------------------
