@@ -107,6 +107,7 @@ stages:
     - data/proc/dataset.parquet
     - data/proc/cls-political.parquet
     - data/proc/posts-text.parquet
+    - ml/prompts/negativity/negativity.md
     outs:
     - data/proc/gpt/negativity-requests.jsonl.gz:
         persist: true

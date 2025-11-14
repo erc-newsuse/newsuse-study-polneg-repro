@@ -22,8 +22,11 @@ rx_headers = re.compile(r"^(TITLE:|TEXT:)\n", re.MULTILINE)
 
 ground_truth = DataFrame.from_(paths.gpt / f"{domain}-ground-truth.parquet")
 
+# %% ---------------------------------------------------------------------------------
+
 data = (
     DataFrame.from_(paths.gpt / f"{domain}-requests.jsonl.gz")
+    .rename(columns={"custom_id": "key"})
     .drop_duplicates(subset=["key", "country"], ignore_index=True)
     .assign(text=lambda df: df["body"].map(lambda s: s["input"]))[
         ["key", "country", "text"]

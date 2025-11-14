@@ -18,7 +18,6 @@ DOMAIN = "negativity"
 with gzip.open(paths.gpt / f"{DOMAIN}-jobs.jsonl.gz", "rt") as fh:
     batch_jobs = json.load(fh)
 
-
 # %% ---------------------------------------------------------------------------------
 
 output = []
@@ -30,24 +29,22 @@ if (responses_path := paths.gpt / f"{DOMAIN}-responses.jsonl.gz").exists():
 
 incomplete = {}
 
-for country, jobs in batch_jobs.items():
-    for job in jobs.values():
-        job = client.batches.retrieve(job["batch_id"])
-        if job.status != COMPLETED:
-            incomplete.setdefault(country, []).append(job)
-            continue
-        content = client.files.content(job.output_file_id).content
-        lines = list(content.decode().splitlines())
-        data = DataFrame([json.loads(line) for line in lines if line.strip()])
-        data.insert(1, "country", country)
-        output.extend(data.to_dict(orient="records"))
+for idx, job in batch_jobs.items():
+    job = client.batches.retrieve(job["batch_id"])
+    if job.status != COMPLETED:
+        incomplete[idx] = job
+        continue
+    content = client.files.content(job.output_file_id).content
+    lines = list(content.decode().splitlines())
+    data = DataFrame([json.loads(line) for line in lines if line.strip()])
+    output.extend(data.to_dict(orient="records"))
 
 # %% ---------------------------------------------------------------------------------
 
 output = (
     DataFrame(output)
     .drop_duplicates(subset=["custom_id"], keep="last")
-    .sort_values(["country", "custom_id"], ignore_index=True)
+    .sort_values(["custom_id"], ignore_index=True)
 )
 
 # %% ---------------------------------------------------------------------------------

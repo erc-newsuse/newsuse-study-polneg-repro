@@ -29,11 +29,10 @@ if gpt_batch_responses_path.exists():
     ids = list(
         zip(
             responses[k] if (k := "custom_id") in responses.columns else [],
-            responses[k] if (k := "params_id") in responses.columns else [],
             strict=False,
         )
     )
-    mask = requests[["custom_id", "params_id"]].map(lambda x: (x,)).sum(axis=1).isin(ids)
+    mask = requests[["custom_id"]].map(lambda x: (x,)).sum(axis=1).isin(ids)
     if mask.any():
         msg = (
             f"File '{paths.gpt_batch_responses.name}' already contains responses to"
@@ -66,44 +65,43 @@ client = OpenAI()
 header = config.gpt.header
 batch_jobs = {}
 
-for target, data in requests.groupby("target"):
-    for idx, batch_index in enumerate(batched(data.index, opts.batch_size)):
-        batch_index = list(batch_index)
-        batch = data.loc[batch_index]
-        if batch.empty:
-            continue
-        # Use an in-memory bytes buffer instead of a temporary file
-        buffer = io.BytesIO()
-        for col in ["key", "target", "country"]:
-            if col in batch.columns:
-                del batch[col]
-        # Write each request as a JSON line to the buffer
-        for request in batch.to_dict(orient="records"):
-            line = json.dumps(request).strip()
-            buffer.write((line + "\n").encode())
-        # Move the buffer's cursor to the beginning before reading
-        buffer.seek(0)
-        # Create the batch file using the in-memory buffer
-        batch_file = client.files.create(
-            file=buffer,
-            purpose="batch",
-        )
-        metadata = {
-            "description": f"[{target}|{idx}] article quality assessment input file",
-            "target": target,
-            "idx": str(idx),
-        }
-        batch_job = client.batches.create(
-            input_file_id=batch_file.id,
-            endpoint=header["url"],
-            completion_window="24h",
-            metadata=metadata,
-        )
-        batch_jobs.setdefault(target, {})[idx] = {
-            "batch_id": batch_job.id,
-            "batch_file_id": batch_file.id,
-            "status": batch_job.status,
-        }
+data = requests.copy()
+for idx, batch_index in enumerate(batched(data.index, opts.batch_size)):
+    batch_index = list(batch_index)
+    batch = data.loc[batch_index]
+    if batch.empty:
+        continue
+    # Use an in-memory bytes buffer instead of a temporary file
+    buffer = io.BytesIO()
+    for col in ["key", "country"]:
+        if col in batch.columns:
+            del batch[col]
+    # Write each request as a JSON line to the buffer
+    for request in batch.to_dict(orient="records"):
+        line = json.dumps(request).strip()
+        buffer.write((line + "\n").encode())
+    # Move the buffer's cursor to the beginning before reading
+    buffer.seek(0)
+    # Create the batch file using the in-memory buffer
+    batch_file = client.files.create(
+        file=buffer,
+        purpose="batch",
+    )
+    metadata = {
+        "description": f"[{idx}] article quality assessment input file",
+        "idx": str(idx),
+    }
+    batch_job = client.batches.create(
+        input_file_id=batch_file.id,
+        endpoint=header["url"],
+        completion_window="24h",
+        metadata=metadata,
+    )
+    batch_jobs[idx] = {
+        "batch_id": batch_job.id,
+        "batch_file_id": batch_file.id,
+        "status": batch_job.status,
+    }
 
 # Report created batch jobs
 print("\nCreated batch jobs:\n" + json.dumps(batch_jobs, indent=4))
