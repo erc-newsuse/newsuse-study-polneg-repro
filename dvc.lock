@@ -714,20 +714,20 @@ stages:
     deps:
     - path: ml/datasets/negativity
       hash: md5
-      md5: 17b9c428af77ca6f90f4aaeecac1fe7f.dir
-      size: 5492577
+      md5: 9c40e298a83cb21ed3ec8abc00c550c9.dir
+      size: 3752265
       nfiles: 10
     - path: stages/ml/negativity_hyper.py
       hash: md5
-      md5: b4cf275ae1ce91708aa98f7d2ef75bf1
-      size: 4417
+      md5: 0fb09ef8774317ab8dedd032af01719d
+      size: 4234
     params:
       params.yaml:
         ml.hyper.negativity:
           study:
             direction: maximize
             load_if_exists: ${eval:${oc.env:NEWSUSE_OPTUNA_RESUME,1}}
-            study_name: newsuse-negativity-model
+            study_name: negativity
           optimize:
             n_jobs: ${eval:${oc.env:NEWSUSE_OPTUNA_N_JOBS,1}}
             n_trials: ${eval:${oc.env:NEWSUSE_OPTUNA_N_TRIALS,50}}
@@ -842,8 +842,8 @@ stages:
     outs:
     - path: data/proc/negativity-hyper.parquet
       hash: md5
-      md5: e0efd475ed6192ea2bec0d3c06458779
-      size: 13509
+      md5: 8405228ed9b96aaf86e05f4bec5abb9f
+      size: 13942
   negativity-ground-truth:
     cmd: python stages/ml/make_negativity_ground_truth.py
     deps:

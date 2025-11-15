@@ -259,7 +259,7 @@ ml:
     negativity:
       <<: *ml_hyper_defaults
       study:
-        study_name: newsuse-negativity-model
+        study_name: negativity
         <<: *ml_hyper_study_defaults
   models:
     negativity:

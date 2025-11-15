@@ -24,15 +24,10 @@ os.environ["PYTORCH_ALLOC_CONF"] = "expandable_segments:True"
 datasets.disable_caching()
 
 domain = "negativity"
-study_name = f"{domain}-ground-truth"
-
-# rng = np.random.default_rng(303)
 
 # %% ---------------------------------------------------------------------------------
 
-dataset = datasets.load_from_disk(paths.ml / "datasets" / domain).filter(
-    lambda example: example["ground_truth"]  # or rng.random() < 0.1
-)
+dataset = datasets.load_from_disk(paths.ml / "datasets" / domain)
 
 # %% ---------------------------------------------------------------------------------
 
@@ -109,7 +104,6 @@ storage = f"sqlite:///{paths.root / 'optuna.db'}"
 opts = {
     **config.ml.hyper[domain].study,
     "storage": storage,
-    "study_name": study_name,
 }
 
 # %% Optimize hyperparameters --------------------------------------------------------
