@@ -37,9 +37,9 @@ pipe = pipeline("text-multi-classification", model=model, tokenizer=tokenizer)
 
 # %% ---------------------------------------------------------------------------------
 
-validation = dataset["valid"].to_pandas().set_index(["ground_truth", "country", "key"])
+testing = dataset["test"].to_pandas().set_index(["ground_truth", "country", "key"])
 results = DataFrame(
-    tqdm(pipe(KeyDataset(validation, "text"), batch_size=16), total=len(validation)),
+    tqdm(pipe(KeyDataset(testing, "text"), batch_size=16), total=len(testing)),
 )
 
 # %% ---------------------------------------------------------------------------------
@@ -50,14 +50,14 @@ output = pd.concat(
         for t in targets
     ],
     axis=1,
-).set_index(validation.index)
+).set_index(testing.index)
 
 # %% ---------------------------------------------------------------------------------
 
 data = (
     output[["event", "sentiment"]]
     .merge(
-        validation[["event", "sentiment"]],
+        testing[["event", "sentiment"]],
         left_index=True,
         right_index=True,
         suffixes=("", "_t"),

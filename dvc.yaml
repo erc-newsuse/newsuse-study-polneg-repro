@@ -166,6 +166,18 @@ stages:
     - data/proc/negativity-hyper.parquet:
         persist: true
 
+  negativity-classify:
+    cmd: python stages/ml/negativity_classify.py
+    params:
+    - ml.inference
+    deps:
+    - stages/ml/negativity_classify.py
+    - data/proc/posts-text.parquet
+    - data/proc/negativity-hyper.parquet
+    outs:
+    - data/proc/negativity-cls.parquet:
+        persist: true
+
   glmm:
     foreach:
     - negativity
