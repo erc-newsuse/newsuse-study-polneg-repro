@@ -566,9 +566,9 @@ stages:
     outs:
     - path: ml/datasets/negativity
       hash: md5
-      md5: 9c40e298a83cb21ed3ec8abc00c550c9.dir
-      size: 3752265
-      nfiles: 10
+      md5: 3098f43a48b78f5d790d8b191bb8e6ff.dir
+      size: 3759033
+      nfiles: 13
   negativity-batch-output:
     cmd: python stages/ml/make_gpt_negativity_output.py
     deps:
@@ -714,9 +714,9 @@ stages:
     deps:
     - path: ml/datasets/negativity
       hash: md5
-      md5: 9c40e298a83cb21ed3ec8abc00c550c9.dir
-      size: 3752265
-      nfiles: 10
+      md5: 3098f43a48b78f5d790d8b191bb8e6ff.dir
+      size: 3759033
+      nfiles: 13
     - path: stages/ml/negativity_hyper.py
       hash: md5
       md5: 0fb09ef8774317ab8dedd032af01719d
@@ -1122,3 +1122,27 @@ stages:
       hash: md5
       md5: 640c3dd59e37a9d26df14641fe901fb4
       size: 252256
+  negativity-classify:
+    cmd: python stages/ml/negativity_classify.py
+    deps:
+    - path: data/proc/negativity-hyper.parquet
+      hash: md5
+      md5: 8405228ed9b96aaf86e05f4bec5abb9f
+      size: 13942
+    - path: data/proc/posts-text.parquet
+      hash: md5
+      md5: ac82d44c49eec08b7e35c21343a60a6c
+      size: 552734108
+    - path: stages/ml/negativity_classify.py
+      hash: md5
+      md5: 473ecbb1e11eddee06b1913ed9446f56
+      size: 1896
+    params:
+      params.yaml:
+        ml.inference:
+          batch_size: ${eval:${oc.env:NEWSUSE_ML_INFERENCE_BATCH_SIZE,32}}
+    outs:
+    - path: data/proc/negativity-cls.parquet
+      hash: md5
+      md5: 49bcd2c321f115a7e1a3e19fa3a0c6b5
+      size: 142210993

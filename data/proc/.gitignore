@@ -13,3 +13,4 @@
 /*.xlsx
 /hyper-negativity.parquet
 /negativity-hyper.parquet
+/negativity-cls.parquet
