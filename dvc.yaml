@@ -175,7 +175,17 @@ stages:
     - data/proc/posts-text.parquet
     - data/proc/valence-hyper.parquet
     outs:
-    - data/proc/valence-cls.parquet:
+    - data/proc/cls-valence.parquet:
+        persist: true
+
+  merge-cls:
+    cmd: python stages/merge_cls.py
+    deps:
+    - stages/merge_cls.py
+    - data/proc/cls-political.parquet
+    - data/proc/cls-valence.parquet
+    outs:
+    - data/proc/cls.parquet:
         persist: true
 
   glmm:
@@ -201,67 +211,3 @@ stages:
     outs:
     - data/proc/articles-sample.parquet:
         persist: true
-
-  # predictions:
-  #   cmd: Rscript stages/make_predictions.R
-  #   deps:
-  #   - stages/make_predictions.R
-  #   - data/proc/dataset.parquet
-  #   - models/glmm/reactions
-  #   - models/glmm/comments
-  #   - models/glmm/shares
-  #   outs:
-  #   - data/proc/predictions.parquet:
-  #       persist: true
-
-  # ml-datasets:
-  #   foreach:
-  #   - political
-  #   - valence
-  #   do:
-  #     cmd: python stages/ml/make_dataset_${item}.py
-  #     deps:
-  #     - stages/ml/make_dataset_${item}.py
-  #     - data/ml/${item}
-  #     params:
-  #     - annotations.${item}
-  #     outs:
-  #     - ml/datasets/${item}:
-  #         persist: true
-
-  # train:
-  #   foreach:
-  #   - political
-  #   - valence
-  #   do:
-  #     cmd: python stages/train_${item}.py
-  #     deps:
-  #     - ml/datasets/${item}
-  #     - stages/train_${item}.py
-  #     outs:
-  #     - ml/classifiers/${item}:
-  #         persist: true
-
-  # labels:
-  #   foreach:
-  #     - political
-  #     - valence
-  #   do:
-  #     cmd: python stages/make_labels.py --model='"${item}"'
-  #     deps:
-  #     - stages/make_labels.py
-  #     - ml/classifiers/${item}
-  #     - data/proc/posts-text.parquet
-  #     outs:
-  #     - data/proc/cls-${item}.parquet:
-  #         persist: true
-
-  # merge-labels:
-  #   cmd: python stages/merge_labels.py
-  #   deps:
-  #   - stages/merge_labels.py
-  #   - data/proc/cls-political.parquet
-  #   - data/proc/cls-valence.parquet
-  #   outs:
-  #   - data/proc/cls.parquet:
-  #       persist: true

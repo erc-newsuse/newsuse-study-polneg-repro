@@ -5,7 +5,7 @@ library(dplyr)
 library(tibble)
 library(glmmTMB)
 
-use_condaenv("polneg-repro")
+use_python(normalizePath(R.home("../../bin/python")), required = TRUE)
 
 project <- import("project")
 config  <- project$config
@@ -25,6 +25,7 @@ dataset <- as.character(paths$dataset) %>%
     mutate(
         country = factor(country, levels = countries),
         political = factor(political, levels = c("OTHER", "POLITICAL")),
+
         valence = factor(valence, levels = c("OTHER", "NEGATIVE")),
         year = as.factor(year),
         month = as.factor(month),

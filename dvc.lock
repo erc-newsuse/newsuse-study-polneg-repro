@@ -400,17 +400,17 @@ stages:
     outs:
     - path: ml/datasets/valence
       hash: md5
-      md5: 3098f43a48b78f5d790d8b191bb8e6ff.dir
-      size: 3759033
-      nfiles: 13
+      md5: d94b5704a2300f94c24bae5e31d17eae.dir
+      size: 3765801
+      nfiles: 16
   valence-train:
     cmd: python stages/ml/valence_hyper.py
     deps:
     - path: ml/datasets/valence
       hash: md5
-      md5: 3098f43a48b78f5d790d8b191bb8e6ff.dir
-      size: 3759033
-      nfiles: 13
+      md5: d94b5704a2300f94c24bae5e31d17eae.dir
+      size: 3765801
+      nfiles: 16
     - path: stages/ml/valence_hyper.py
       hash: md5
       md5: 744ffb840088b5c969a857d883613401
@@ -551,14 +551,34 @@ stages:
       size: 13942
     - path: stages/ml/valence_classify.py
       hash: md5
-      md5: 7cf882e8256aa7bda980dcab5c09d97c
+      md5: 2e38e888ebe82cc8b36c6d7bb2a0c348
       size: 1893
     params:
       params.yaml:
         ml.inference:
           batch_size: ${eval:${oc.env:NEWSUSE_ML_INFERENCE_BATCH_SIZE,32}}
     outs:
-    - path: data/proc/valence-cls.parquet
+    - path: data/proc/cls-valence.parquet
       hash: md5
       md5: 49bcd2c321f115a7e1a3e19fa3a0c6b5
       size: 142210993
+  merge-cls:
+    cmd: python stages/merge_cls.py
+    deps:
+    - path: data/proc/cls-political.parquet
+      hash: md5
+      md5: b5cb11b590ee40238d76156289cbc18d
+      size: 138848517
+    - path: data/proc/cls-valence.parquet
+      hash: md5
+      md5: 49bcd2c321f115a7e1a3e19fa3a0c6b5
+      size: 142210993
+    - path: stages/merge_cls.py
+      hash: md5
+      md5: 5229056ec25d4079e18efbda929e1051
+      size: 907
+    outs:
+    - path: data/proc/cls.parquet
+      hash: md5
+      md5: df27f851ab34b89051a3191d54712221
+      size: 186713947
