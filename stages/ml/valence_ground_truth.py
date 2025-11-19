@@ -4,7 +4,7 @@ from newsuse.data import DataFrame
 
 from project import paths
 
-domain = "negativity"
+domain = "valence"
 
 # %% ---------------------------------------------------------------------------------
 

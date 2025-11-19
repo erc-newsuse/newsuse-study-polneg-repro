@@ -9,7 +9,7 @@ from rich.progress import track
 from project import paths
 from project.metrics import f1_score
 
-here = paths.root / "analyses" / "negativity"
+here = paths.root / "analyses" / "valence"
 
 # %% ---------------------------------------------------------------------------------
 
@@ -17,7 +17,7 @@ studio = LabelStudio(
     base_url=os.environ["LABEL_STUDIO_URL"],
     api_key=os.environ["LABEL_STUDIO_API_KEY"],
 )
-project = studio.projects.get(id=int(os.environ["LABEL_STUDIO_NEGATIVITY_PROJECT_ID"]))
+project = studio.projects.get(id=int(os.environ["LABEL_STUDIO_VALENCE_PROJECT_ID"]))
 tasks = list(studio.tasks.list(project=project.id))
 
 # %% ----------------------------------------------------------------------------------

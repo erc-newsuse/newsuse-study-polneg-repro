@@ -17,7 +17,7 @@ from project import paths
 from project.metrics import amae_score, o1_score
 from project.pipelines import KeyDataset, pipeline
 
-domain = "negativity"
+domain = "valence"
 targets = ["event", "sentiment"]
 
 # %% ---------------------------------------------------------------------------------

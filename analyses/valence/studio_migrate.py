@@ -9,7 +9,7 @@ from rich.progress import track
 
 from project import paths
 
-here = paths.root / "analyses" / "negativity"
+here = paths.root / "analyses" / "valence"
 
 # %% ---------------------------------------------------------------------------------
 
@@ -17,7 +17,7 @@ studio = LabelStudio(
     base_url=os.environ["LABEL_STUDIO_URL"],
     api_key=os.environ["LABEL_STUDIO_API_KEY"],
 )
-project = studio.projects.get(id=int(os.environ["LABEL_STUDIO_NEGATIVITY_PROJECT_ID"]))
+project = studio.projects.get(id=int(os.environ["LABEL_STUDIO_VALENCE_PROJECT_ID"]))
 tasks = list(studio.tasks.list(project=project.id))
 users = [u for u in studio.users.list() if u.organization_membership.active]
 
@@ -30,7 +30,7 @@ country = "fr"
 # %% ---------------------------------------------------------------------------------
 
 user_data = (
-    DataFrame.from_(here / "Negativity-OpenAI.csv")
+    DataFrame.from_(here / "Valence-OpenAI.csv")
     .query(f"country.eq('{country}')")
     .reset_index(drop=True)[["key", f"{prefix}_event", f"{prefix}_sentiment"]]
     .rename(columns={f"{prefix}_event": "event", f"{prefix}_sentiment": "sentiment"})

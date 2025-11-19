@@ -13,7 +13,7 @@ from project import config, paths  # noqa
 
 model_version = input("Enter model version/name: ")
 
-here = paths.root / "analyses" / "negativity"
+here = paths.root / "analyses" / "valence"
 
 # %% ---------------------------------------------------------------------------------
 
@@ -21,7 +21,7 @@ studio = LabelStudio(
     base_url=os.environ["LABEL_STUDIO_URL"],
     api_key=os.environ["LABEL_STUDIO_API_KEY"],
 )
-project = studio.projects.get(id=int(os.environ["LABEL_STUDIO_NEGATIVITY_PROJECT_ID"]))
+project = studio.projects.get(id=int(os.environ["LABEL_STUDIO_VALENCE_PROJECT_ID"]))
 users = list(studio.users.list())
 tasks = list(studio.tasks.list(project=project.id))
 
@@ -30,9 +30,7 @@ targets = list(project.parsed_label_config)
 # %% ---------------------------------------------------------------------------------
 
 gpt = (
-    DataFrame.from_(here / "gpt" / "Negativity-GPT-Optimized.csv")[
-        ["key", "prompt_6_output"]
-    ]
+    DataFrame.from_(here / "gpt" / "Valence-GPT-Optimized.csv")[["key", "prompt_6_output"]]
     .rename(columns={"prompt_6_output": "output"})
     .assign(output=lambda df: df["output"].apply(json.loads))
     .assign(

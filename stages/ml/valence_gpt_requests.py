@@ -9,12 +9,12 @@ from omegaconf import OmegaConf
 from openai.lib._pydantic import to_strict_json_schema
 
 from project import config, paths
-from project.gpt import NegativityClassification
+from project.gpt import ValenceClassification
 
 COMPLETED = "completed"
 IN_PROGRESS = "in_progress"
 
-domain = "negativity"
+domain = "valence"
 opts = config.gpt[domain].batch
 
 rng = np.random.default_rng(opts.sample.seed)
@@ -50,12 +50,12 @@ sample = (
 header = config.gpt.header
 text_format = {
     "type": "json_schema",
-    "name": "negativity",
+    "name": "valence",
     "strict": True,
-    "schema": to_strict_json_schema(NegativityClassification),
+    "schema": to_strict_json_schema(ValenceClassification),
 }
 
-with (paths.prompts / domain / "negativity.md").open() as fh:
+with (paths.prompts / domain / "valence.md").open() as fh:
     prompt = fh.read().strip()
 
 # %% ---------------------------------------------------------------------------------
@@ -89,6 +89,6 @@ assert requests["custom_id"].is_unique, "Duplicate custom_id values found in req
 # %% ---------------------------------------------------------------------------------
 
 paths.gpt.mkdir(parents=True, exist_ok=True)
-requests.to_(paths.gpt / "negativity-requests.jsonl.gz")
+requests.to_(paths.gpt / "valence-requests.jsonl.gz")
 
 # %% ---------------------------------------------------------------------------------

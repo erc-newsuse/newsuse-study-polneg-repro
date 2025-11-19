@@ -14,7 +14,7 @@ from project import config, paths
 COMPLETED = "completed"
 IN_PROGRESS = "in_progress"
 
-domain = "negativity"
+domain = "valence"
 opts = config.gpt[domain].experiment
 
 # %% ---------------------------------------------------------------------------------
@@ -84,6 +84,6 @@ requests = DataFrame(requests)
 # %% ---------------------------------------------------------------------------------
 
 paths.gpt.mkdir(parents=True, exist_ok=True)
-requests.to_(paths.gpt / "negativity-experiment-requests.jsonl.gz")
+requests.to_(paths.gpt / "valence-experiment-requests.jsonl.gz")
 
 # %% ---------------------------------------------------------------------------------

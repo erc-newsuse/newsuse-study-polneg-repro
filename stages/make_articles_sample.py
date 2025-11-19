@@ -67,7 +67,7 @@ for prefix in bad_prefixes:
 
 classifiers = {
     "political": pipeline("text-classification", paths.ml / "classifiers" / "political"),
-    "negativity": pipeline("text-classification", paths.ml / "classifiers" / "negativity"),
+    "valence": pipeline("text-classification", paths.ml / "classifiers" / "valence"),
 }
 
 for domain, model in classifiers.items():

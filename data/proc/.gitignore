@@ -1,6 +1,6 @@
 /dataset.parquet
 /cls-political.parquet
-/cls-negativity.parquet
+/cls-valence.parquet
 /cls.parquet
 /sentiment.parquet
 /daily.parquet
@@ -11,6 +11,6 @@
 /predictions.parquet
 /sentiment-sample.xlsx
 /*.xlsx
-/hyper-negativity.parquet
-/negativity-hyper.parquet
-/negativity-cls.parquet
+/hyper-valence.parquet
+/valence-hyper.parquet
+/valence-cls.parquet

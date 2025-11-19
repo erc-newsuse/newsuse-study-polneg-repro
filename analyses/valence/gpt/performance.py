@@ -14,7 +14,7 @@ from sklearn.metrics import f1_score
 from project import paths
 from project.metrics import amae_score, o1_score
 
-here = paths.root / "analyses" / "negativity" / "gpt"
+here = paths.root / "analyses" / "valence" / "gpt"
 
 prompt = "prompt_6"
 targets = ["event", "sentiment"]
@@ -29,7 +29,7 @@ metric_funs = {
 # %% ---------------------------------------------------------------------------------
 
 data = (
-    DataFrame.from_(here / "Negativity-GPT-Optimized.csv")[
+    DataFrame.from_(here / "Valence-GPT-Optimized.csv")[
         ["key", "country", "event", "sentiment", f"{prompt}_output"]
     ]
     .rename(columns={f"{prompt}_output": "output"})

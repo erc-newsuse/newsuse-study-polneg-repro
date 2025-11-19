@@ -95,7 +95,7 @@ data <- as.character(paths$dataset) %>%
     mutate(across(c(year, month, day), as.factor)) %>%
     mutate(
         political  = relevel(as.factor(political), "OTHER"),
-        negativity = relevel(as.factor(negativity), "OTHER"),
+        valence = relevel(as.factor(valence), "OTHER"),
         country    = factor(country, levels = countries)
     )
 ```
@@ -113,7 +113,7 @@ rdf_cond <- filter(rdf, component == "cond")
 ```{r}
 time <- mutate(
     filter(rdf_cond, grpvar == "country:year:month:day"),
-    term    = str_replace_all(term, "political|negativity", ""),
+    term    = str_replace_all(term, "political|valence", ""),
     country = str_split_i(grp, ":", 1L),
     year    = as.integer(str_split_i(grp, ":", 2L)),
     month   = as.integer(str_split_i(grp, ":", 3L)),
@@ -122,7 +122,7 @@ time <- mutate(
 
 outlets <- mutate(
     filter(rdf_cond, grpvar == "country:name"),
-    term    = str_replace_all(term, "political|negativity", ""),
+    term    = str_replace_all(term, "political|valence", ""),
     country = str_split_i(grp, ":", 1L),
     name    = str_split_i(grp, ":", 2L),
 ) %>% relocate(c(country, name), .after = grpvar)
@@ -245,9 +245,9 @@ make_data <- function(data, rdf, ...) {
         values_from=condval
     ) %>%
         mutate(across(all_of(keys), as.factor)) %>%
-        left_join(select(data, !!!keys, political, negativity))
+        left_join(select(data, !!!keys, political, valence))
     U   <- as.matrix(cbind(df[, unique(time$term)]))
-    mod <- lm(U ~ country * political * negativity, data = df)
+    mod <- lm(U ~ country * political * valence, data = df)
     fit <- fitted(mod)
     rsq <- broom::glance(mod)$r.squared
     aov <- car::Anova(mod, type = 2L)
@@ -313,12 +313,12 @@ sim <- simulate(glmm, nsim = 100L, seed = 303L) %>%
 
 ```{r}
 simdata <- bind_cols(
-    select(data, country, political, negativity, obs = shares),
+    select(data, country, political, valence, obs = shares),
     sim
 )
 
 kdedata <- simdata %>%
-    group_by(country, political, negativity) %>%
+    group_by(country, political, valence) %>%
     summarize(
         obs = mean(obs),
         sim = list(colMeans(pick(starts_with("sim_"))))
@@ -335,7 +335,7 @@ ccdfdata <- simdata %>%
 ```{python}
 data      = r.kdedata
 polvals   = data["political"].unique()
-negvals   = data["negativity"].unique()
+negvals   = data["valence"].unique()
 fig, axes = plt.subplots(
     nrows=len(polvals),
     ncols=len(countries),
@@ -353,14 +353,14 @@ for pol, axrow in zip(polvals, axes, strict=True):
         )
         sns.kdeplot(
             df, x="sim", ax=ax,
-            hue="negativity", hue_order=["NEGATIVE", "OTHER"],
+            hue="valence", hue_order=["NEGATIVE", "OTHER"],
             palette=[colors["negative"], "black"],
             fill=True,
             legend=False,
             common_norm=False,
         )
         for neg in negvals:
-            obs = df.query(f"negativity == '{neg}'")["obs"].iloc[0]
+            obs = df.query(f"valence == '{neg}'")["obs"].iloc[0]
             ax.axvline(
                 obs, ls="--",
                 color="k" if neg == "OTHER" else colors["negative"]
@@ -389,7 +389,7 @@ gc()
 ```
 
 ```{python}
-gdf = r.ccdfdata.groupby(["political", "negativity", "country"])
+gdf = r.ccdfdata.groupby(["political", "valence", "country"])
 fig, axes = plt.subplots(
     nrows=4,
     ncols=len(countries),
@@ -403,8 +403,8 @@ palette   = ["black", colors["blue"]]
 
 for ax, df in zip(axes.flat, gdf, strict=True):
     key, df = df
-    political, negativity, country = key
-    label = f"{political.lower()}, {negativity.lower()}"
+    political, valence, country = key
+    label = f"{political.lower()}, {valence.lower()}"
     sns.ecdfplot(
         df, x="value", hue="name", ax=ax,
         log_scale=True, complementary=True,

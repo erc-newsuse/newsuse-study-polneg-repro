@@ -93,7 +93,7 @@ data <- as.character(paths$dataset) %>%
     mutate(across(c(year, month, day), as.factor)) %>%
     mutate(
         political  = relevel(as.factor(political), "OTHER"),
-        negativity = relevel(as.factor(negativity), "OTHER"),
+        valence = relevel(as.factor(valence), "OTHER"),
         country    = factor(country, levels = countries),
     )
 ```
@@ -119,15 +119,15 @@ gc()
 ```{r}
 countries <- rgr@levels$country
 polvals   <- str_to_lower(rgr@levels$political)
-negvals   <- str_to_lower(rgr@levels$negativity)
+negvals   <- str_to_lower(rgr@levels$valence)
 
-emmr  <- emmeans(rgr, ~country*political*negativity)
-emmc  <- emmeans(rgc, ~country*political*negativity)
-emms  <- emmeans(rgs, ~country*political*negativity)
+emmr  <- emmeans(rgr, ~country*political*valence)
+emmc  <- emmeans(rgc, ~country*political*valence)
+emms  <- emmeans(rgs, ~country*political*valence)
 
-emmra <- emmeans(rgr, ~political*negativity)
-emmca <- emmeans(rgc, ~political*negativity)
-emmsa <- emmeans(rgs, ~political*negativity)
+emmra <- emmeans(rgr, ~political*valence)
+emmca <- emmeans(rgc, ~political*valence)
+emmsa <- emmeans(rgs, ~political*valence)
 ```
 
 ## Negative/other contrasts
@@ -139,7 +139,7 @@ coefo <- emmr %>%
     contrast(by = "country", interaction = "trt.vs.ctrl") %>%
     coef %>%
     mutate(across(starts_with("c."),~{
-        abs(.x) * if_else(negativity == "OTHER", -1, 1) / length(polvals)
+        abs(.x) * if_else(valence == "OTHER", -1, 1) / length(polvals)
     }))
 
 .countries <- c("overall", countries)

@@ -3,7 +3,7 @@ from newsuse.ml import Dataset, Evaluator, pipeline
 
 from project import config, paths
 
-config["model"] = "negativity"
+config["model"] = "valence"
 paths = paths.__copy__(
     model=f"@ml/classifiers/{config.model}",
     examples=f"@ml/datasets/{config.model}",

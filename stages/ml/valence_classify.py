@@ -9,7 +9,7 @@ import project.model  # noqa
 from project import config, paths
 from project.pipelines import KeyDataset, pipeline
 
-domain = "negativity"
+domain = "valence"
 targets = ["event", "sentiment"]
 
 # %% ---------------------------------------------------------------------------------

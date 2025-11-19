@@ -12,18 +12,18 @@ from pydantic import ValidationError
 from project import config, paths
 from project.gpt import (
     EventClassification,
-    NegativityClassification,
     SentimentClassification,
+    ValenceClassification,
 )
 
-DOMAIN = "negativity"
+DOMAIN = "valence"
 
 opts = config.gpt[DOMAIN].experiment
 
 output_models = {
     "event": EventClassification,
     "sentiment": SentimentClassification,
-    "negativity": NegativityClassification,
+    "valence": ValenceClassification,
 }
 
 # %% ---------------------------------------------------------------------------------
@@ -86,13 +86,13 @@ output = (
     .set_index(["key", "params_id", "target"])
     .map(lambda x: x.model_dump())
     .assign(
-        split=lambda df: df.index.get_level_values("target") != "negativity",
+        split=lambda df: df.index.get_level_values("target") != "valence",
     )
     .set_index("split", append=True)
     .groupby(level=["key", "params_id", "split"])
     .apply(lambda df: (reduce(lambda x, y: x | y, df["output"], {})))
-    .map(NegativityClassification.model_validate)
-    .map(NegativityClassification.model_dump)
+    .map(ValenceClassification.model_validate)
+    .map(ValenceClassification.model_dump)
     .pipe(lambda s: DataFrame(s.tolist(), index=s.index))
     .reset_index()
 )

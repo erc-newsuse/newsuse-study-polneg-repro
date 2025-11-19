@@ -17,7 +17,7 @@ stages:
   # ml-datasets:
   #   foreach:
   #   - political
-  #   - negativity
+  #   - valence
   #   do:
   #     cmd: python scripts/ml/make_dataset_${item}.py
   #     deps:
@@ -32,7 +32,7 @@ stages:
   # train:
   #   foreach:
   #   - political
-  #   - negativity
+  #   - valence
   #   do:
   #     cmd: python scripts/train_${item}.py
   #     deps:
@@ -45,7 +45,7 @@ stages:
   # labels:
   #   foreach:
   #     - political
-  #     - negativity
+  #     - valence
   #   do:
   #     cmd: python scripts/make_labels.py --model='"${item}"'
   #     deps:
@@ -61,7 +61,7 @@ stages:
     deps:
     - scripts/merge_labels.py
     - data/proc/cls-political.parquet
-    - data/proc/cls-negativity.parquet
+    - data/proc/cls-valence.parquet
     outs:
     - data/proc/cls.parquet:
         persist: true
@@ -95,7 +95,7 @@ stages:
 
   glmm:
     foreach:
-    - negativity
+    - valence
     - reactions
     - comments
     - shares

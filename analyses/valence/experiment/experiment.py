@@ -12,7 +12,7 @@ from sklearn.metrics import f1_score
 from project import paths
 from project.metrics import o1_score  # noqa
 
-domain = "negativity"
+domain = "valence"
 targets = ["event", "sentiment"]
 root = paths.root / "analyses" / domain
 here = root / "experiment"
@@ -33,7 +33,7 @@ requests = (
     DataFrame.from_(paths.gpt / f"{domain}-experiment-requests.jsonl.gz")[
         ["key", "country", "params_id", "body", "target"]
     ]
-    .assign(split=lambda df: df["target"] != "negativity")
+    .assign(split=lambda df: df["target"] != "valence")
     .assign(
         model=lambda df: df["body"].map(lambda x: x["model"]),
         reasoning=lambda df: df["body"].map(lambda x: x.get("reasoning", {}).get("effort")),

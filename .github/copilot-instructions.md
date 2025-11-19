@@ -1,7 +1,7 @@
 # GitHub Copilot Instructions
 
 ## Project Architecture & Overview
-- **Goal**: Reproducible research pipeline for political negativity analysis in news.
+- **Goal**: Reproducible research pipeline for political valence analysis in news.
 - **Core Stack**: Python (>=3.11), R, DVC (Data Version Control).
 - **Structure**:
   - `stages/`: Pipeline scripts (Python & R). Each script typically corresponds to a DVC stage.

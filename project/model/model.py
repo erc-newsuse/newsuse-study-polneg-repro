@@ -30,13 +30,13 @@ ID2LABEL = MappingProxyType(
 )
 
 __all__ = (
-    "NewsuseNegativityClassifier",
-    "NewsuseNegativityClassifierConfig",
+    "NewsuseValenceClassifier",
+    "NewsuseValenceClassifierConfig",
 )
 
 
-class NewsuseNegativityClassifierConfig(PretrainedConfig):
-    """Configuration for `NewsuseNegativityClassifier`.
+class NewsuseValenceClassifierConfig(PretrainedConfig):
+    """Configuration for `NewsuseValenceClassifier`.
 
     Attributes
     ----------
@@ -58,7 +58,7 @@ class NewsuseNegativityClassifierConfig(PretrainedConfig):
         Mapping from label IDs to label names.
     """
 
-    model_type = "newsuse-negativity-classifier"
+    model_type = "newsuse-valence-classifier"
 
     def __init__(
         self,
@@ -125,7 +125,7 @@ class NewsuseNegativityClassifierConfig(PretrainedConfig):
 class Pooler(nn.Sequential):
     """Pooling layer applied in-between feed forward and classification branches."""
 
-    def __init__(self, config: NewsuseNegativityClassifierConfig) -> None:
+    def __init__(self, config: NewsuseValenceClassifierConfig) -> None:
         super().__init__(
             nn.Linear(config.base.hidden_size, config.base.hidden_size), nn.Tanh()
         )
@@ -134,7 +134,7 @@ class Pooler(nn.Sequential):
 class FeedForward(nn.Sequential):
     """Feed forward layer used in shared and head-specific networks."""
 
-    def __init__(self, config: NewsuseNegativityClassifierConfig) -> None:
+    def __init__(self, config: NewsuseValenceClassifierConfig) -> None:
         super().__init__(
             nn.Linear(config.base.hidden_size, config.base.hidden_size),
             nn.GELU(),
@@ -143,12 +143,12 @@ class FeedForward(nn.Sequential):
         )
 
 
-class NewsuseNegativityClassifierHead(nn.Module):
-    """Classification head for a single target in `NewsuseNegativityClassifier`."""
+class NewsuseValenceClassifierHead(nn.Module):
+    """Classification head for a single target in `NewsuseValenceClassifier`."""
 
     def __init__(
         self,
-        config: NewsuseNegativityClassifierConfig,
+        config: NewsuseValenceClassifierConfig,
         target: str,
     ) -> None:
         super().__init__()
@@ -196,13 +196,13 @@ class NewsuseNegativityClassifierHead(nn.Module):
         return checkpoint(self._forward, hidden, use_reentrant=False)
 
 
-class NewsuseNegativityClassifier(PreTrainedModel):
-    """Newsuse negativity classifier with ordinal classification heads."""
+class NewsuseValenceClassifier(PreTrainedModel):
+    """Newsuse valence classifier with ordinal classification heads."""
 
-    config_class: ClassVar[type[PretrainedConfig]] = NewsuseNegativityClassifierConfig
+    config_class: ClassVar[type[PretrainedConfig]] = NewsuseValenceClassifierConfig
     supports_gradient_checkpointing: ClassVar[bool] = True
 
-    def __init__(self, config: NewsuseNegativityClassifierConfig) -> None:
+    def __init__(self, config: NewsuseValenceClassifierConfig) -> None:
         super().__init__(config)
         self.base = AutoModel.from_pretrained(
             (d := self.config.base.to_dict()).pop("_name_or_path"), **d
@@ -212,7 +212,7 @@ class NewsuseNegativityClassifier(PreTrainedModel):
         )
         self.heads = nn.ModuleDict(
             {
-                target: NewsuseNegativityClassifierHead(config, target)
+                target: NewsuseValenceClassifierHead(config, target)
                 for target in config.targets
             }
         )
@@ -350,14 +350,14 @@ class NewsuseNegativityClassifier(PreTrainedModel):
 
 
 # Register the model configuration and model class
-AutoConfig.register("newsuse-negativity-classifier", NewsuseNegativityClassifierConfig)
-AutoModel.register(NewsuseNegativityClassifierConfig, NewsuseNegativityClassifier)
+AutoConfig.register("newsuse-valence-classifier", NewsuseValenceClassifierConfig)
+AutoModel.register(NewsuseValenceClassifierConfig, NewsuseValenceClassifier)
 
 
 @TextMultiClassificationPipeline.compute_scores.register
 def _(
     self,  # noqa
-    model: NewsuseNegativityClassifier,  # noqa
+    model: NewsuseValenceClassifier,  # noqa
     logits: torch.Tensor,
 ) -> PipeOutputT:
     """Model-specific logits post-processing for multi-target classification."""

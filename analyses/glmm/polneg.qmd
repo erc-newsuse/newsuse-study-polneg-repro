@@ -92,13 +92,13 @@ data <- as.character(paths$dataset) %>%
     mutate(across(c(year, month, day), as.factor)) %>%
     mutate(
         political  = relevel(as.factor(political), "OTHER"),
-        negativity = relevel(as.factor(negativity), "OTHER"),
+        valence = relevel(as.factor(valence), "OTHER"),
         country    = factor(country, levels = countries)
     )
 ```
 
 ```{r}
-glmm <- readRDS(as.character(paths$glmm / "negativity" / "0.rds"))
+glmm <- readRDS(as.character(paths$glmm / "valence" / "0.rds"))
 gc()
 ```
 
@@ -109,7 +109,7 @@ rg <- ref_grid(glmm)
 gc()
 ```
 
-# Estimated probabilities of negativity
+# Estimated probabilities of valence
 
 ```{r}
 countries <- rg@levels$country
@@ -117,7 +117,7 @@ polvals   <- str_to_lower(rg@levels$political)
 
 obs <- data %>%
     group_by(country, name, year, month, day, political) %>%
-    summarize(prob = mean(negativity == "NEGATIVE")) %>%
+    summarize(prob = mean(valence == "NEGATIVE")) %>%
     ungroup
 
 emm  <- emmeans(rg, ~country*political)
@@ -308,7 +308,7 @@ ax.axvline(.5, ls="--", color="k")
 fig.legends.clear()
 fig.align_ylabels(list(axes.values()))
 fig.tight_layout()
-fig.savefig(figpath / "negativity.pdf")
+fig.savefig(figpath / "valence.pdf")
 ```
 
 ```{python}

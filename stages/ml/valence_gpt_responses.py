@@ -11,7 +11,7 @@ from project import paths
 client = OpenAI()
 
 COMPLETED = "completed"
-DOMAIN = "negativity"
+DOMAIN = "valence"
 
 # %% ---------------------------------------------------------------------------------
 

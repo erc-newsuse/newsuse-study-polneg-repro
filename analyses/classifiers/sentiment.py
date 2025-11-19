@@ -22,9 +22,9 @@ sentiment = DataFrame.from_(paths.sentiment)
 
 data = (
     dataset.merge(sentiment[["key", "label"]], how="inner")
-    .merge(labels[["key", "negativity"]], how="inner")
+    .merge(labels[["key", "valence"]], how="inner")
     .assign(
-        negative=lambda df: (df["negativity"] == "NEGATIVE").astype(int),
+        negative=lambda df: (df["valence"] == "NEGATIVE").astype(int),
         negative_sentiment=lambda df: (
             df["label"].isin(["Negative", "Very Negative"]).astype(int)
         ),
@@ -37,7 +37,7 @@ data = (
 
 pd.crosstab(
     data["sentiment"],
-    data["negativity"],
+    data["valence"],
     rownames=["predicted"],
     colnames=["true"],
     normalize="columns",
@@ -47,7 +47,7 @@ pd.crosstab(
 
 labels = ["non-negative", "negative"]
 pred = np.where(data["sentiment"].isin(["Negative", "Very Negative"]), 1, 0)
-true = np.where(data["negativity"] == "NEGATIVE", 1, 0)
+true = np.where(data["valence"] == "NEGATIVE", 1, 0)
 
 print(classification_report(true, pred, target_names=labels, zero_division=0))
 
@@ -61,7 +61,7 @@ ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=labels).plot()
 (
     data.groupby(["country"]).apply(
         lambda df: f1_score(
-            np.where(df["negativity"] == "NEGATIVE", 1, 0),
+            np.where(df["valence"] == "NEGATIVE", 1, 0),
             np.where(df["sentiment"].isin(["Negative", "Very Negative"]), 1, 0),
         ),
         include_groups=False,
@@ -73,7 +73,7 @@ ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=labels).plot()
 rng = np.random.default_rng(17)
 sample = (
     data.groupby(["country", "negative", "sentiment"])[
-        ["key", "country", "name", "timestamp", "negativity", "sentiment"]
+        ["key", "country", "name", "timestamp", "valence", "sentiment"]
     ]
     .apply(lambda df: df.sample(min(len(df), 10), random_state=rng))
     .merge(DataFrame.from_(paths.text), how="left", on="key")

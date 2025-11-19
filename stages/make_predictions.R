@@ -18,7 +18,7 @@ paths   <- project$paths
 
 dataset <- as.character(paths$dataset) %>%
     read_parquet() %>%
-    select(country, name, political, negativity, year, month, day, timestamp)
+    select(country, name, political, valence, year, month, day, timestamp)
 
 gc()
 
@@ -30,19 +30,19 @@ time  <- seq.POSIXt(start, end, by = "day")
 
 outlets    <- unique(with(dataset, interaction(country, name, sep = ":")))
 political  <- unique(dataset$political)
-negativity <- unique(dataset$negativity)
+valence <- unique(dataset$valence)
 
 grid <- do.call(expand.grid, rlang::ll(
     outlet = outlets,
     political = political,
-    negativity = negativity,
+    valence = valence,
     timestamp = time,
 )) %>%
     transmute(
         country = str_split_i(outlet, ":", 1L),
         name = str_split_i(outlet, ":", 2L),
         political = political,
-        negativity = negativity,
+        valence = valence,
         year = year(timestamp),
         month = month(timestamp),
         day = day(timestamp),

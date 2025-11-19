@@ -22,7 +22,7 @@ paths:
   prompts:          "@ml/prompts"
   gpt:              "@proc/gpt/"
   annotations:      "annotations"
-  negativity_hyper: "@proc/negativity-hyper.parquet"
+  valence_hyper: "@proc/valence-hyper.parquet"
 
 countries:
   order:
@@ -45,7 +45,7 @@ annotations:
     labels:
     - OTHER
     - POLITICAL
-  negativity:
+  valence:
     labels:
     - OTHER
     - NEGATIVE
@@ -90,7 +90,7 @@ gpt:
     method: POST
     url: /v1/responses
   batch_size: &gpt_default_batch_size 2500
-  negativity:
+  valence:
     experiment:
       params:
         gpt-5:
@@ -113,7 +113,7 @@ gpt:
           temperature:
             - 0.0
       prompts:
-        - negativity.md
+        - valence.md
         - event.md
         - sentiment.md
       header:
@@ -154,7 +154,7 @@ ml:
       training: 0.8
       testing: 0.1
       validation: 0.1
-    negativity:
+    valence:
       <<: *ml_dataset_defaults
       seed: 34280
   inference:
@@ -256,14 +256,14 @@ ml:
             - 365673098
             - 415169889
             - 3396084250
-    negativity:
+    valence:
       <<: *ml_hyper_defaults
       study:
-        study_name: negativity
+        study_name: valence
         <<: *ml_hyper_study_defaults
   models:
-    negativity:
-      defaults: &ml_model_negativity_defaults
+    valence:
+      defaults: &ml_model_valence_defaults
         base: {}
         newsuse: {}
         tokenize:
@@ -274,10 +274,10 @@ ml:
             <<: *ml_training_arguments_defaults
       distilbert:
         checkpoint: distilbert-base-multilingual-cased
-        <<: *ml_model_negativity_defaults
+        <<: *ml_model_valence_defaults
       xlm-large:
         checkpoint: xlm-roberta-large
-        <<: *ml_model_negativity_defaults
+        <<: *ml_model_valence_defaults
 
 plotting:
   style:  tableau-colorblind10
@@ -300,7 +300,7 @@ plotting:
       negative:      ${..palette.red}
       non-political: ${.other}
       non-negative:  ${.other}
-      negativity:    ${.negative}
+      valence:    ${.negative}
       overall:       ${..palette.black}
       us:            ${..palette.blue}
       esp:           ${..palette.gold}

@@ -9,7 +9,7 @@ local_scheme = "node-and-timestamp"
 
 [project]
 name = "newsuse-study-polneg"
-description = "NEWSUSE study on negativity in political news."
+description = "NEWSUSE study on valence in political news."
 authors = [{ name = "Szymon Talaga",  email="stalaga@uw.edu.pl"}]
 
 readme = "README.md"

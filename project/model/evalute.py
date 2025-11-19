@@ -6,14 +6,14 @@ from scipy.stats import hmean
 from sklearn.metrics import f1_score
 from transformers import EvalPrediction
 
-from .model import NewsuseNegativityClassifierConfig
+from .model import NewsuseValenceClassifierConfig
 from .ordinal import ordinal_probs
 
 MultiOutputT = Mapping[str, torch.Tensor]
 
 
-class NewsuseNegativityEvaluator:
-    """Evaluator for :class:`~project.model.newsuse.NewsuseNegativityModel` models.
+class NewsuseValenceEvaluator:
+    """Evaluator for :class:`~project.model.newsuse.NewsuseValenceModel` models.
 
     Attributes
     ----------
@@ -25,7 +25,7 @@ class NewsuseNegativityEvaluator:
 
     def __init__(
         self,
-        config: NewsuseNegativityClassifierConfig,
+        config: NewsuseValenceClassifierConfig,
         *,
         reduction: Callable[[Sequence[float]], float] = hmean,
     ) -> None:

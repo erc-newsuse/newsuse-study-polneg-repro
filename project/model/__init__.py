@@ -1,2 +1,2 @@
-from .evalute import NewsuseNegativityEvaluator
-from .model import NewsuseNegativityClassifier, NewsuseNegativityClassifierConfig
+from .evalute import NewsuseValenceEvaluator
+from .model import NewsuseValenceClassifier, NewsuseValenceClassifierConfig

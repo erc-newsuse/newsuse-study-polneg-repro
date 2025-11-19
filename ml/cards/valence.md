@@ -9,11 +9,11 @@ language:
 - es
 pipeline_tag: text-classification
 model-index:
-- name: erc-newsuse-negativity
+- name: erc-newsuse-valence
   results: []
 ---
 
-# erc-newsuse-negativity
+# erc-newsuse-valence
 
 This model is a fine-tuned version of [FacebookAI/xlm-roberta-large](https://huggingface.co/FacebookAI/xlm-roberta-large) trained on a custom human-labelled dataset
 of social media posts published by major news media outlets in six countries: U.S., U.K., Ireland, Poland, France and Spain between 2020 and 2024.
@@ -21,10 +21,10 @@ of social media posts published by major news media outlets in six countries: U.
 ## Model description
 
 It was fined-tuned for the purpose of discrimination (binary classification) between negative and non-negative news posts.
-To define negativity, we followed the conceptual work by [Lengauer et al. (2011)](https://doi.org/10.1177/1464884911427800),
-who proposed definitions and measurements of negativity in news. Our operationalization and classifier define negativity by combining
-“the mere dissemination of negative news” (exogenous negativity coming into the news from outside, that is, from the topic itself)
-and “endogenous negativity imposed on news by journalists through their usage of language”.
+To define valence, we followed the conceptual work by [Lengauer et al. (2011)](https://doi.org/10.1177/1464884911427800),
+who proposed definitions and measurements of valence in news. Our operationalization and classifier define valence by combining
+“the mere dissemination of negative news” (exogenous valence coming into the news from outside, that is, from the topic itself)
+and “endogenous valence imposed on news by journalists through their usage of language”.
 
 In particular, the classifier should be sensitive to both negative sentiment expressed
 through the use of language, as well as coverage of negative events such as:
@@ -59,7 +59,7 @@ The easiest way to apply the model in practice is to load it as a text classific
 ```python
 from transformers import pipeline
 
-classifier = pipeline("text-classification", "sztal/erc-newsuse-negativity")
+classifier = pipeline("text-classification", "sztal/erc-newsuse-valence")
 ```
 
 ### Examples

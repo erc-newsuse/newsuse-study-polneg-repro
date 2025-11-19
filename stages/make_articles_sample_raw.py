@@ -10,7 +10,7 @@ dataset = DataFrame.from_(paths.dataset)
 
 # %% ---------------------------------------------------------------------------------
 
-keys = ["country", "name", "political", "negativity"]
+keys = ["country", "name", "political", "valence"]
 sample = (
     dataset.query("type.eq('link')")[["key", *keys, "post_url"]]
     .groupby(keys)
@@ -26,7 +26,7 @@ sample = (
 
 # %% -------------------------------------------------------------------------------
 
-keys = ["country", "political", "negativity"]
+keys = ["country", "political", "valence"]
 small_sample = (
     sample.groupby(keys)
     .sample(n=config.articles_sample.groupsize, random_state=30317)

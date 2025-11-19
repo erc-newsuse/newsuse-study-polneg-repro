@@ -93,7 +93,7 @@ colors    = {
 ```
 
 ```{r}
-glmm_n <- readRDS(as.character(paths$glmm / "negativity" / "0.rds"))
+glmm_n <- readRDS(as.character(paths$glmm / "valence" / "0.rds"))
 glmm_r <- readRDS(as.character(paths$glmm / "reactions" / "0.rds"))
 glmm_c <- readRDS(as.character(paths$glmm / "comments" / "0.rds"))
 glmm_s <- readRDS(as.character(paths$glmm / "shares" / "0.rds"))
@@ -105,7 +105,7 @@ rg_s <- ref_grid(glmm_s)
 
 countries  <- rg_r@levels$country
 political  <- rg_r@levels$political
-negativity <- rg_r@levels$negativity
+valence <- rg_r@levels$valence
 ```
 
 # Simulation
@@ -128,9 +128,9 @@ get_estimator <- function(rg, pol, country = NA) {
         str_c(parts[!is.na(parts)], collapse = sep)
     }
     if (is.na(country)) {
-        frm <- ~political * negativity
+        frm <- ~political * valence
     } else {
-        frm <- ~country * political * negativity
+        frm <- ~country * political * valence
     }
     # Define appropriate EMM grid only once
     emm  <- emmeans(rg, frm, type = "link")
@@ -156,9 +156,9 @@ get_estimator <- function(rg, pol, country = NA) {
     estimate
 }
 
-# Function for marginalizing out negativity probability
+# Function for marginalizing out valence probability
 # using simple numerical integration and model-based
-# estimates of negativity prevalence and using the asymptotic
+# estimates of valence prevalence and using the asymptotic
 # normality of MLE estimators
 marginalize <- function(est, se, estimator, sdrange = 3, n_steps = 100L) {
     start  <- max(0, est - se * sdrange)
@@ -344,7 +344,7 @@ fig.legend(
     labels=[
         *map(str.lower, hue_ord),
         rf"{r.conf*100:.0f}\% CI",
-        r"negativity prevalence + 95\%CI",
+        r"valence prevalence + 95\%CI",
     ],
     loc="center",
     framealpha=1.0,

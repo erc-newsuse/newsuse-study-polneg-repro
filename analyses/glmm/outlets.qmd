@@ -61,17 +61,17 @@ emm_options(
 obs <- as.character(paths$dataset) %>%
     read_parquet() %>%
     pivot_longer(c(reactions, comments, shares), names_to = "metric") %>%
-    group_by(country, name, year, month, day, political, negativity, metric) %>%
+    group_by(country, name, year, month, day, political, valence, metric) %>%
     summarize(value = mean(value)) %>%
     ungroup %>%
-    mutate(across(c(political, negativity), ~relevel(as.factor(.x), ref = "OTHER")))
+    mutate(across(c(political, valence), ~relevel(as.factor(.x), ref = "OTHER")))
 ```
 
 ```{r}
 pred <- as.character(paths$predictions) %>%
     read_parquet() %>%
     mutate(prediction = prediction) %>%
-    mutate(across(c(political, negativity), ~relevel(as.factor(.x), ref = "OTHER")))
+    mutate(across(c(political, valence), ~relevel(as.factor(.x), ref = "OTHER")))
 ```
 
 ```{r}
@@ -79,19 +79,19 @@ pred <- as.character(paths$predictions) %>%
 data <- rename(pred, value = prediction)
 
 data %>%
-    group_by(country, political, negativity, metric) %>%
+    group_by(country, political, valence, metric) %>%
     summarize(value = mean(value)) %>%
     ungroup %>%
-    group_by(political, negativity, metric) %>%
+    group_by(political, valence, metric) %>%
     summarize(value = mean(value)) %>%
     ungroup %>%
-    arrange(political, negativity)
+    arrange(political, valence)
 ```
 
 ```{r}
 ratios <- pred %>%
     pivot_wider(
-        names_from = negativity,
+        names_from = valence,
         values_from = prediction,
     ) %>%
     rename(other = OTHER, negative = NEGATIVE) %>%

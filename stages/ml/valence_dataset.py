@@ -9,10 +9,10 @@ from newsuse.data import DataFrame
 
 from project import config, paths
 
-domain = "negativity"
+domain = "valence"
 dirpath = paths.ml / "datasets"
 
-rng = np.random.default_rng(config.ml.dataset.negativity.seed)
+rng = np.random.default_rng(config.ml.dataset.valence.seed)
 
 datasets.disable_caching()
 
@@ -44,8 +44,8 @@ rng.shuffle(index)
 
 # %% ---------------------------------------------------------------------------------
 
-n_train = int(len(data) * config.ml.dataset.negativity.training)
-n_test = int(len(data) * config.ml.dataset.negativity.testing)
+n_train = int(len(data) * config.ml.dataset.valence.training)
+n_test = int(len(data) * config.ml.dataset.valence.testing)
 
 index_train = index[:n_train]
 index_test = index[n_train : n_train + n_test]

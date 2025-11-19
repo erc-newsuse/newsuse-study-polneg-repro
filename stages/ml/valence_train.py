@@ -5,20 +5,20 @@ from transformers import AutoTokenizer, Trainer
 
 from project import config, paths
 from project.model import (
-    NewsuseNegativityClassifier,
-    NewsuseNegativityClassifierConfig,
-    NewsuseNegativityEvaluator,
+    NewsuseValenceClassifier,
+    NewsuseValenceClassifierConfig,
+    NewsuseValenceEvaluator,
 )
 
 datasets.disable_caching()
 
-domain = "negativity"
+domain = "valence"
 
 # %% ---------------------------------------------------------------------------------
 
 base_model_name = "distilbert/distilbert-base-multilingual-cased"
-model_config = NewsuseNegativityClassifierConfig(base_model_name)
-model = NewsuseNegativityClassifier(model_config)
+model_config = NewsuseValenceClassifierConfig(base_model_name)
+model = NewsuseValenceClassifier(model_config)
 tokenizer = AutoTokenizer.from_pretrained(model_config.base_name_or_path)
 
 # %% ---------------------------------------------------------------------------------
@@ -35,8 +35,8 @@ eval_dataset = dataset["test"]
 # %% ---------------------------------------------------------------------------------
 
 
-def model_init() -> NewsuseNegativityClassifier:
-    model = NewsuseNegativityClassifier(model_config)
+def model_init() -> NewsuseValenceClassifier:
+    model = NewsuseValenceClassifier(model_config)
     return model
 
 
@@ -50,7 +50,7 @@ trainer = Trainer(
     train_dataset=train_dataset,
     eval_dataset=eval_dataset,
     tokenizer=tokenizer,
-    compute_metrics=NewsuseNegativityEvaluator(model_config),
+    compute_metrics=NewsuseValenceEvaluator(model_config),
     callbacks=[cb.make() for cb in config.ml.training.callbacks],
 )
 

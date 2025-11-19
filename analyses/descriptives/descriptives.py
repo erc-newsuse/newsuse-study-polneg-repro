@@ -31,7 +31,7 @@ colors = config.plotting.color
 
 dataset = (
     DataFrame.from_(paths.dataset)
-    .rename(columns={"negativity": "negative"})
+    .rename(columns={"valence": "negative"})
     .assign(likes=lambda df: df["interactions"])
 )
 
@@ -220,16 +220,16 @@ parts = [
 ]
 data = pd.concat(parts, ignore_index=True).assign(
     political=lambda df: df["political"].str.lower(),
-    negativity=lambda df: df["negative"].str.lower(),
+    valence=lambda df: df["negative"].str.lower(),
 )
 
 order = {"overall": 1, "other": 3}
 inter = (
-    data.groupby(["country", "political", "negativity"])[metrics]
+    data.groupby(["country", "political", "valence"])[metrics]
     .agg(["mean", "std", "median", IQR])
     .sort_index(
         axis=0,
-        level=["political", "negativity"],
+        level=["political", "valence"],
         key=lambda idx: idx.map(lambda x: order.get(x, 2)),
     )
     .loc[["overall", *config.countries.order]]
@@ -242,7 +242,7 @@ print(
     inter
     # .drop("std", axis=1, level=1)
     # .xs("overall", level="political")
-    # .xs("overall", level="negativity")
+    # .xs("overall", level="valence")
     .loc[[*countries.values(), "Overall"]].to_latex(escape=True, float_format="%.1f")
 )
 
@@ -341,7 +341,7 @@ fig.savefig(figpath / "descriptives-engagement-polneg.pdf")
     .rename(str.title, axis=1, level=0)
     .rename(str.lower, axis=0, level=0)
     .rename(str.lower, axis=0, level=1)
-    .rename_axis(["political", "negativity"], axis=0)
+    .rename_axis(["political", "valence"], axis=0)
     .pipe(
         lambda df: print(
             df.to_latex(

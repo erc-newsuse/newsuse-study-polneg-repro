@@ -49,138 +49,138 @@ stages:
     - data/proc/cls-political.parquet:
         persist: true
 
-  negativity-ground-truth:
-    cmd: python stages/ml/negativity_ground_truth.py
+  valence-ground-truth:
+    cmd: python stages/ml/valence_ground_truth.py
     deps:
-    - stages/ml/negativity_ground_truth.py
-    - data/raw/negativity-ground-truth.json.gz
+    - stages/ml/valence_ground_truth.py
+    - data/raw/valence-ground-truth.json.gz
     outs:
-    - data/proc/gpt/negativity-ground-truth.parquet:
+    - data/proc/gpt/valence-ground-truth.parquet:
         persist: true
 
-  negativity-experiment-requests:
-    cmd: python stages/ml/negativity_gpt_experiment_requests.py
+  valence-experiment-requests:
+    cmd: python stages/ml/valence_gpt_experiment_requests.py
     params:
-    - gpt.negativity.experiment
+    - gpt.valence.experiment
     deps:
-    - stages/ml/negativity_gpt_experiment_requests.py
-    - data/proc/gpt/negativity-ground-truth.parquet
+    - stages/ml/valence_gpt_experiment_requests.py
+    - data/proc/gpt/valence-ground-truth.parquet
     outs:
-    - data/proc/gpt/negativity-experiment-requests.jsonl.gz:
+    - data/proc/gpt/valence-experiment-requests.jsonl.gz:
         persist: true
 
-  negativity-experiment-jobs:
-    cmd: python stages/ml/negativity_gpt_experiment_jobs.py
+  valence-experiment-jobs:
+    cmd: python stages/ml/valence_gpt_experiment_jobs.py
     params:
-    - gpt.negativity.experiment
+    - gpt.valence.experiment
     deps:
-    - stages/ml/negativity_gpt_experiment_jobs.py
-    - data/proc/gpt/negativity-experiment-requests.jsonl.gz
+    - stages/ml/valence_gpt_experiment_jobs.py
+    - data/proc/gpt/valence-experiment-requests.jsonl.gz
     outs:
-    - data/proc/gpt/negativity-experiment-jobs.jsonl.gz:
+    - data/proc/gpt/valence-experiment-jobs.jsonl.gz:
         persist: true
 
-  negativity-experiment-responses:
-    cmd: python stages/ml/negativity_gpt_experiment_responses.py
+  valence-experiment-responses:
+    cmd: python stages/ml/valence_gpt_experiment_responses.py
     deps:
-    - stages/ml/negativity_gpt_experiment_responses.py
-    - data/proc/gpt/negativity-experiment-jobs.jsonl.gz
+    - stages/ml/valence_gpt_experiment_responses.py
+    - data/proc/gpt/valence-experiment-jobs.jsonl.gz
     outs:
-    - data/proc/gpt/negativity-experiment-responses.jsonl.gz:
+    - data/proc/gpt/valence-experiment-responses.jsonl.gz:
         persist: true
 
-  negativity-experiment-output:
-    cmd: python stages/ml/negativity_gpt_experiment_output.py
+  valence-experiment-output:
+    cmd: python stages/ml/valence_gpt_experiment_output.py
     deps:
-    - stages/ml/negativity_gpt_experiment_output.py
-    - data/proc/gpt/negativity-experiment-responses.jsonl.gz
+    - stages/ml/valence_gpt_experiment_output.py
+    - data/proc/gpt/valence-experiment-responses.jsonl.gz
     outs:
-    - data/proc/gpt/negativity-experiment.parquet:
+    - data/proc/gpt/valence-experiment.parquet:
         persist: true
 
-  negativity-requests:
-    cmd: python stages/ml/negativity_gpt_requests.py
+  valence-requests:
+    cmd: python stages/ml/valence_gpt_requests.py
     params:
-    - gpt.negativity.batch
+    - gpt.valence.batch
     deps:
-    - stages/ml/negativity_gpt_requests.py
+    - stages/ml/valence_gpt_requests.py
     - data/proc/dataset.parquet
     - data/proc/cls-political.parquet
     - data/proc/posts-text.parquet
-    - ml/prompts/negativity/negativity.md
+    - ml/prompts/valence/valence.md
     outs:
-    - data/proc/gpt/negativity-requests.jsonl.gz:
+    - data/proc/gpt/valence-requests.jsonl.gz:
         persist: true
 
-  negativity-jobs:
-    cmd: python stages/ml/negativity_gpt_jobs.py
+  valence-jobs:
+    cmd: python stages/ml/valence_gpt_jobs.py
     params:
-    - gpt.negativity.batch
+    - gpt.valence.batch
     deps:
-    - stages/ml/negativity_gpt_jobs.py
-    - data/proc/gpt/negativity-requests.jsonl.gz
+    - stages/ml/valence_gpt_jobs.py
+    - data/proc/gpt/valence-requests.jsonl.gz
     outs:
-    - data/proc/gpt/negativity-jobs.jsonl.gz:
+    - data/proc/gpt/valence-jobs.jsonl.gz:
         persist: true
 
-  negativity-responses:
-    cmd: python stages/ml/negativity_gpt_responses.py
+  valence-responses:
+    cmd: python stages/ml/valence_gpt_responses.py
     deps:
-    - stages/ml/negativity_gpt_responses.py
-    - data/proc/gpt/negativity-jobs.jsonl.gz
+    - stages/ml/valence_gpt_responses.py
+    - data/proc/gpt/valence-jobs.jsonl.gz
     outs:
-    - data/proc/gpt/negativity-responses.jsonl.gz:
+    - data/proc/gpt/valence-responses.jsonl.gz:
         persist: true
 
-  negativity-output:
-    cmd: python stages/ml/negativity_gpt_output.py
+  valence-output:
+    cmd: python stages/ml/valence_gpt_output.py
     deps:
-    - stages/ml/negativity_gpt_output.py
-    - data/proc/gpt/negativity-responses.jsonl.gz
+    - stages/ml/valence_gpt_output.py
+    - data/proc/gpt/valence-responses.jsonl.gz
     outs:
-    - data/proc/gpt/negativity.parquet:
+    - data/proc/gpt/valence.parquet:
         persist: true
 
-  negativity-dataset:
-    cmd: python stages/ml/negativity_dataset.py
+  valence-dataset:
+    cmd: python stages/ml/valence_dataset.py
     params:
-    - ml.dataset.negativity
+    - ml.dataset.valence
     deps:
-    - stages/ml/negativity_dataset.py
-    - data/proc/gpt/negativity.parquet
-    - data/proc/gpt/negativity-ground-truth.parquet
-    - data/proc/gpt/negativity-requests.jsonl.gz
+    - stages/ml/valence_dataset.py
+    - data/proc/gpt/valence.parquet
+    - data/proc/gpt/valence-ground-truth.parquet
+    - data/proc/gpt/valence-requests.jsonl.gz
     outs:
-    - ml/datasets/negativity:
+    - ml/datasets/valence:
         persist: true
 
-  negativity-train:
-    cmd: python stages/ml/negativity_hyper.py
+  valence-train:
+    cmd: python stages/ml/valence_hyper.py
     params:
-    - ml.hyper.negativity
-    - ml.models.negativity
+    - ml.hyper.valence
+    - ml.models.valence
     deps:
-    - stages/ml/negativity_hyper.py
-    - ml/datasets/negativity
+    - stages/ml/valence_hyper.py
+    - ml/datasets/valence
     outs:
-    - data/proc/negativity-hyper.parquet:
+    - data/proc/valence-hyper.parquet:
         persist: true
 
-  negativity-classify:
-    cmd: python stages/ml/negativity_classify.py
+  valence-classify:
+    cmd: python stages/ml/valence_classify.py
     params:
     - ml.inference
     deps:
-    - stages/ml/negativity_classify.py
+    - stages/ml/valence_classify.py
     - data/proc/posts-text.parquet
-    - data/proc/negativity-hyper.parquet
+    - data/proc/valence-hyper.parquet
     outs:
-    - data/proc/negativity-cls.parquet:
+    - data/proc/valence-cls.parquet:
         persist: true
 
   glmm:
     foreach:
-    - negativity
+    - valence
     - reactions
     - comments
     - shares
@@ -217,7 +217,7 @@ stages:
   # ml-datasets:
   #   foreach:
   #   - political
-  #   - negativity
+  #   - valence
   #   do:
   #     cmd: python stages/ml/make_dataset_${item}.py
   #     deps:
@@ -232,7 +232,7 @@ stages:
   # train:
   #   foreach:
   #   - political
-  #   - negativity
+  #   - valence
   #   do:
   #     cmd: python stages/train_${item}.py
   #     deps:
@@ -245,7 +245,7 @@ stages:
   # labels:
   #   foreach:
   #     - political
-  #     - negativity
+  #     - valence
   #   do:
   #     cmd: python stages/make_labels.py --model='"${item}"'
   #     deps:
@@ -261,7 +261,7 @@ stages:
   #   deps:
   #   - stages/merge_labels.py
   #   - data/proc/cls-political.parquet
-  #   - data/proc/cls-negativity.parquet
+  #   - data/proc/cls-valence.parquet
   #   outs:
   #   - data/proc/cls.parquet:
   #       persist: true

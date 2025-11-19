@@ -6,9 +6,9 @@ import pandas as pd
 from newsuse.data import DataFrame
 
 from project import paths
-from project.gpt import NegativityClassification
+from project.gpt import ValenceClassification
 
-DOMAIN = "negativity"
+DOMAIN = "valence"
 
 # %% ---------------------------------------------------------------------------------
 
@@ -36,8 +36,8 @@ output = (
         )
     )
     .set_index(["key"])["output"]
-    .map(NegativityClassification.model_validate)
-    .map(NegativityClassification.model_dump)
+    .map(ValenceClassification.model_validate)
+    .map(ValenceClassification.model_dump)
     .pipe(lambda s: DataFrame(s.tolist(), index=s.index))
     .astype("int64[pyarrow]")
     .dropna()

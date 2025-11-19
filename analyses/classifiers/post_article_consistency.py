@@ -8,7 +8,7 @@ from project import paths
 # %% ---------------------------------------------------------------------------------
 
 data = DataFrame.from_(paths.articles_sample).merge(
-    DataFrame.from_(paths.dataset, columns=["key", "country", "political", "negativity"]),
+    DataFrame.from_(paths.dataset, columns=["key", "country", "political", "valence"]),
     on="key",
     how="left",
 )
@@ -18,12 +18,12 @@ data = DataFrame.from_(paths.articles_sample).merge(
 consistency = (
     data.assign(
         political=lambda df: df["political"] == df["political_text"],
-        negativity=lambda df: df["negativity"] == df["negativity_text"],
+        valence=lambda df: df["valence"] == df["valence_text"],
     )
     .groupby(["country"])
     .agg(
         political=("political", "mean"),
-        negativity=("negativity", "mean"),
+        valence=("valence", "mean"),
     )
 )
 
@@ -37,8 +37,8 @@ consistency.mean()
             {
                 "political": df["political"].eq("POLITICAL").mean(),
                 "political_text": df["political_text"].eq("POLITICAL").mean(),
-                "negativity": df["negativity"].eq("NEGATIVE").mean(),
-                "negativity_text": df["negativity_text"].eq("NEGATIVE").mean(),
+                "valence": df["valence"].eq("NEGATIVE").mean(),
+                "valence_text": df["valence_text"].eq("NEGATIVE").mean(),
             }
         )
     )

@@ -77,7 +77,7 @@ mpl.rcParams.update({
     for k, v in config.plotting.params.items()
 })
 
-figpath = paths.figures / "glmm" / "negativity"
+figpath = paths.figures / "glmm" / "valence"
 figpath.mkdir(parents=True, exist_ok=True)
 
 countries = config.countries.labels
@@ -91,13 +91,13 @@ data <- as.character(paths$dataset) %>%
     mutate(across(c(year, month, day), as.factor)) %>%
     mutate(
         political  = relevel(as.factor(political), "OTHER"),
-        negativity = relevel(as.factor(negativity), "OTHER"),
+        valence = relevel(as.factor(valence), "OTHER"),
         country    = factor(country, levels = countries)
     )
 ```
 
 ```{r}
-glmm <- readRDS(as.character(paths$glmm / "negativity" / "0.rds"))
+glmm <- readRDS(as.character(paths$glmm / "valence" / "0.rds"))
 rdf  <- as_tibble(ranef(glmm))
 gc()
 ```
@@ -105,7 +105,7 @@ gc()
 ```{r}
 time <- mutate(
     filter(rdf, grpvar == "country:year:month:day"),
-    term    = str_replace_all(term, "political|negativity", ""),
+    term    = str_replace_all(term, "political|valence", ""),
     country = str_split_i(grp, ":", 1L),
     year    = as.integer(str_split_i(grp, ":", 2L)),
     month   = as.integer(str_split_i(grp, ":", 3L)),
@@ -114,7 +114,7 @@ time <- mutate(
 
 outlets <- mutate(
     filter(rdf, grpvar == "country:name"),
-    term    = str_replace_all(term, "political|negativity", ""),
+    term    = str_replace_all(term, "political|valence", ""),
     country = str_split_i(grp, ":", 1L),
     name    = str_split_i(grp, ":", 2L),
 ) %>% relocate(c(country, name), .after = grpvar)
@@ -299,7 +299,7 @@ simdata <- data %>%
     bind_cols(., do.call(cbind, sim)) %>%
     group_by(country, political) %>%
     summarize(
-        obs = mean(negativity == "NEGATIVE"),
+        obs = mean(valence == "NEGATIVE"),
         sim = list(colMeans(pick(starts_with("sim_")))),
     ) %>%
     ungroup %>%

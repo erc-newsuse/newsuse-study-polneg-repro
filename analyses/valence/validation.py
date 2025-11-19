@@ -4,7 +4,7 @@ from newsuse.data import DataFrame
 
 from project import paths
 
-here = paths.root / "analyses" / "negativity"
+here = paths.root / "analyses" / "valence"
 
 # %% ---------------------------------------------------------------------------------
 
@@ -12,7 +12,7 @@ data = (
     DataFrame.from_(paths.dataset, columns=["key", "country", "name", "post_url"])
     .merge(DataFrame.from_(paths.text))
     .merge(
-        DataFrame.from_(paths.gpt / "negativity.parquet"),
+        DataFrame.from_(paths.gpt / "valence.parquet"),
         on=["key", "country"],
         how="inner",
     )
@@ -28,6 +28,6 @@ data = (
 
 # %% ---------------------------------------------------------------------------------
 
-data.to_(here / "negativity-openai-dataset.jsonl")
+data.to_(here / "valence-openai-dataset.jsonl")
 
 # %% ---------------------------------------------------------------------------------

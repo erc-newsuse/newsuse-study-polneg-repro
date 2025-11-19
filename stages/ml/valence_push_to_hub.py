@@ -16,7 +16,7 @@ from project import config, paths
 
 huggingface_hub.login(token=os.environ["HUGGINGFACE_HUB_UPLOAD_TOKEN"])
 
-DOMAIN = "negativity"
+DOMAIN = "valence"
 USER = huggingface_hub.whoami()["name"]
 MODELNAME = f"erc-newsuse-{DOMAIN}"
 

@@ -1,195 +1,173 @@
 schema: '2.0'
 stages:
-  data:
-    cmd: python scripts/make_data.py
+  valence-ground-truth:
+    cmd: python stages/ml/valence_ground_truth.py
     deps:
-    - path: data/raw/posts-text.parquet
+    - path: data/raw/valence-ground-truth.json.gz
       hash: md5
-      md5: c3987abb792d1e01eec9a456a9903e53
-      size: 604106646
-    - path: data/raw/posts.parquet
+      md5: 832d9253adb5ea60bb4fe7654054ac25
+      size: 266934
+    - path: stages/ml/valence_ground_truth.py
       hash: md5
-      md5: a6a98bc3097f40a47ea151bd2043692f
-      size: 247912431
-    - path: scripts/make_data.py
+      md5: d6d3776a6950faa73801f05c5578ca81
+      size: 1337
+    outs:
+    - path: data/proc/gpt/valence-ground-truth.parquet
       hash: md5
-      md5: 88735a473509dc321531845265078c67
-      size: 1373
+      md5: 9c5a88a0adeef2dc6ebb339bc3fd1670
+      size: 70213
+  valence-experiment-requests:
+    cmd: python stages/ml/valence_gpt_experiment_requests.py
+    deps:
+    - path: data/proc/gpt/valence-ground-truth.parquet
+      hash: md5
+      md5: 9c5a88a0adeef2dc6ebb339bc3fd1670
+      size: 70213
+    - path: stages/ml/valence_gpt_experiment_requests.py
+      hash: md5
+      md5: 7bd39ee5d575dc7b569b38e84a26d25f
+      size: 2974
     params:
       params.yaml:
-        dataset.usecols:
-        - key
-        - country
-        - name
-        - timestamp
-        - type
-        - has_snippet
-        - likes
-        - reactions_LIKE
-        - reactions_LOVE
-        - reactions_WOW
-        - reactions_HAHA
-        - reactions_ANGRY
-        - reactions_SAD
-        - comments
-        - shares
-        - ini
-        - post_url
+        gpt.valence.experiment:
+          params:
+            gpt-5:
+              model:
+              - gpt-5
+              - gpt-5-mini
+              - gpt-5-nano
+              reasoning:
+              - effort: minimal
+              - effort: low
+              - effort: medium
+              - effort: high
+              text:
+              - verbosity: low
+            gpt-4.1:
+              model:
+              - gpt-4.1
+              - gpt-4.1-mini
+              - gpt-4.1-nano
+              temperature:
+              - 0.0
+          prompts:
+          - valence.md
+          - event.md
+          - sentiment.md
+          header:
+            method: POST
+            url: /v1/responses
+          batch_size: 2500
+    outs:
+    - path: data/proc/gpt/valence-experiment-requests.jsonl.gz
+      hash: md5
+      md5: c6d15b995e13524246553ebbda468ce2
+      size: 4118008
+  valence-experiment-jobs:
+    cmd: python stages/ml/valence_gpt_experiment_jobs.py
+    deps:
+    - path: data/proc/gpt/valence-experiment-requests.jsonl.gz
+      hash: md5
+      md5: c6d15b995e13524246553ebbda468ce2
+      size: 4118008
+    - path: stages/ml/valence_gpt_experiment_jobs.py
+      hash: md5
+      md5: 7ec00ad045c4edfd2b7831c5ac453ba0
+      size: 4322
+    params:
+      params.yaml:
+        gpt.valence.experiment:
+          params:
+            gpt-5:
+              model:
+              - gpt-5
+              - gpt-5-mini
+              - gpt-5-nano
+              reasoning:
+              - effort: minimal
+              - effort: low
+              - effort: medium
+              - effort: high
+              text:
+              - verbosity: low
+            gpt-4.1:
+              model:
+              - gpt-4.1
+              - gpt-4.1-mini
+              - gpt-4.1-nano
+              temperature:
+              - 0.0
+          prompts:
+          - valence.md
+          - event.md
+          - sentiment.md
+          header:
+            method: POST
+            url: /v1/responses
+          batch_size: 2500
+    outs:
+    - path: data/proc/gpt/valence-experiment-jobs.jsonl.gz
+      hash: md5
+      md5: 99eec3c76a44a296c19bdf57a1e0ceca
+      size: 1033
+  valence-experiment-responses:
+    cmd: python stages/ml/valence_gpt_experiment_responses.py
+    deps:
+    - path: data/proc/gpt/valence-experiment-jobs.jsonl.gz
+      hash: md5
+      md5: 99eec3c76a44a296c19bdf57a1e0ceca
+      size: 1033
+    - path: stages/ml/valence_gpt_experiment_responses.py
+      hash: md5
+      md5: e112e36edb4d92c795a6fa2eded887e1
+      size: 2635
+    outs:
+    - path: data/proc/gpt/valence-experiment-responses.jsonl.gz
+      hash: md5
+      md5: 03edaeb32515f0ae16ff02d2115524f6
+      size: 3762351
+  valence-experiment-output:
+    cmd: python stages/ml/valence_gpt_experiment_output.py
+    deps:
+    - path: data/proc/gpt/valence-experiment-responses.jsonl.gz
+      hash: md5
+      md5: 03edaeb32515f0ae16ff02d2115524f6
+      size: 3762351
+    - path: stages/ml/valence_gpt_experiment_output.py
+      hash: md5
+      md5: d390ea6c7c06c206519c2fa847b89c73
+      size: 3328
+    outs:
+    - path: data/proc/gpt/valence-experiment.parquet
+      hash: md5
+      md5: 04afdb8de611fc4dcb43d9a969839059
+      size: 17567
+  posts:
+    cmd: python stages/make_posts.py
+    deps:
+    - path: data/raw/posts/
+      hash: md5
+      md5: 7fd19c9db903de2885ce7570019a723a.dir
+      size: 904062817
+      nfiles: 6
+    - path: stages/make_posts.py
+      hash: md5
+      md5: 8d375ab91127078684c6717c929b7609
+      size: 2733
+    params:
+      params.yaml:
+        posts:
+          start_date: '2020-01-01'
+          end_date: '2024-04-01'
     outs:
     - path: data/proc/posts-text.parquet
       hash: md5
-      md5: 2e8cbbb7b6185d4ef224c2645faf093e
-      size: 604129252
+      md5: ac82d44c49eec08b7e35c21343a60a6c
+      size: 552734108
     - path: data/proc/posts.parquet
       hash: md5
-      md5: 5d0a18be409dbb6fa851c0077864029e
-      size: 271443044
-  ml-datasets@political:
-    cmd: python scripts/ml/make_dataset_political.py
-    deps:
-    - path: data/ml/political
-      hash: md5
-      md5: a5d2ef5ef904f208cb6a4fcb82fbc0d9.dir
-      size: 1629934
-      nfiles: 5
-    - path: scripts/ml/make_dataset_political.py
-      hash: md5
-      md5: ccc1be51acf3e559d86ba42e9c227a6a
-      size: 1277
-    params:
-      params.yaml:
-        annotations.political:
-          labels:
-          - OTHER
-          - POLITICAL
-    outs:
-    - path: ml/datasets/political
-      hash: md5
-      md5: c89ccb94348d758a91ba967fd6e8694b.dir
-      size: 1945539
-      nfiles: 13
-  ml-datasets@negativity:
-    cmd: python scripts/ml/make_dataset_negativity.py
-    deps:
-    - path: data/ml/negativity
-      hash: md5
-      md5: ccdc2baf9def5a5084436a17dd368d84.dir
-      size: 984694
-      nfiles: 5
-    - path: scripts/ml/make_dataset_negativity.py
-      hash: md5
-      md5: 26f1c68e15e54d47ce5433b5c41d03f6
-      size: 1461
-    params:
-      params.yaml:
-        annotations.negativity:
-          labels:
-          - OTHER
-          - NEGATIVE
-    outs:
-    - path: ml/datasets/negativity
-      hash: md5
-      md5: 20c91105aed3abcb53f8b2a9c3f885ec.dir
-      size: 1445341
-      nfiles: 10
-  train@political:
-    cmd: python scripts/train_political.py
-    deps:
-    - path: ml/datasets/political
-      hash: md5
-      md5: c89ccb94348d758a91ba967fd6e8694b.dir
-      size: 1945539
-      nfiles: 13
-    - path: scripts/train_political.py
-      hash: md5
-      md5: 61981e9106902c7e4828ca7943210703
-      size: 1663
-    outs:
-    - path: ml/classifiers/political
-      hash: md5
-      md5: e3fbdd95f6babab253d23518742cf928.dir
-      size: 2256709253
-      nfiles: 6
-  train@negativity:
-    cmd: python scripts/train_negativity.py
-    deps:
-    - path: ml/datasets/negativity
-      hash: md5
-      md5: 20c91105aed3abcb53f8b2a9c3f885ec.dir
-      size: 1445341
-      nfiles: 10
-    - path: scripts/train_negativity.py
-      hash: md5
-      md5: 6ddd961bc825e70379fdbec1a9795d49
-      size: 1664
-    outs:
-    - path: ml/classifiers/negativity
-      hash: md5
-      md5: 6e86a059d9b92cb3c238dfac6df279a7.dir
-      size: 2256709251
-      nfiles: 6
-  labels@political:
-    cmd: python scripts/make_labels.py --model='"political"'
-    deps:
-    - path: data/proc/posts-text.parquet
-      hash: md5
-      md5: 2e8cbbb7b6185d4ef224c2645faf093e
-      size: 604129252
-    - path: ml/classifiers/political
-      hash: md5
-      md5: e3fbdd95f6babab253d23518742cf928.dir
-      size: 2256709253
-      nfiles: 6
-    - path: scripts/make_labels.py
-      hash: md5
-      md5: ce3996ca4b1674b24118b5640bc9da4e
-      size: 1324
-    outs:
-    - path: data/proc/cls-political.parquet
-      hash: md5
-      md5: f6eb792a082ef42e9c530fba347c34a7
-      size: 85950608
-  labels@negativity:
-    cmd: python scripts/make_labels.py --model='"negativity"'
-    deps:
-    - path: data/proc/posts-text.parquet
-      hash: md5
-      md5: 2e8cbbb7b6185d4ef224c2645faf093e
-      size: 604129252
-    - path: ml/classifiers/negativity
-      hash: md5
-      md5: 6e86a059d9b92cb3c238dfac6df279a7.dir
-      size: 2256709251
-      nfiles: 6
-    - path: scripts/make_labels.py
-      hash: md5
-      md5: ce3996ca4b1674b24118b5640bc9da4e
-      size: 1324
-    outs:
-    - path: data/proc/cls-negativity.parquet
-      hash: md5
-      md5: 1796865b2c26c90612cb157ffb23b9a3
-      size: 84447475
-  merge-labels:
-    cmd: python scripts/merge_labels.py
-    deps:
-    - path: data/proc/cls-negativity.parquet
-      hash: md5
-      md5: 1796865b2c26c90612cb157ffb23b9a3
-      size: 84447475
-    - path: data/proc/cls-political.parquet
-      hash: md5
-      md5: f6eb792a082ef42e9c530fba347c34a7
-      size: 85950608
-    - path: scripts/merge_labels.py
-      hash: md5
-      md5: 18e7dcc810afbafa0178675c734f5e3a
-      size: 765
-    outs:
-    - path: data/proc/cls.parquet
-      hash: md5
-      md5: 97e245055c57000f0e841dc7803fdf41
-      size: 118261607
+      md5: 21b7ad8a997c29c2518337d5caa3057d
+      size: 269870934
   daily-counts:
     cmd: python stages/make_daily.py
     deps:
@@ -237,166 +215,8 @@ stages:
       hash: md5
       md5: 1c45a8891fa1d5fcb6a2520944f14e39
       size: 7222
-  glmm@negativity:
-    cmd: Rscript scripts/glmm_negativity.R
-    deps:
-    - path: data/proc/dataset.parquet
-      hash: md5
-      md5: ced69356e7ad17799fda0a660e732b2b
-      size: 239708427
-    - path: scripts/glmm_negativity.R
-      hash: md5
-      md5: c607e0923d38cbe470b2b334db79ac7a
-      size: 2083
-    outs:
-    - path: models/glmm/negativity
-      hash: md5
-      md5: 4c462c35cf4966da350952157137cbbe.dir
-      size: 333706738
-      nfiles: 1
-  glmm@likes:
-    cmd: Rscript scripts/glmm_likes.R
-    deps:
-    - path: data/proc/dataset.parquet
-      hash: md5
-      md5: 7f21946741bf2fd92e40ddc526d259a4
-      size: 238634300
-    - path: scripts/glmm_likes.R
-      hash: md5
-      md5: 6e80b646c9adffe6ff13b9ba3eb7dc10
-      size: 2374
-    outs:
-    - path: models/glmm/likes
-      hash: md5
-      md5: c89ae361596fa6c4519cb081f25d0306.dir
-      size: 471941144
-      nfiles: 1
-  glmm@comments:
-    cmd: Rscript scripts/glmm_comments.R
-    deps:
-    - path: data/proc/dataset.parquet
-      hash: md5
-      md5: ced69356e7ad17799fda0a660e732b2b
-      size: 239708427
-    - path: scripts/glmm_comments.R
-      hash: md5
-      md5: 3451aa58b989be667e4ba39c4a7426aa
-      size: 2293
-    outs:
-    - path: models/glmm/comments
-      hash: md5
-      md5: 5eef25869a1bca3de8c2a22bfed0e692.dir
-      size: 465867435
-      nfiles: 1
-  glmm@shares:
-    cmd: Rscript scripts/glmm_shares.R
-    deps:
-    - path: data/proc/dataset.parquet
-      hash: md5
-      md5: ced69356e7ad17799fda0a660e732b2b
-      size: 239708427
-    - path: scripts/glmm_shares.R
-      hash: md5
-      md5: 27d2c28c8070bf470d7e243a69eb45ea
-      size: 2289
-    outs:
-    - path: models/glmm/shares
-      hash: md5
-      md5: 694cc56b410528292a1f389c0474a3e0.dir
-      size: 455754503
-      nfiles: 1
-  articles-sample:
-    cmd: python scripts/make_articles_sample.py
-    deps:
-    - path: data/raw/articles-sample.xlsx
-      hash: md5
-      md5: cb4501b611be5925894c2b1985ba2b08
-      size: 41840
-    - path: scripts/make_articles_sample.py
-      hash: md5
-      md5: a5f23e61f388fbc8e1104cac8347f162
-      size: 2894
-    outs:
-    - path: data/proc/articles-sample.parquet
-      hash: md5
-      md5: 3bdb6ec940d57d1f0afd2c6f5487d455
-      size: 352252
-  predictions:
-    cmd: Rscript scripts/make_predictions.R
-    deps:
-    - path: data/proc/dataset.parquet
-      hash: md5
-      md5: ced69356e7ad17799fda0a660e732b2b
-      size: 239708427
-    - path: models/glmm/comments
-      hash: md5
-      md5: 5eef25869a1bca3de8c2a22bfed0e692.dir
-      size: 465867435
-      nfiles: 1
-    - path: models/glmm/reactions
-      hash: md5
-      md5: d079c59625d17c40e15adf2f52b2538d.dir
-      size: 472191537
-      nfiles: 1
-    - path: models/glmm/shares
-      hash: md5
-      md5: 694cc56b410528292a1f389c0474a3e0.dir
-      size: 455754503
-      nfiles: 1
-    - path: scripts/make_predictions.R
-      hash: md5
-      md5: 121b57758cfb30260b4edf6bad5f8f19
-      size: 2117
-    outs:
-    - path: data/proc/predictions.parquet
-      hash: md5
-      md5: f52fba9cd2ce8f9a5fa3c0b08f999d31
-      size: 14345946
-  glmm@reactions:
-    cmd: Rscript scripts/glmm_reactions.R
-    deps:
-    - path: data/proc/dataset.parquet
-      hash: md5
-      md5: ced69356e7ad17799fda0a660e732b2b
-      size: 239708427
-    - path: scripts/glmm_reactions.R
-      hash: md5
-      md5: 74d6e08d5ad6f5f8e9b82f78e7ae2e23
-      size: 2395
-    outs:
-    - path: models/glmm/reactions
-      hash: md5
-      md5: d079c59625d17c40e15adf2f52b2538d.dir
-      size: 472191537
-      nfiles: 1
-  posts:
-    cmd: python stages/make_posts.py
-    deps:
-    - path: data/raw/posts/
-      hash: md5
-      md5: 7fd19c9db903de2885ce7570019a723a.dir
-      size: 904062817
-      nfiles: 6
-    - path: stages/make_posts.py
-      hash: md5
-      md5: 8d375ab91127078684c6717c929b7609
-      size: 2733
-    params:
-      params.yaml:
-        posts:
-          start_date: '2020-01-01'
-          end_date: '2024-04-01'
-    outs:
-    - path: data/proc/posts-text.parquet
-      hash: md5
-      md5: ac82d44c49eec08b7e35c21343a60a6c
-      size: 552734108
-    - path: data/proc/posts.parquet
-      hash: md5
-      md5: 21b7ad8a997c29c2518337d5caa3057d
-      size: 269870934
-  cls-political:
-    cmd: python stages/make_cls_political.py
+  political-classify:
+    cmd: python stages/political_classify.py
     deps:
     - path: data/proc/posts-text.parquet
       hash: md5
@@ -406,7 +226,7 @@ stages:
       hash: md5
       md5: 21b7ad8a997c29c2518337d5caa3057d
       size: 269870934
-    - path: stages/make_cls_political.py
+    - path: stages/ml/political_classify.py
       hash: md5
       md5: 35bb581ab816ede09134b19b29281b3b
       size: 1628
@@ -415,319 +235,193 @@ stages:
       hash: md5
       md5: b5cb11b590ee40238d76156289cbc18d
       size: 138848517
-  gpt-batch-requests:
-    cmd: python stages/ml/make_gpt_negativity_batch_requests.py
+  valence-requests:
+    cmd: python stages/ml/valence_gpt_requests.py
     deps:
     - path: data/proc/cls-political.parquet
       hash: md5
       md5: b5cb11b590ee40238d76156289cbc18d
       size: 138848517
+    - path: data/proc/dataset.parquet
+      hash: md5
+      md5: 515c7bf14a2189efdb76f941bf339acd
+      size: 265347745
     - path: data/proc/posts-text.parquet
       hash: md5
       md5: ac82d44c49eec08b7e35c21343a60a6c
       size: 552734108
-    - path: data/proc/posts.parquet
+    - path: ml/prompts/valence/valence.md
       hash: md5
-      md5: 21b7ad8a997c29c2518337d5caa3057d
-      size: 269870934
-    - path: stages/ml/make_gpt_negativity_batch_requests.py
+      md5: cf2c16b1e6cf4ed763a5387da567c2b8
+      size: 3541
+    - path: stages/ml/valence_gpt_requests.py
       hash: md5
-      md5: 11fef345564c75a9f33f246a9f146fcf
-      size: 2805
+      md5: f777a0997bf778915781fd7f24c23997
+      size: 2951
     params:
       params.yaml:
-        gpt.negativity:
-          prompt: negativity.md
-          model: gpt-4.1-mini
+        gpt.valence.batch:
+          params:
+            model: gpt-5
+            reasoning: &id001
+              effort: medium
+            text: &id002
+              verbosity: medium
           header:
             method: POST
             url: /v1/responses
           batch_size: 2500
-          configurations:
-            gpt-4.1-mini:
-              temperature: 0.0
-            gpt-5-nano:
-              text:
-                verbosity: low
-              reasoning:
-                effort: minimal
           sample:
-            size_per_group: 2000
+            size_per_group: 1000
             min_words: 5
             countries: []
             political:
             - OTHER
             - POLITICAL
-            seed: 31041
+            seed: 535017
+          targets:
+            event:
+              model: gpt-5
+              reasoning: *id001
+              text: *id002
+            sentiment:
+              model: gpt-5
+              reasoning: *id001
+              text: *id002
     outs:
-    - path: data/proc/gpt/negativity-requests.jsonl.gz
+    - path: data/proc/gpt/valence-requests.jsonl.gz
       hash: md5
-      md5: b4ea9deabc796843d4b6762ca83dd1d2
-      size: 4794140
-  gpt-batch-jobs:
-    cmd: python stages/ml/make_gpt_negativity_batch_jobs.py
+      md5: 879b023147e4958fc651bb345936754a
+      size: 2339349
+  valence-jobs:
+    cmd: python stages/ml/valence_gpt_jobs.py
     deps:
-    - path: data/proc/gpt/negativity-requests.jsonl.gz
+    - path: data/proc/gpt/valence-requests.jsonl.gz
       hash: md5
-      md5: b4ea9deabc796843d4b6762ca83dd1d2
-      size: 4794140
-    - path: stages/ml/make_gpt_negativity_batch_jobs.py
+      md5: 879b023147e4958fc651bb345936754a
+      size: 2339349
+    - path: stages/ml/valence_gpt_jobs.py
       hash: md5
-      md5: b3ef7260866271e735f49b99981bf0a8
-      size: 4710
+      md5: 32fd5c90dcce6c57b666c2e30c523234
+      size: 3805
     params:
       params.yaml:
-        gpt.negativity:
-          prompt: negativity.md
-          model: gpt-4.1-mini
+        gpt.valence.batch:
+          params:
+            model: gpt-5
+            reasoning: &id003
+              effort: medium
+            text: &id004
+              verbosity: medium
           header:
             method: POST
             url: /v1/responses
           batch_size: 2500
-          configurations:
-            gpt-4.1-mini:
-              temperature: 0.0
-            gpt-5-nano:
-              text:
-                verbosity: low
-              reasoning:
-                effort: minimal
           sample:
-            size_per_group: 2000
+            size_per_group: 1000
             min_words: 5
             countries: []
             political:
             - OTHER
             - POLITICAL
-            seed: 31041
+            seed: 535017
+          targets:
+            event:
+              model: gpt-5
+              reasoning: *id003
+              text: *id004
+            sentiment:
+              model: gpt-5
+              reasoning: *id003
+              text: *id004
     outs:
-    - path: data/proc/gpt/negativity-jobs.jsonl.gz
+    - path: data/proc/gpt/valence-jobs.jsonl.gz
       hash: md5
-      md5: 84024b0ba445611a067f5725860435ee
-      size: 613
-  gpt-batch-responses:
-    cmd: python stages/ml/make_gpt_negativity_batch_responses.py
+      md5: 3062aa003a9f7d70cc8430a24d2c146e
+      size: 327
+  valence-responses:
+    cmd: python stages/ml/valence_gpt_responses.py
     deps:
-    - path: data/proc/gpt/negativity-jobs.jsonl.gz
+    - path: data/proc/gpt/valence-jobs.jsonl.gz
       hash: md5
-      md5: 84024b0ba445611a067f5725860435ee
-      size: 613
-    - path: stages/ml/make_gpt_negativity_batch_responses.py
+      md5: 3062aa003a9f7d70cc8430a24d2c146e
+      size: 327
+    - path: stages/ml/valence_gpt_responses.py
       hash: md5
-      md5: 5dcd26a09384039e9c622e6fbb0b405c
-      size: 2617
+      md5: 6bb3d8929704a0a08b87e2053cb15a24
+      size: 2466
     outs:
-    - path: data/proc/gpt/negativity-responses.jsonl.gz
+    - path: data/proc/gpt/valence-responses.jsonl.gz
       hash: md5
-      md5: 94226c2a12b50a33b83a9f98b328a3e3
-      size: 4191718
-  gpt-batch-output:
-    cmd: python stages/ml/make_gpt_negativity_output.py
+      md5: faf07a71d978f6a86412eb5b37eb8929
+      size: 2236043
+  valence-output:
+    cmd: python stages/ml/valence_gpt_output.py
     deps:
-    - path: data/proc/gpt/negativity-responses.jsonl.gz
+    - path: data/proc/gpt/valence-responses.jsonl.gz
       hash: md5
-      md5: 94226c2a12b50a33b83a9f98b328a3e3
-      size: 4191718
-    - path: stages/ml/make_gpt_negativity_output.py
+      md5: faf07a71d978f6a86412eb5b37eb8929
+      size: 2236043
+    - path: stages/ml/valence_gpt_output.py
       hash: md5
-      md5: e6929385b923fded798e1662607db215
-      size: 1782
+      md5: 8a5e526cd0bc71dc1d047fdd894e7f17
+      size: 1420
     outs:
-    - path: data/proc/gpt/negativity.parquet
-      hash: md5
-      md5: 967b292f1d011880dceb6ab6079af6e4
-      size: 508644
-  negativity-dataset:
-    cmd: python stages/ml/negativity_dataset.py
-    deps:
-    - path: data/proc/gpt/negativity-ground-truth.parquet
-      hash: md5
-      md5: 9c5a88a0adeef2dc6ebb339bc3fd1670
-      size: 70213
-    - path: data/proc/gpt/negativity-requests.jsonl.gz
-      hash: md5
-      md5: ffbe7e9ddf9f316e364f50233284ec60
-      size: 2339352
-    - path: data/proc/gpt/negativity.parquet
+    - path: data/proc/gpt/valence.parquet
       hash: md5
       md5: 640c3dd59e37a9d26df14641fe901fb4
       size: 252256
-    - path: stages/ml/negativity_dataset.py
+  valence-dataset:
+    cmd: python stages/ml/valence_dataset.py
+    deps:
+    - path: data/proc/gpt/valence-ground-truth.parquet
       hash: md5
-      md5: 9ba103a4d12f896204fa11bb3a0ba2b2
-      size: 2347
+      md5: 9c5a88a0adeef2dc6ebb339bc3fd1670
+      size: 70213
+    - path: data/proc/gpt/valence-requests.jsonl.gz
+      hash: md5
+      md5: 879b023147e4958fc651bb345936754a
+      size: 2339349
+    - path: data/proc/gpt/valence.parquet
+      hash: md5
+      md5: 640c3dd59e37a9d26df14641fe901fb4
+      size: 252256
+    - path: stages/ml/valence_dataset.py
+      hash: md5
+      md5: 3be591d77aba23c05a9f96d866f11cd9
+      size: 2335
     params:
       params.yaml:
-        ml.dataset.negativity:
+        ml.dataset.valence:
           training: 0.8
           testing: 0.1
           validation: 0.1
           seed: 34280
     outs:
-    - path: ml/datasets/negativity
+    - path: ml/datasets/valence
       hash: md5
       md5: 3098f43a48b78f5d790d8b191bb8e6ff.dir
       size: 3759033
       nfiles: 13
-  negativity-batch-output:
-    cmd: python stages/ml/make_gpt_negativity_output.py
+  valence-train:
+    cmd: python stages/ml/valence_hyper.py
     deps:
-    - path: data/proc/gpt/negativity-responses.jsonl.gz
-      hash: md5
-      md5: 70e09745561d3c4a51bd2d9a7c988fc2
-      size: 2148205
-    - path: stages/ml/make_gpt_negativity_output.py
-      hash: md5
-      md5: 6810f1953a3fa6b307eeb1202ebe9977
-      size: 3002
-    outs:
-    - path: data/proc/gpt/negativity.parquet
-      hash: md5
-      md5: 6ef5f02b0e568a309971a0504e00e131
-      size: 17476
-  negativity-batch-requests:
-    cmd: python stages/ml/make_gpt_negativity_batch_requests.py
-    deps:
-    - path: data/proc/gpt/negativity-ground-truth.parquet
-      hash: md5
-      md5: 617797f970ecae7e2bd94f5e65d5cc23
-      size: 70211
-    - path: stages/ml/make_gpt_negativity_batch_requests.py
-      hash: md5
-      md5: c0ab107bb0c1dedfca179f372dad9b7c
-      size: 2964
-    params:
-      params.yaml:
-        gpt.negativity:
-          prompts:
-          - event.md
-          - sentiment.md
-          header:
-            method: POST
-            url: /v1/responses
-          batch_size: 2500
-          sample:
-            size_per_group: 2000
-            min_words: 5
-            countries: []
-            political:
-            - OTHER
-            - POLITICAL
-            seed: 31041
-          params:
-            gpt-5:
-              model:
-              - gpt-5
-              - gpt-5-mini
-              - gpt-5-nano
-              reasoning:
-              - effort: minimal
-              - effort: low
-              - effort: medium
-              - effort: high
-              text:
-              - verbosity: low
-            gpt-4.1:
-              model:
-              - gpt-4.1
-              - gpt-4.1-mini
-              - gpt-4.1-nano
-              temperature:
-              - 0.0
-    outs:
-    - path: data/proc/gpt/negativity-requests.jsonl.gz
-      hash: md5
-      md5: 1924b3da278f23e7ac5e02d40591c4ed
-      size: 2469113
-  negativity-batch-jobs:
-    cmd: python stages/ml/make_gpt_negativity_batch_jobs.py
-    deps:
-    - path: data/proc/gpt/negativity-requests.jsonl.gz
-      hash: md5
-      md5: 1924b3da278f23e7ac5e02d40591c4ed
-      size: 2469113
-    - path: stages/ml/make_gpt_negativity_batch_jobs.py
-      hash: md5
-      md5: a369f1cd70d4ef134b79d83bbbc8bee8
-      size: 4280
-    params:
-      params.yaml:
-        gpt.negativity:
-          prompts:
-          - event.md
-          - sentiment.md
-          header:
-            method: POST
-            url: /v1/responses
-          batch_size: 2500
-          sample:
-            size_per_group: 2000
-            min_words: 5
-            countries: []
-            political:
-            - OTHER
-            - POLITICAL
-            seed: 31041
-          params:
-            gpt-5:
-              model:
-              - gpt-5
-              - gpt-5-mini
-              - gpt-5-nano
-              reasoning:
-              - effort: minimal
-              - effort: low
-              - effort: medium
-              - effort: high
-              text:
-              - verbosity: low
-            gpt-4.1:
-              model:
-              - gpt-4.1
-              - gpt-4.1-mini
-              - gpt-4.1-nano
-              temperature:
-              - 0.0
-    outs:
-    - path: data/proc/gpt/negativity-jobs.jsonl.gz
-      hash: md5
-      md5: d9fbedfcd94ed5f7dd49ca15d887bb01
-      size: 1028
-  negativity-batch-responses:
-    cmd: python stages/ml/make_gpt_negativity_batch_responses.py
-    deps:
-    - path: data/proc/gpt/negativity-jobs.jsonl.gz
-      hash: md5
-      md5: d9fbedfcd94ed5f7dd49ca15d887bb01
-      size: 1028
-    - path: stages/ml/make_gpt_negativity_batch_responses.py
-      hash: md5
-      md5: 5dcd26a09384039e9c622e6fbb0b405c
-      size: 2617
-    outs:
-    - path: data/proc/gpt/negativity-responses.jsonl.gz
-      hash: md5
-      md5: 70e09745561d3c4a51bd2d9a7c988fc2
-      size: 2148205
-  negativity-train:
-    cmd: python stages/ml/negativity_hyper.py
-    deps:
-    - path: ml/datasets/negativity
+    - path: ml/datasets/valence
       hash: md5
       md5: 3098f43a48b78f5d790d8b191bb8e6ff.dir
       size: 3759033
       nfiles: 13
-    - path: stages/ml/negativity_hyper.py
+    - path: stages/ml/valence_hyper.py
       hash: md5
-      md5: 0fb09ef8774317ab8dedd032af01719d
-      size: 4234
+      md5: 744ffb840088b5c969a857d883613401
+      size: 4207
     params:
       params.yaml:
-        ml.hyper.negativity:
+        ml.hyper.valence:
           study:
             direction: maximize
             load_if_exists: ${eval:${oc.env:NEWSUSE_OPTUNA_RESUME,1}}
-            study_name: negativity
+            study_name: valence
           optimize:
             n_jobs: ${eval:${oc.env:NEWSUSE_OPTUNA_N_JOBS,1}}
             n_trials: ${eval:${oc.env:NEWSUSE_OPTUNA_N_TRIALS,50}}
@@ -797,14 +491,14 @@ stages:
                 - 365673098
                 - 415169889
                 - 3396084250
-        ml.models.negativity:
+        ml.models.valence:
           defaults:
-            base: &id001 {}
-            newsuse: &id002 {}
-            tokenize: &id003
+            base: &id005 {}
+            newsuse: &id006 {}
+            tokenize: &id007
               padding: max_length
               truncation: true
-            training: &id004
+            training: &id008
               callbacks:
               - make!: transformers:EarlyStoppingCallback
                 early_stopping_patience: 2
@@ -828,341 +522,43 @@ stages:
                 load_best_model_at_end: true
                 overwrite_output_dir: true
           distilbert:
-            base: *id001
-            newsuse: *id002
-            tokenize: *id003
-            training: *id004
+            base: *id005
+            newsuse: *id006
+            tokenize: *id007
+            training: *id008
             checkpoint: distilbert-base-multilingual-cased
           xlm-large:
-            base: *id001
-            newsuse: *id002
-            tokenize: *id003
-            training: *id004
+            base: *id005
+            newsuse: *id006
+            tokenize: *id007
+            training: *id008
             checkpoint: xlm-roberta-large
     outs:
-    - path: data/proc/negativity-hyper.parquet
+    - path: data/proc/valence-hyper.parquet
       hash: md5
       md5: 8405228ed9b96aaf86e05f4bec5abb9f
       size: 13942
-  negativity-ground-truth:
-    cmd: python stages/ml/negativity_ground_truth.py
+  valence-classify:
+    cmd: python stages/ml/valence_classify.py
     deps:
-    - path: data/raw/negativity-ground-truth.json.gz
-      hash: md5
-      md5: 6d2197cada0d2586fa92b6100529073e
-      size: 266937
-    - path: stages/ml/negativity_ground_truth.py
-      hash: md5
-      md5: f385aebda2734209b2249198e08261fc
-      size: 1340
-    outs:
-    - path: data/proc/gpt/negativity-ground-truth.parquet
-      hash: md5
-      md5: 9c5a88a0adeef2dc6ebb339bc3fd1670
-      size: 70213
-  negativity-experiment-requests:
-    cmd: python stages/ml/negativity_gpt_experiment_requests.py
-    deps:
-    - path: data/proc/gpt/negativity-ground-truth.parquet
-      hash: md5
-      md5: 9c5a88a0adeef2dc6ebb339bc3fd1670
-      size: 70213
-    - path: stages/ml/negativity_gpt_experiment_requests.py
-      hash: md5
-      md5: 9dee67b53e118704386f0cf7faf9239b
-      size: 2980
-    params:
-      params.yaml:
-        gpt.negativity.experiment:
-          params:
-            gpt-5:
-              model:
-              - gpt-5
-              - gpt-5-mini
-              - gpt-5-nano
-              reasoning:
-              - effort: minimal
-              - effort: low
-              - effort: medium
-              - effort: high
-              text:
-              - verbosity: low
-            gpt-4.1:
-              model:
-              - gpt-4.1
-              - gpt-4.1-mini
-              - gpt-4.1-nano
-              temperature:
-              - 0.0
-          prompts:
-          - negativity.md
-          - event.md
-          - sentiment.md
-          header:
-            method: POST
-            url: /v1/responses
-          batch_size: 2500
-    outs:
-    - path: data/proc/gpt/negativity-experiment-requests.jsonl.gz
-      hash: md5
-      md5: eb3b880ce0b9454871a4a084b2fb10a3
-      size: 4118011
-  negativity-experiment-jobs:
-    cmd: python stages/ml/negativity_gpt_experiment_jobs.py
-    deps:
-    - path: data/proc/gpt/negativity-experiment-requests.jsonl.gz
-      hash: md5
-      md5: eb3b880ce0b9454871a4a084b2fb10a3
-      size: 4118011
-    - path: stages/ml/negativity_gpt_experiment_jobs.py
-      hash: md5
-      md5: 2f1217853b8438355696915694699a59
-      size: 4325
-    params:
-      params.yaml:
-        gpt.negativity.experiment:
-          params:
-            gpt-5:
-              model:
-              - gpt-5
-              - gpt-5-mini
-              - gpt-5-nano
-              reasoning:
-              - effort: minimal
-              - effort: low
-              - effort: medium
-              - effort: high
-              text:
-              - verbosity: low
-            gpt-4.1:
-              model:
-              - gpt-4.1
-              - gpt-4.1-mini
-              - gpt-4.1-nano
-              temperature:
-              - 0.0
-          prompts:
-          - negativity.md
-          - event.md
-          - sentiment.md
-          header:
-            method: POST
-            url: /v1/responses
-          batch_size: 2500
-    outs:
-    - path: data/proc/gpt/negativity-experiment-jobs.jsonl.gz
-      hash: md5
-      md5: 5db6b44ebd6038cca6b68a8ba7efa92c
-      size: 1036
-  negativity-experiment-responses:
-    cmd: python stages/ml/negativity_gpt_experiment_responses.py
-    deps:
-    - path: data/proc/gpt/negativity-experiment-jobs.jsonl.gz
-      hash: md5
-      md5: 5db6b44ebd6038cca6b68a8ba7efa92c
-      size: 1036
-    - path: stages/ml/negativity_gpt_experiment_responses.py
-      hash: md5
-      md5: 63a9bbd7f66a10e7c5979b13db68ab22
-      size: 2638
-    outs:
-    - path: data/proc/gpt/negativity-experiment-responses.jsonl.gz
-      hash: md5
-      md5: 6108a0c3c05f46da178709e29796838d
-      size: 3762354
-  negativity-experiment-output:
-    cmd: python stages/ml/negativity_gpt_experiment_output.py
-    deps:
-    - path: data/proc/gpt/negativity-experiment-responses.jsonl.gz
-      hash: md5
-      md5: 6108a0c3c05f46da178709e29796838d
-      size: 3762354
-    - path: stages/ml/negativity_gpt_experiment_output.py
-      hash: md5
-      md5: 1473f6e45fcd10cd4e5e6b9aaa3c3787
-      size: 3349
-    outs:
-    - path: data/proc/gpt/negativity-experiment.parquet
-      hash: md5
-      md5: 04afdb8de611fc4dcb43d9a969839059
-      size: 17567
-  negativity-requests:
-    cmd: python stages/ml/negativity_gpt_requests.py
-    deps:
-    - path: data/proc/cls-political.parquet
-      hash: md5
-      md5: b5cb11b590ee40238d76156289cbc18d
-      size: 138848517
-    - path: data/proc/dataset.parquet
-      hash: md5
-      md5: 515c7bf14a2189efdb76f941bf339acd
-      size: 265347745
     - path: data/proc/posts-text.parquet
       hash: md5
       md5: ac82d44c49eec08b7e35c21343a60a6c
       size: 552734108
-    - path: ml/prompts/negativity/negativity.md
-      hash: md5
-      md5: cf2c16b1e6cf4ed763a5387da567c2b8
-      size: 3541
-    - path: stages/ml/negativity_gpt_requests.py
-      hash: md5
-      md5: 5410e2036b7c47ee66fed458fa152563
-      size: 2969
-    params:
-      params.yaml:
-        gpt.negativity.batch:
-          params:
-            model: gpt-5
-            reasoning: &id005
-              effort: medium
-            text: &id006
-              verbosity: medium
-          header:
-            method: POST
-            url: /v1/responses
-          batch_size: 2500
-          sample:
-            size_per_group: 1000
-            min_words: 5
-            countries: []
-            political:
-            - OTHER
-            - POLITICAL
-            seed: 535017
-          targets:
-            event:
-              model: gpt-5
-              reasoning: *id005
-              text: *id006
-            sentiment:
-              model: gpt-5
-              reasoning: *id005
-              text: *id006
-    outs:
-    - path: data/proc/gpt/negativity-requests.jsonl.gz
-      hash: md5
-      md5: ffbe7e9ddf9f316e364f50233284ec60
-      size: 2339352
-  negativity-jobs:
-    cmd: python stages/ml/negativity_gpt_jobs.py
-    deps:
-    - path: data/proc/gpt/negativity-requests.jsonl.gz
-      hash: md5
-      md5: ffbe7e9ddf9f316e364f50233284ec60
-      size: 2339352
-    - path: stages/ml/negativity_gpt_jobs.py
-      hash: md5
-      md5: f2b45131d60cb726208804ebd0ecca4b
-      size: 3808
-    params:
-      params.yaml:
-        gpt.negativity.batch:
-          params:
-            model: gpt-5
-            reasoning: &id007
-              effort: medium
-            text: &id008
-              verbosity: medium
-          header:
-            method: POST
-            url: /v1/responses
-          batch_size: 2500
-          sample:
-            size_per_group: 1000
-            min_words: 5
-            countries: []
-            political:
-            - OTHER
-            - POLITICAL
-            seed: 535017
-          targets:
-            event:
-              model: gpt-5
-              reasoning: *id007
-              text: *id008
-            sentiment:
-              model: gpt-5
-              reasoning: *id007
-              text: *id008
-    outs:
-    - path: data/proc/gpt/negativity-jobs.jsonl.gz
-      hash: md5
-      md5: c75c885dfb5387d99adf1c3605a682c0
-      size: 330
-  negativity-responses:
-    cmd: python stages/ml/negativity_gpt_responses.py
-    deps:
-    - path: data/proc/gpt/negativity-jobs.jsonl.gz
-      hash: md5
-      md5: c75c885dfb5387d99adf1c3605a682c0
-      size: 330
-    - path: stages/ml/negativity_gpt_responses.py
-      hash: md5
-      md5: f7862aa9ec27a5b3a8ac1501baccb075
-      size: 2469
-    outs:
-    - path: data/proc/gpt/negativity-responses.jsonl.gz
-      hash: md5
-      md5: ee33a55da451ed9799b18a02df20abbc
-      size: 2236046
-  negativity-output:
-    cmd: python stages/ml/negativity_gpt_output.py
-    deps:
-    - path: data/proc/gpt/negativity-responses.jsonl.gz
-      hash: md5
-      md5: ee33a55da451ed9799b18a02df20abbc
-      size: 2236046
-    - path: stages/ml/negativity_gpt_output.py
-      hash: md5
-      md5: 7b3a78f130d54c7dc81de3db5f8a4b73
-      size: 1432
-    outs:
-    - path: data/proc/gpt/negativity.parquet
-      hash: md5
-      md5: 640c3dd59e37a9d26df14641fe901fb4
-      size: 252256
-  negativity-classify:
-    cmd: python stages/ml/negativity_classify.py
-    deps:
-    - path: data/proc/negativity-hyper.parquet
+    - path: data/proc/valence-hyper.parquet
       hash: md5
       md5: 8405228ed9b96aaf86e05f4bec5abb9f
       size: 13942
-    - path: data/proc/posts-text.parquet
+    - path: stages/ml/valence_classify.py
       hash: md5
-      md5: ac82d44c49eec08b7e35c21343a60a6c
-      size: 552734108
-    - path: stages/ml/negativity_classify.py
-      hash: md5
-      md5: 473ecbb1e11eddee06b1913ed9446f56
-      size: 1896
+      md5: 7cf882e8256aa7bda980dcab5c09d97c
+      size: 1893
     params:
       params.yaml:
         ml.inference:
           batch_size: ${eval:${oc.env:NEWSUSE_ML_INFERENCE_BATCH_SIZE,32}}
     outs:
-    - path: data/proc/negativity-cls.parquet
+    - path: data/proc/valence-cls.parquet
       hash: md5
       md5: 49bcd2c321f115a7e1a3e19fa3a0c6b5
       size: 142210993
-  political-classify:
-    cmd: python stages/political_classify.py
-    deps:
-    - path: data/proc/posts-text.parquet
-      hash: md5
-      md5: ac82d44c49eec08b7e35c21343a60a6c
-      size: 552734108
-    - path: data/proc/posts.parquet
-      hash: md5
-      md5: 21b7ad8a997c29c2518337d5caa3057d
-      size: 269870934
-    - path: stages/ml/political_classify.py
-      hash: md5
-      md5: 35bb581ab816ede09134b19b29281b3b
-      size: 1628
-    outs:
-    - path: data/proc/cls-political.parquet
-      hash: md5
-      md5: b5cb11b590ee40238d76156289cbc18d
-      size: 138848517

@@ -5,13 +5,13 @@ from project import config, paths
 
 countries = config.countries.labels
 
-data = DataFrame.from_(paths.dataset)[["key", "country", "political", "negativity"]].merge(
+data = DataFrame.from_(paths.dataset)[["key", "country", "political", "valence"]].merge(
     DataFrame.from_(paths.text), on="key", how="left"
 )
 
 # %%
 examples = (
-    data.groupby(["country", "political", "negativity"])
+    data.groupby(["country", "political", "valence"])
     .sample(5, random_state=117171)
     .reset_index(drop=True)
 )
@@ -21,10 +21,10 @@ examples.pipe(
     lambda df: print(
         df.set_index("country")
         .loc[["us", "uk"]]
-        .set_index(["political", "negativity"], append=True)
+        .set_index(["political", "valence"], append=True)
         .rename(countries, level="country")
         .rename({"POLITICAL": "political", "OTHER": "non-political"}, level="political")
-        .rename({"NEGATIVE": "negative", "OTHER": "non-negative"}, level="negativity")
+        .rename({"NEGATIVE": "negative", "OTHER": "non-negative"}, level="valence")
         .style.hide(["key"], axis="columns")
         .format(escape="latex")
         .to_latex(

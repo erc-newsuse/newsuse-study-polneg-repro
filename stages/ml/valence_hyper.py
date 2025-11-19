@@ -15,15 +15,15 @@ from transformers import AutoConfig, AutoTokenizer, Trainer
 
 from project import config, paths
 from project.model import (
-    NewsuseNegativityClassifier,
-    NewsuseNegativityClassifierConfig,
-    NewsuseNegativityEvaluator,
+    NewsuseValenceClassifier,
+    NewsuseValenceClassifierConfig,
+    NewsuseValenceEvaluator,
 )
 
 os.environ["PYTORCH_ALLOC_CONF"] = "expandable_segments:True"
 datasets.disable_caching()
 
-domain = "negativity"
+domain = "valence"
 
 # %% ---------------------------------------------------------------------------------
 
@@ -48,7 +48,7 @@ def objective(trial: optuna.Trial) -> float:
     model_config = config.ml.models[domain][base]
     base_config = AutoConfig.from_pretrained(model_config.checkpoint, **model_config.base)
     # Build newsuse config
-    newsuse_config = NewsuseNegativityClassifierConfig(
+    newsuse_config = NewsuseValenceClassifierConfig(
         base_config, **{**model_config.newsuse, **newsuse_space}
     )
     # Initialize tokenizer and tokenize dataset
@@ -58,8 +58,8 @@ def objective(trial: optuna.Trial) -> float:
         batched=True,
     )
 
-    def model_init() -> NewsuseNegativityClassifier:
-        return NewsuseNegativityClassifier(newsuse_config)
+    def model_init() -> NewsuseValenceClassifier:
+        return NewsuseValenceClassifier(newsuse_config)
 
     with TemporaryDirectory() as tmpdir:
         dirpath = Path(tmpdir) / base
@@ -73,7 +73,7 @@ def objective(trial: optuna.Trial) -> float:
             train_dataset=encoded["train"],
             eval_dataset=encoded["valid"],
             tokenizer=tokenizer,
-            compute_metrics=NewsuseNegativityEvaluator(newsuse_config),
+            compute_metrics=NewsuseValenceEvaluator(newsuse_config),
             callbacks=[cb.make() for cb in model_config.training.callbacks],
         )
         trainer.train()
@@ -114,6 +114,6 @@ study.optimize(objective, **config.ml.hyper[domain].optimize)
 # %% ---------------------------------------------------------------------------------
 
 results = DataFrame(study.trials_dataframe())
-results.to_(paths.negativity_hyper)
+results.to_(paths.valence_hyper)
 
 # %% ---------------------------------------------------------------------------------

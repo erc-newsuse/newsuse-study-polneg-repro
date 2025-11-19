@@ -1,4 +1,4 @@
-# Political negativity
+# Political valence
 
 This is a repository for reproducing the results from the paper
 
@@ -56,7 +56,7 @@ In order to run the full pipeline using the rehydrated data
 create the following files in the following files:
 - `data/raw/posts-text.parquet` with columns `key`, `country` and `text` (the text content of the posts). The value in `key` and `country` columns should match the values in the `data/raw/posts.parquet` file.
 - `data/ml/political/text.parquet` with columns `split`, `key`, `text` (the text content of the posts used for training the political classifier). The value in `key` column should match the values in the `data/ml/data.parquet` file.
-- `data/ml/negativity/text.parquet` with columns `split`, `key`, `text` (the text content of the posts used for training the negativity classifier). The value in `key` column should match the values in the `data/ml/data.parquet` file.
+- `data/ml/valence/text.parquet` with columns `split`, `key`, `text` (the text content of the posts used for training the valence classifier). The value in `key` column should match the values in the `data/ml/data.parquet` file.
 
 
 ## Reproduction
@@ -92,15 +92,15 @@ This should be the output:
 ```
 data                    Outputs data/proc/posts.parquet, data/proc/posts-text.parquet
 ml-datasets@political   Outputs ml/datasets/political
-ml-datasets@negativity  Outputs ml/datasets/negativity
+ml-datasets@valence  Outputs ml/datasets/valence
 train@political         Outputs ml/classifiers/political
-train@negativity        Outputs ml/classifiers/negativity
+train@valence        Outputs ml/classifiers/valence
 labels@political        Outputs data/proc/cls-political.parquet
-labels@negativity       Outputs data/proc/cls-negativity.parquet
+labels@valence       Outputs data/proc/cls-valence.parquet
 merge-labels            Outputs data/proc/cls.parquet
 daily-counts            Outputs data/proc/daily.parquet
 dataset                 Outputs data/proc/dataset.parquet, data/proc/quality.parquet
-glmm@negativity         Outputs models/glmm/negativity
+glmm@valence         Outputs models/glmm/valence
 glmm@reactions          Outputs models/glmm/reactions
 glmm@comments           Outputs models/glmm/comments
 glmm@shares             Outputs models/glmm/shares
@@ -162,7 +162,7 @@ In particular there are the following notebooks and scripts in the `analyses` su
 ```
 analyses/
 ├── classifiers              // python scripts for evaluating classifier performance
-│   ├── negativity.py
+│   ├── valence.py
 │   └── political.py
 ├── descriptives
 │   ├── descriptives.py      // descriptive statistics
@@ -172,12 +172,12 @@ analyses/
 │   │   └── validation.qmd   // validation of GLMM for comments
 │   ├── likes
 │   │   └── validation.qmd   // validation of GLMM for likes
-│   ├── negativity
-│   │   └── validation.qmd   // validation of GLMM for negativity
+│   ├── valence
+│   │   └── validation.qmd   // validation of GLMM for valence
 │   ├── shares
 │   │   └── validation.qmd   // validation of GLMM for shares
 │   ├── models-table.qmd     // generation of the model coefficient table
-│   ├── polneg.qmd           // generation of negativity prevalence subfigure
+│   ├── polneg.qmd           // generation of valence prevalence subfigure
 │   ├── engagement.qmd       // generation of engagement subfigure
 │   └── simulation.qmd       // generation of figure with simulation results
 ```
@@ -192,4 +192,4 @@ See the `scripts/make_labels.py` script for an example.
 
 They are also accessible through _Huggingface Hub_:
 - [political](https://huggingface.co/sztal/erc-newsuse-political)
-- [negativity](https://huggingface.co/sztal/erc-newsuse-negativity).
+- [valence](https://huggingface.co/sztal/erc-newsuse-valence).

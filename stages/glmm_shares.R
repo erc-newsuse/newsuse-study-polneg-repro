@@ -25,7 +25,7 @@ dataset <- as.character(paths$dataset) %>%
     mutate(
         country = factor(country, levels = countries),
         political = factor(political, levels = c("OTHER", "POLITICAL")),
-        negativity = factor(negativity, levels = c("OTHER", "NEGATIVE")),
+        valence = factor(valence, levels = c("OTHER", "NEGATIVE")),
         year = as.factor(year),
         month = as.factor(month),
         day = as.factor(day),
@@ -61,9 +61,9 @@ fitglmm <- function(
 
 # %% Fit model 0 ---------------------------------------------------------------------
 
-frm <- frm0  <- shares ~ country * political * negativity +
-    (1 + political * negativity | country:name) +
-    (1 + political * negativity | country:year:month:day)
+frm <- frm0  <- shares ~ country * political * valence +
+    (1 + political * valence | country:name) +
+    (1 + political * valence | country:year:month:day)
 zfrm <- ~0
 dfrm <- ~country + (1 | country:year:month:day)
 time <- time0 <- system.time(

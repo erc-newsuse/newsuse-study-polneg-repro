@@ -91,7 +91,7 @@ colors    = {"overall": "black", **config.plotting.color.semantics}
 ## Models
 
 ```{r}
-glmm_n <- readRDS(as.character(paths$glmm / "negativity" / "0.rds"))
+glmm_n <- readRDS(as.character(paths$glmm / "valence" / "0.rds"))
 glmm_r <- readRDS(as.character(paths$glmm / "reactions" / "0.rds"))
 glmm_c <- readRDS(as.character(paths$glmm / "comments" / "0.rds"))
 glmm_s <- readRDS(as.character(paths$glmm / "shares" / "0.rds"))
@@ -154,7 +154,7 @@ def sanitize_term(term, ref=list(countries)[0]):
             return t.removeprefix(prefix).upper()
         if t.startswith((prefix := "political")):
             return t.removeprefix(prefix).lower()
-        if t.startswith((prefix := "negativity")):
+        if t.startswith((prefix := "valence")):
             return t.removeprefix(prefix).lower()
         if t == "(Intercept)":
             return f"(Intercept = {ref.upper()})"
@@ -210,10 +210,10 @@ tab = (
     make_modeltable(r.Tr, "Reactions")
     .merge(make_modeltable(r.Tc, "Comments"), **mergekw)
     .merge(make_modeltable(r.Ts, "Shares"), **mergekw)
-    .merge(make_modeltable(r.Tn, "Negativity"), **mergekw)
+    .merge(make_modeltable(r.Tn, "Valence"), **mergekw)
     .droplevel(level=0)
     .loc[["cond", "disp"]]
-    [["Negativity", "Reactions", "Comments", "Shares"]]
+    [["Valence", "Reactions", "Comments", "Shares"]]
     .droplevel(level=["component"])
     .rename_axis(index={"group": "effect"})
     .pipe(lambda df: df.style.format(
