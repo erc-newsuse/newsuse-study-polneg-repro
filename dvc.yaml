@@ -188,6 +188,16 @@ stages:
     - data/proc/cls.parquet:
         persist: true
 
+  final:
+    cmd: python stages/final.py
+    deps:
+    - stages/final.py
+    - data/proc/dataset.parquet
+    - data/proc/cls.parquet
+    outs:
+    - data/proc/final.parquet:
+        persist: true
+
   glmm:
     foreach:
     - valence

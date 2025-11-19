@@ -16,10 +16,6 @@ data, *other = data
 for df in other:
     data = data.merge(df, how="left", on="key")
 
-# %% ---------------------------------------------------------------------------------
-
-data = data.assign(valence=lambda df: df["event"] + df["sentiment"])
-
 # %% Save data -----------------------------------------------------------------------
 
 data.to_(paths.proc / "cls.parquet")

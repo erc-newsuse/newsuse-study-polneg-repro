@@ -22,11 +22,13 @@ countries <- countries[0L:length(countries)]
 dataset <- as.character(paths$dataset) %>%
     read_parquet %>%
     tibble %>%
+    inner_join(read_parquet(as.character(paths$labels))) %>%
     mutate(
         country = factor(country, levels = countries),
         political = factor(political, levels = c("OTHER", "POLITICAL")),
-
-        valence = factor(valence, levels = c("OTHER", "NEGATIVE")),
+        event = factor(event, ordered = TRUE),
+        sentiment = factor(sentiment, ordered = TRUE),
+        valence = factor(valence, ordered = TRUE),
         year = as.factor(year),
         month = as.factor(month),
         day = as.factor(day),
