@@ -5,7 +5,6 @@ from typing import Any
 import numpy as np
 import pandas as pd
 from dlordinal.metrics import amae
-from scipy.stats import hmean
 
 __all__ = ("amae_score", "mae_precision_score", "mae_recall_score", "o1_score")
 
@@ -74,7 +73,7 @@ def _(
     cm: pd.DataFrame,
     value: int | None = None,
     *,
-    average: Callable[[np.ndarray], float] | None = hmean,
+    average: Callable[[np.ndarray], float] | None = np.mean,
     **kwargs: Any,
 ) -> float | np.ndarray:
     """Calculate O1 (MAE F1) score from confusion matrix."""
@@ -138,7 +137,7 @@ def _prediction_margin_score(
     value: int | None,
     axis: int,
     *,
-    average: Callable[[np.ndarray], float] | None = hmean,
+    average: Callable[[np.ndarray], float] | None = np.mean,
     **kwargs: Any,
 ) -> float | np.ndarray:
     """Calculate MAE precision from confusion matrix."""

@@ -37,7 +37,13 @@ pipe = pipeline("text-multi-classification", model=model, tokenizer=tokenizer)
 
 # %% ---------------------------------------------------------------------------------
 
-testing = dataset["test"].to_pandas().set_index(["ground_truth", "country", "key"])
+testing = pd.concat(
+    [
+        dataset["test"].to_pandas().set_index(["ground_truth", "country", "key"]),
+        dataset["valid"].to_pandas().set_index(["ground_truth", "country", "key"]),
+    ]
+)
+
 results = DataFrame(
     tqdm(pipe(KeyDataset(testing, "text"), batch_size=16), total=len(testing)),
 )
@@ -148,6 +154,8 @@ ground_truth = data.xs(True, level="ground_truth")
 # %% ---------------------------------------------------------------------------------
 
 perf_gt = ground_truth.groupby(level="target").apply(compute_metrics)
+perf_gt_country = ground_truth.groupby(["country", "target"]).apply(compute_metrics)
+
 
 # %% ---------------------------------------------------------------------------------
 
@@ -244,5 +252,40 @@ labels["strong_valence"].groupby("ground_truth").apply(compute_metrics)
 # %% ---------------------------------------------------------------------------------
 
 labels["additive"].groupby("ground_truth").apply(compute_metrics)
+
+
+# %% Sample ground truth examples with machine labels --------------------------------
+
+content = (
+    data.xs(True, level="ground_truth")
+    .unstack("target")
+    .swaplevel(0, 1, axis=1)
+    .sort_index(axis=1)
+    .pipe(
+        lambda df: pd.concat(
+            [df[t].rename(columns={"pred": f"{t}_p", "true": f"{t}_t"}) for t in targets],
+            axis=1,
+        )
+    )
+    .reset_index()
+    .merge(DataFrame.from_(paths.text), on="key")
+    .set_index(["country", "key"])
+)
+
+# %% ---------------------------------------------------------------------------------
+
+
+def show(row: pd.Series) -> None:
+    print("Event | Sentiment [T/P]")
+    print(f"{row['event_t']}/{row['event_p']} | {row['sentiment_t']}/{row['sentiment_p']}")
+    print("\n")
+    if pd.notnull(row["title"]):
+        print(row["title"], "\n")
+    print(row["text"], "\n")
+
+
+# %% ---------------------------------------------------------------------------------
+
+content.loc["us"].sample(1).iloc[0].pipe(show)
 
 # %% ---------------------------------------------------------------------------------
