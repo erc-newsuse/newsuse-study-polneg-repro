@@ -94,13 +94,13 @@ def _(
 
 
 def _confusion_matrix(
-    y_true: np.ndarray,
-    y_pred: np.ndarray,
+    y_true: pd.Series,
+    y_pred: pd.Series,
     *,
     support: np.ndarray | int | None = None,
 ) -> pd.DataFrame:
-    y_true = y_true
-    y_pred = y_pred
+    y_true = pd.Series(y_true)
+    y_pred = pd.Series(y_pred)
     u_true = np.unique(y_true)
     u_pred = np.unique(y_pred)
     if support is None:
