@@ -6,6 +6,10 @@ from project import paths
 
 # %% ---------------------------------------------------------------------------------
 
+meta = DataFrame.from_(paths.outlet_meta)
+
+# %% ---------------------------------------------------------------------------------
+
 data = (
     DataFrame.from_(paths.dataset)
     .merge(DataFrame.from_(paths.labels, columns=["key", "event", "sentiment"]))
@@ -26,6 +30,7 @@ data = (
             "shares",
         ]
     ]
+    .merge(meta, how="left", on=["country", "name"])
     .merge(
         DataFrame.from_(paths.labels, columns=["key", "political", "event", "sentiment"])
     )

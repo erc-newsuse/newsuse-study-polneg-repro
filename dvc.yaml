@@ -39,6 +39,15 @@ stages:
     - data/proc/quality.parquet:
         persist: true
 
+  outlet-meta:
+    cmd: python stages/outlet_meta.py
+    deps:
+    - stages/outlet_meta.py
+    - data/raw/outlet-meta.xlsx
+    outs:
+    - data/proc/outlet-meta.parquet:
+        persist: true
+
   political-classify:
     cmd: python stages/political_classify.py
     deps:
@@ -154,6 +163,7 @@ stages:
     - stages/final.py
     - data/proc/dataset.parquet
     - data/proc/cls.parquet
+    - data/proc/outlet-meta.parquet
     outs:
     - data/proc/final.parquet:
         persist: true
@@ -180,15 +190,6 @@ stages:
     - data/raw/articles-sample.xlsx
     outs:
     - data/proc/articles-sample.parquet:
-        persist: true
-
-  outlet-meta:
-    cmd: python stages/outlet_meta.py
-    deps:
-    - stages/outlet_meta.py
-    - data/raw/outlet-meta.xlsx
-    outs:
-    - data/proc/outlet-meta.parquet:
         persist: true
 
   # valence-experiment-requests:
