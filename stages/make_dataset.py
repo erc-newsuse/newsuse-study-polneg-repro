@@ -39,7 +39,8 @@ quality = (
         bad_rate=lambda df: df["rate"] < config.dataset.min_posts_per_day,
         bad_shares=lambda df: df["shares"] > config.dataset.max_decile_difference,
     )
-    .assign(bad=lambda df: df["bad_rate"] | df["bad_shares"])
+    # .assign(bad=lambda df: df["bad_rate"] | df["bad_shares"])
+    .assign(bad=lambda df: df["bad_rate"])
     .set_index(keys)
 )
 
