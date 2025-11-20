@@ -1,5 +1,0 @@
-outs:
-- md5: 555bae003de546ffc08c2f4752054028
-  size: 80931
-  hash: md5
-  path: gpt-annotated-subsample.parquet

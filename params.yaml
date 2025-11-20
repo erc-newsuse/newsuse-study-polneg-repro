@@ -8,6 +8,7 @@ paths:
   dataset:          "@proc/dataset.parquet"
   daily:            "@proc/daily.parquet"
   quality:          "@proc/quality.parquet"
+  outlet_meta:      "@proc/outlet-meta.parquet"
   cls_political:    "@proc/cls-political.parquet"
   cls_valence:      "@proc/cls-valence.parquet"
   labels:           "@proc/cls.parquet"
@@ -324,9 +325,6 @@ plotting:
     axes.titleweight:      bold
     axes.titlesize:        large
     axes.labelsize:        large
-    axes.prop_cycle:
-      make!:               matplotlib:cycler
-      color:               ${oc.dict.values:plotting.color.palette}
     scatter.marker:        o
     scatter.edgecolors:    black
     lines.markeredgecolor: black

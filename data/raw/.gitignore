@@ -3,5 +3,5 @@
 /posts-text.parquet
 /followers.parquet
 /posts
-/gpt-annotated-subsample.parquet
 /valence-ground-truth.json.gz
+/outlet-meta.xlsx

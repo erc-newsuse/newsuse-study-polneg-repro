@@ -29,8 +29,10 @@ dependencies:
   - r-matrix=1.6.5
   - r-lme4=1.1.35.5
   - r-tmb=1.9.15
-  # - r-glmmtmb=1.1.10
   - r-heplots
   - quarto
+  # - r-glmmtmb=1.1.10
+  # - r-rstan
+  # - r-brms=2.23.0
 variables:
   LIBARROW_MINIMAL: false

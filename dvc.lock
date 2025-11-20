@@ -200,8 +200,8 @@ stages:
       size: 269870934
     - path: stages/make_dataset.py
       hash: md5
-      md5: bbd51108a2b1a6116500a1fbb9d9bc94
-      size: 1813
+      md5: cc861cdfc1e4b8bb540fe5a6d4ae8ab9
+      size: 1858
     params:
       params.yaml:
         dataset.max_decile_difference: 10.0
@@ -209,11 +209,11 @@ stages:
     outs:
     - path: data/proc/dataset.parquet
       hash: md5
-      md5: 515c7bf14a2189efdb76f941bf339acd
-      size: 265347745
+      md5: 1de9edbce6068b2722a0fa6518807809
+      size: 269768414
     - path: data/proc/quality.parquet
       hash: md5
-      md5: 1c45a8891fa1d5fcb6a2520944f14e39
+      md5: 327df99330f5320a9bbefb4f5841f383
       size: 7222
   political-classify:
     cmd: python stages/political_classify.py
@@ -244,8 +244,8 @@ stages:
       size: 138848517
     - path: data/proc/dataset.parquet
       hash: md5
-      md5: 515c7bf14a2189efdb76f941bf339acd
-      size: 265347745
+      md5: 1de9edbce6068b2722a0fa6518807809
+      size: 269768414
     - path: data/proc/posts-text.parquet
       hash: md5
       md5: ac82d44c49eec08b7e35c21343a60a6c
@@ -602,3 +602,19 @@ stages:
       hash: md5
       md5: 89faded92570dce204615553f508bd82
       size: 121407673
+  outlet-meta:
+    cmd: python stages/outlet_meta.py
+    deps:
+    - path: data/raw/outlet-meta.xlsx
+      hash: md5
+      md5: c829d7a931b44f8c61718d317534b29b
+      size: 12191
+    - path: stages/outlet_meta.py
+      hash: md5
+      md5: dbcaffd8c43f09793538ec2c96fd1dfa
+      size: 1286
+    outs:
+    - path: data/proc/outlet-meta.parquet
+      hash: md5
+      md5: 54daaccf3d171e68be36d2bdef4c6bf2
+      size: 3817
