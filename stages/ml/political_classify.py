@@ -10,12 +10,13 @@ from project.pipelines import KeyDataset, pipeline
 # %% ---------------------------------------------------------------------------------
 
 data = (
-    DataFrame.from_(paths.dataset)[["key", "country"]]
-    .merge(DataFrame.from_(paths.text), on="key", how="left")
-    .assign(text=lambda df: df["text"].fillna("") + df.pop("title").fillna(""))
-    .query("text.notnull() & text.ne('')")
-    .reset_index(drop=True)
+    DataFrame.from_(paths.text, columns=["key", "fulltext"])
+    .dropna(ignore_index=True)
+    .rename(columns={"fulltext": "text"})
 )
+
+# %% ---------------------------------------------------------------------------------
+
 opts = config.classification.political
 inference_opts = config.ml.inference
 
