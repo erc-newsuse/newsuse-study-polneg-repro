@@ -12,7 +12,7 @@ posts = DataFrame.from_(paths.posts)
 # %% Compute data quality statistics -------------------------------------------------
 
 quality = (
-    DataFrame.from_(paths.daily)
+    DataFrame.from_(paths.daily_counts)
     .groupby(["country", "name"])[["n"]]
     .mean()
     .reset_index()

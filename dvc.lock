@@ -177,8 +177,8 @@ stages:
       size: 142110678
     - path: stages/daily_counts.py
       hash: md5
-      md5: 246cb115b9c8a7764c94cc56d5d8799f
-      size: 1630
+      md5: a3c81cadde1a32033856f75e5323745d
+      size: 1613
     params:
       params.yaml:
         dataset.min_posts_per_day: 2
@@ -188,33 +188,32 @@ stages:
       md5: 59059a5d1bdcc4856367aa8a187e81af
       size: 145666
   dataset:
-    cmd: python stages/make_dataset.py
+    cmd: python stages/dataset.py
     deps:
-    - path: data/proc/daily.parquet
+    - path: data/proc/daily-counts.parquet
       hash: md5
-      md5: 52e61e545d24fe48cf380a61f0acc656
-      size: 145913
+      md5: 59059a5d1bdcc4856367aa8a187e81af
+      size: 145666
     - path: data/proc/posts.parquet
       hash: md5
-      md5: 21b7ad8a997c29c2518337d5caa3057d
-      size: 269870934
-    - path: stages/make_dataset.py
+      md5: f9a2b9acda243c225a9430fa00595db2
+      size: 142110678
+    - path: stages/dataset.py
       hash: md5
-      md5: cc861cdfc1e4b8bb540fe5a6d4ae8ab9
-      size: 1858
+      md5: 40e416e29947a425e5167e250dbe3ab5
+      size: 1718
     params:
       params.yaml:
-        dataset.max_decile_difference: 10.0
         dataset.min_posts_per_day: 2
     outs:
+    - path: data/proc/data-quality.parquet
+      hash: md5
+      md5: af10e5157e056211ce82793b2acf2bf8
+      size: 6753
     - path: data/proc/dataset.parquet
       hash: md5
-      md5: 1de9edbce6068b2722a0fa6518807809
-      size: 269768414
-    - path: data/proc/quality.parquet
-      hash: md5
-      md5: 327df99330f5320a9bbefb4f5841f383
-      size: 7222
+      md5: 57f50334b0d4b35a80efbed31627e99a
+      size: 142197177
   political-classify:
     cmd: python stages/political_classify.py
     deps:
