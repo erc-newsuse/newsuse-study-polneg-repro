@@ -152,8 +152,8 @@ stages:
       nfiles: 6
     - path: stages/posts.py
       hash: md5
-      md5: 423f76b8719fce6fefba05007410a661
-      size: 3135
+      md5: c61789dd90cc90cee725d7f03c00ca10
+      size: 3094
     params:
       params.yaml:
         posts:
@@ -169,24 +169,24 @@ stages:
       md5: f9a2b9acda243c225a9430fa00595db2
       size: 142110678
   daily-counts:
-    cmd: python stages/make_daily.py
+    cmd: python stages/daily_counts.py
     deps:
     - path: data/proc/posts.parquet
       hash: md5
-      md5: 21b7ad8a997c29c2518337d5caa3057d
-      size: 269870934
-    - path: stages/make_daily.py
+      md5: f9a2b9acda243c225a9430fa00595db2
+      size: 142110678
+    - path: stages/daily_counts.py
       hash: md5
-      md5: d6a33610670f7c935232f20651f4ecf3
-      size: 1623
+      md5: 246cb115b9c8a7764c94cc56d5d8799f
+      size: 1630
     params:
       params.yaml:
         dataset.min_posts_per_day: 2
     outs:
-    - path: data/proc/daily.parquet
+    - path: data/proc/daily-counts.parquet
       hash: md5
-      md5: 52e61e545d24fe48cf380a61f0acc656
-      size: 145913
+      md5: 59059a5d1bdcc4856367aa8a187e81af
+      size: 145666
   dataset:
     cmd: python stages/make_dataset.py
     deps:
