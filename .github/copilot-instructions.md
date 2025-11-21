@@ -3,6 +3,7 @@
 ## Project Architecture & Overview
 - **Goal**: Reproducible research pipeline for political valence analysis in news.
 - **Core Stack**: Python (>=3.11), R, DVC (Data Version Control).
+- **Environment**: Python code should be executed withim the `newsuse-study-polneg` conda environment.
 - **Structure**:
   - `stages/`: Pipeline scripts (Python & R). Each script typically corresponds to a DVC stage.
   - `project/`: Local Python package containing shared utilities, configuration (`config`), and paths (`paths`).
