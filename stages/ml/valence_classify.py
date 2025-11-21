@@ -16,7 +16,15 @@ targets = ["event", "sentiment"]
 
 data = (
     DataFrame.from_(paths.text)
-    .assign(text=lambda df: df.pop("title") + "\n\n" + df["text"])
+    .assign(
+        title=lambda df: df["title"].str.strip().fillna(""),
+        text=lambda df: df["text"].str.strip().fillna(""),
+    )
+    .assign(
+        text=lambda df: (
+            (df.pop("title") + "\n\n" + df["text"]).str.strip().replace("", pd.NA)
+        )
+    )
     .dropna()
     .set_index("key")
 )

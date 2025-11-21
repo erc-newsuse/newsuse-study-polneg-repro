@@ -32,7 +32,6 @@ stages:
     - data/proc/daily.parquet
     params:
     - dataset.min_posts_per_day
-    - dataset.max_decile_difference
     outs:
     - data/proc/dataset.parquet:
         persist: true

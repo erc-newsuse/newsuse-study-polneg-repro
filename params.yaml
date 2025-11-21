@@ -76,7 +76,6 @@ dataset:
   - ini
   - post_url
   min_posts_per_day: 2
-  max_decile_difference: 10.0
 
 classification:
   political:

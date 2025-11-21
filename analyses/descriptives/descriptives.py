@@ -10,6 +10,8 @@ from project import config, paths
 mpl.rcParams.update(config.plotting.params)
 
 targets = ["event", "sentiment", "valence"]
+quality = ["low", "medium", "high"]
+ideology = ["left", "center", "right"]
 
 # %% ---------------------------------------------------------------------------------
 
@@ -37,13 +39,24 @@ fig.tight_layout()
 
 # %% Tables --------------------------------------------------------------------------
 
-table = pd.pivot_table(
-    data,
-    index="event",
-    columns="sentiment",
-    aggfunc="size",
-)
 
-(table / table.sum().sum()).round(3)
+def make_pivot(df: pd.DataFrame) -> pd.DataFrame:
+    return (
+        pd.pivot_table(df, index="sentiment", columns="event", aggfunc="size")
+        .pipe(lambda df: df / df.sum().sum())
+        .fillna(0)
+        .mul(100)
+    )
+
+
+make_pivot(data).round(1)
+
+# %% By quality ----------------------------------------------------------------------
+
+(data.groupby(["quality"]).apply(make_pivot, include_groups=False).round(1).loc[quality])
+
+# %% By ideology ---------------------------------------------------------------------
+
+(data.groupby(["ideology"]).apply(make_pivot, include_groups=False).round(1).loc[ideology])
 
 # %% ---------------------------------------------------------------------------------

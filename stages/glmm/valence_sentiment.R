@@ -35,7 +35,7 @@ data <- as.character(paths$final) %>%
 
 # %% ---------------------------------------------------------------------------------
 
-frm <- event ~ country * political +
+frm <- sentiment ~ country * political +
     (1 + political | country:name) + (1 + political | country:year:month:day)
 
 # %% ---------------------------------------------------------------------------------
@@ -45,9 +45,9 @@ system.time(
         formula = frm,
         data = data,
         family = cumulative(link = "logit"),
-        cores = min(parallel::detectCores(), 8L),
+        cores = min(parallel::detectCores() - 2L, 16L),
         iter = 2000L,
-        algorithm = "fullrank",
+        algorithm = "sampling",
         prior = c(
             prior(normal(0, 1), class = "sd", group = "country:name"),
             prior(normal(0, 1), class = "sd", group = "country:year:month:day")
