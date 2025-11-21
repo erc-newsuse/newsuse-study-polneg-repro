@@ -1,6 +1,5 @@
 # %% ---------------------------------------------------------------------------------
 
-import joblib
 import pandas as pd
 from newsuse.data import DataFrame, strings
 from tqdm.auto import tqdm
@@ -22,7 +21,7 @@ posts = (
     .reset_index(drop=True)
     .rename(columns={"fb_post_id": "key", "likes": "reactions"})
     .assign(
-        key=lambda df: "sotrender@" + df["key"].map(joblib.hash),
+        key=lambda df: "sotrender@" + df["key"],
         date=lambda df: pd.to_datetime(df["date"]),
     )
     .query(f"date.ge('{config.posts.start_date}') & date.le('{config.posts.end_date}')")
@@ -45,7 +44,12 @@ posts = posts.assign(
     text=lambda df: sanitize_strings(df["text"]),
     link_title=lambda df: sanitize_strings(df["link_title"]),
     link_content=lambda df: sanitize_strings(df["link_content"]),
-).replace({"link_title": missing, "link_content": missing})
+).replace({"text": missing, "link_title": missing, "link_content": missing})
+
+# %% ---------------------------------------------------------------------------------
+
+idx = posts.columns.tolist().index("text") + 1
+posts.insert(idx, "title", posts["link_title"].combine_first(posts["link_content"]))
 
 # %% ---------------------------------------------------------------------------------
 
@@ -67,15 +71,23 @@ for col in intcols:
 # %% ---------------------------------------------------------------------------------
 
 idx = posts.columns.tolist().index("text") + 1
-for col in ["post_url", "author", "link_content", "link_title"]:
+for col in ["post_url", "author", "link_content", "link_title", "title"]:
     posts.insert(idx, col, posts.pop(col))
 
 # %% ---------------------------------------------------------------------------------
 
-text = posts[["key", "text", "link_title"]].rename(columns={"link_title": "title"})
+text = posts[["key", "text", "title"]].assign(
+    fulltext=lambda df: (
+        (df["title"].fillna("") + "\n\n" + df["text"].fillna(""))
+        .str.strip()
+        .replace({"": pd.NA})
+    )
+)
 mask = text[["text", "title"]].notnull().any(axis=1)
 text = text[mask].reset_index(drop=True)
-posts = posts.drop(columns=["text", "link_title"])[mask].reset_index(drop=True)
+posts = posts.drop(columns=["text", "title", "link_content", "link_title"])[
+    mask
+].reset_index(drop=True)
 
 # %% ---------------------------------------------------------------------------------
 

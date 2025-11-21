@@ -1,11 +1,11 @@
 stages:
 
   posts:
-    cmd: python stages/make_posts.py
+    cmd: python stages/posts.py
     params:
     - posts
     deps:
-    - stages/make_posts.py
+    - stages/posts.py
     - data/raw/posts/
     outs:
     - data/proc/posts.parquet:
@@ -14,28 +14,28 @@ stages:
         persist: true
 
   daily-counts:
-    cmd: python stages/make_daily.py
+    cmd: python stages/daily_counts.py
     deps:
-    - stages/make_daily.py
+    - stages/daily_counts.py
     - data/proc/posts.parquet
     params:
     - dataset.min_posts_per_day
     outs:
-    - data/proc/daily.parquet:
+    - data/proc/daily-counts.parquet:
         persist: true
 
   dataset:
-    cmd: python stages/make_dataset.py
+    cmd: python stages/dataset.py
     deps:
-    - stages/make_dataset.py
+    - stages/dataset.py
     - data/proc/posts.parquet
-    - data/proc/daily.parquet
+    - data/proc/daily-counts.parquet
     params:
     - dataset.min_posts_per_day
     outs:
     - data/proc/dataset.parquet:
         persist: true
-    - data/proc/quality.parquet:
+    - data/proc/data-quality.parquet:
         persist: true
 
   outlet-meta:
@@ -48,7 +48,7 @@ stages:
         persist: true
 
   political-classify:
-    cmd: python stages/political_classify.py
+    cmd: python stages/ml/political_classify.py
     deps:
     - stages/ml/political_classify.py
     - data/proc/posts.parquet

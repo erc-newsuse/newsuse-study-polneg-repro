@@ -3,7 +3,7 @@
 /cls-valence.parquet
 /cls.parquet
 /sentiment.parquet
-/daily.parquet
+/daily-counts.parquet
 /posts.parquet
 /posts-text.parquet
 /quality.parquet

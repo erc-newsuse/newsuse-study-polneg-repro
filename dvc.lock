@@ -143,17 +143,17 @@ stages:
       md5: 04afdb8de611fc4dcb43d9a969839059
       size: 17567
   posts:
-    cmd: python stages/make_posts.py
+    cmd: python stages/posts.py
     deps:
     - path: data/raw/posts/
       hash: md5
       md5: 7fd19c9db903de2885ce7570019a723a.dir
       size: 904062817
       nfiles: 6
-    - path: stages/make_posts.py
+    - path: stages/posts.py
       hash: md5
-      md5: 8d375ab91127078684c6717c929b7609
-      size: 2733
+      md5: 423f76b8719fce6fefba05007410a661
+      size: 3135
     params:
       params.yaml:
         posts:
@@ -162,12 +162,12 @@ stages:
     outs:
     - path: data/proc/posts-text.parquet
       hash: md5
-      md5: ac82d44c49eec08b7e35c21343a60a6c
-      size: 552734108
+      md5: 14d94c180ca204d0ce849c0db6007afc
+      size: 895953559
     - path: data/proc/posts.parquet
       hash: md5
-      md5: 21b7ad8a997c29c2518337d5caa3057d
-      size: 269870934
+      md5: f9a2b9acda243c225a9430fa00595db2
+      size: 142110678
   daily-counts:
     cmd: python stages/make_daily.py
     deps:
