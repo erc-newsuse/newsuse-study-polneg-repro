@@ -1,0 +1,273 @@
+---
+title: "Event valence"
+subtitle: "Validation of the Bayesian ordinal mixed model"
+author: "Szymon Talaga"
+date: last-modified
+date-format: "MMMM D, YYYY | HH:mm:ss (Z)"
+toc: true
+toc-depth: 3
+toc-location: left
+execute:
+  echo: false
+  warning: false
+  cache: false
+  daemon: false
+format:
+  html:
+    grid:
+      margin-width: 350px
+    embed-resources: true
+  pdf:
+    toc: false
+    number-sections: true
+    colorlinks: true
+reference-location: margin
+citation-location: margin
+---
+
+```{r}
+library(reticulate)
+library(stringr)
+library(arrow)
+library(dplyr)
+library(tibble)
+library(brms)
+library(emmeans)
+
+set.seed(303L)
+
+use_python(normalizePath(R.home("../../bin/python")), required = TRUE)
+
+project <- import("project")
+config  <- project$config
+paths   <- project$paths
+here    <- paths$analyses / "valence"
+
+countries <- config$countries$order
+countries <- countries[0L:length(countries)]
+```
+
+```{r}
+glmm   <- readRDS(as.character(paths$glmm / "valence" / "event.rds"))
+data   <- tibble(glmm$data) %>% select(event:day)
+sample <- sample_n(data, 1e5L)
+```
+
+
+# Posterior Predictive Checks
+
+```{r}
+ppd <- posterior_predict(glmm, newdata = sample, cores = 8L)
+```
+
+```{r}
+ppc_bars <- pp_check(glmm, newdata = sample, type = "bars", cores = 8L)
+```
+
+
+```{r}
+bayesplot::pp_check(glmm, type = "stat", stat = "mean")
+```
+
+```{r}
+# Predictive check by categories
+bayesplot::pp_check(glmm, type = "stat_grouped", stat = "mean", group = "country")
+```
+
+```{r}
+# Distribution-based check
+bayesplot::pp_check(glmm, type = "dens_overlay", ndraws = 100)
+```
+
+# Posterior Distribution of Fixed Effects
+
+## Fixed Effects Point Estimates and Credible Intervals
+
+```{r}
+fe_samples <- as_draws_df(glmm, variable = "b_", regex = TRUE)
+
+cat("Fixed effects samples dimensions:", dim(fe_samples), "\n")
+cat("(posterior draws, parameters)\n")
+```
+
+```{r}
+# Extract and display fixed effects with credible intervals
+fe_est <- fixef(glmm)
+cat("\nFixed Effects Estimates (95% CrI):\n")
+print(fe_est)
+```
+
+## Posterior Predictive Distributions by Category
+
+Generate predictions for representative combinations of predictors:
+
+```{r}
+library(tidybayes)
+
+# Create prediction data: all combinations of country and political
+pred_data <- expand_grid(
+    country = unique(data$country),
+    political = levels(data$political),
+    event = NA  # outcome to predict
+)
+
+# Get posterior epred (expected value on response scale)
+epred <- posterior_epred(glmm, newdata = pred_data, re_formula = NA)
+
+cat("Posterior expected value predictions shape:", dim(epred), "\n")
+cat("(posterior draws, prediction scenarios)\n")
+```
+
+```{r}
+# Summarize posterior predictions
+pred_summary <- pred_data %>%
+    mutate(
+        .epred_mean = colMeans(epred),
+        .epred_q05 = apply(epred, 2, quantile, probs = 0.05),
+        .epred_q95 = apply(epred, 2, quantile, probs = 0.95),
+    ) %>%
+    arrange(country, political)
+
+cat("\nPosterior Predicted Expected Values (95% CrI):\n")
+print(pred_summary, n = nrow(pred_summary))
+```
+
+# Leave-One-Out Cross-Validation (LOO-IC)
+
+## LOO-IC Diagnostics
+
+LOO-IC provides model comparison and out-of-sample predictive accuracy assessment:
+
+```{r}
+# Compute LOO-IC (this may take a moment)
+loo_fit <- loo(glmm)
+
+# Display LOO diagnostics
+cat("\nLOO Information Criterion:\n")
+print(loo_fit)
+```
+
+## Pareto k Diagnostics
+
+Pareto k values diagnose the reliability of LOO-IC. Values > 0.7 are problematic:
+
+```{r}
+# Extract Pareto k values
+k_vals <- loo_fit$diagnostics$pareto_k
+
+cat("\nPareto k Diagnostic Summary:\n")
+cat("  Min k:", round(min(k_vals), 3), "\n")
+cat("  Max k:", round(max(k_vals), 3), "\n")
+cat("  Mean k:", round(mean(k_vals), 3), "\n")
+cat("  Observations with k > 0.7 (highly influential):", sum(k_vals > 0.7), "\n")
+cat("  Observations with k > 0.5 (moderately influential):", sum(k_vals > 0.5), "\n")
+
+if (sum(k_vals > 0.7) > 0) {
+    cat("\nWarning: Some observations are highly influential for cross-validation.\n")
+    cat("This may indicate model misspecification or outliers.\n")
+}
+```
+
+```{python}
+# Visualize Pareto k diagnostic
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+k_vals = np.array(r.k_vals)
+
+fig, ax = plt.subplots(figsize=(10, 4))
+ax.scatter(range(len(k_vals)), sorted(k_vals), alpha=0.6, s=20)
+ax.axhline(0.5, color="orange", linestyle="--", alpha=0.7, label="Moderately influential (k > 0.5)")
+ax.axhline(0.7, color="red", linestyle="--", alpha=0.7, label="Highly influential (k > 0.7)")
+ax.set_xlabel("Observation (sorted by k)")
+ax.set_ylabel("Pareto k")
+ax.legend()
+ax.set_title("Pareto k Diagnostics for LOO-IC")
+ax.grid(True, alpha=0.3)
+fig.tight_layout()
+fig.savefig(as.character(r.here / "pareto-k-diagnostic.png"), dpi=100, bbox_inches="tight")
+plt.close()
+```
+
+# Model Predictive Performance
+
+## Prediction Accuracy for Ordinal Outcomes
+
+```{r}
+library(tidybayes)
+
+# Get posterior predictions for each observation
+post_pred <- posterior_predict(glmm, ndraws = 500)
+pred_mode <- apply(post_pred, 2, function(x) as.numeric(names(table(x)))[which.max(table(x))])
+
+# Compare with observed
+comparison <- tibble(
+    observed = as.integer(data$event),
+    predicted = pred_mode
+) %>%
+    mutate(
+        correct = observed == predicted,
+        abs_error = abs(observed - predicted)
+    )
+
+cat("\nPredictive Accuracy for Event Valence:\n")
+cat("  Overall accuracy:", round(mean(comparison$correct), 3), "\n")
+cat("  Mean absolute error:", round(mean(comparison$abs_error), 3), "\n")
+
+# Accuracy by category
+cat("\nAccuracy by Political Classification:\n")
+acc_political <- data %>%
+    mutate(
+        observed = as.integer(event),
+        predicted = pred_mode,
+        correct = observed == predicted
+    ) %>%
+    group_by(political) %>%
+    summarize(
+        n = n(),
+        accuracy = mean(correct),
+        mae = mean(abs(observed - predicted))
+    )
+print(acc_political)
+```
+
+## Confusion Matrix (Ordinal Scale)
+
+```{r}
+library(caret)
+
+# Create confusion matrix
+conf_matrix <- confusionMatrix(
+    factor(comparison$predicted, levels = 1:nlevels(data$event)),
+    factor(comparison$observed, levels = 1:nlevels(data$event))
+)
+
+cat("\nConfusion Matrix:\n")
+print(conf_matrix$table)
+
+cat("\nPer-Class Metrics:\n")
+print(conf_matrix$byClass)
+```
+
+# Summary Assessment
+
+```{r}
+cat("\n=== MODEL VALIDATION SUMMARY ===\n\n")
+
+cat("1. CONVERGENCE: ",
+    if (max(rhat_vals, na.rm = TRUE) <= 1.01) "✓ Good" else "✗ Check Rhat values", "\n")
+
+cat("2. ESS (Effective Sample Size): ",
+    if (low_bulk == 0 & low_tail == 0) "✓ Adequate" else "⚠ Some low ESS values", "\n")
+
+cat("3. POSTERIOR PREDICTIVE CHECK: Visual inspection recommended\n")
+
+cat("4. PREDICTION ACCURACY: ",
+    round(mean(comparison$correct), 1), "% correct\n")
+
+cat("5. LOO-IC RELIABILITY: ",
+    if (sum(k_vals > 0.7) == 0) "✓ Reliable" else paste("⚠", sum(k_vals > 0.7), "problematic observations"), "\n")
+
+cat("\n==============================\n")
+```

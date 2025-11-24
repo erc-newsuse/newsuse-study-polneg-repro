@@ -18,13 +18,13 @@ paths:
   followers:        "@raw/followers.parquet"
   mldata:           "@data/ml"
   ml:               "ml"
-  models:           "models"
-  glmm:             "@models/glmm"
+  glmm:             "glmm"
   figures:          "figures"
   prompts:          "@ml/prompts"
   gpt:              "@proc/gpt/"
   annotations:      "annotations"
-  valence_hyper: "@proc/valence-hyper.parquet"
+  valence_hyper:     "@proc/valence-hyper.parquet"
+  analyses:          "analyses"
 
 countries:
   order:

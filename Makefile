@@ -17,9 +17,7 @@ packages:
 	pip install -e .[dev]
 	pre-commit install
 	R -e 'remotes::install_version("glmmTMB", version = "1.1.10", repos = "http://cran.us.r-project.org", upgrade = "never")'
-# 	R -e 'remotes::install_github("stan-dev/cmdstanr@v0.9.0", upgrade = "never")'
-# 	R -e 'cmdstanr::install_cmdstan()'
-# 	R -e 'remotes::install_version("brms", version = "2.23.0", repos = "http://cran.us.r-project.org", upgrade = "never")'
+	R -e 'cmdstanr::install_cmdstan()'
 
 structure:
 	git init

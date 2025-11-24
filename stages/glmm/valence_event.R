@@ -31,13 +31,11 @@ data <- as.character(paths$final) %>%
         month = as.factor(month),
         day = as.factor(day),
     )
-# data <- sample_n(data, 1000000L)
 
 # %% ---------------------------------------------------------------------------------
 
 frm <- event ~ country * political +
-    # (1 | country:name:political) + (1 | country:year:month:day:political)
-    (1 + political | country:name) + (1 + political | country:year:month:day)
+    (1 + political || country:name) + (1 + political || country:year:month:day)
 
 # %% ---------------------------------------------------------------------------------
 
@@ -53,21 +51,24 @@ system.time(
         threads = threading(4), # Adjust based on available cores (chains * threads <= total cores)
         cores = 4,
         iter = 2000L,
-        prior = c(
-            prior(
-                normal(0, 1.253314), lb = 0, class = "sd",
-                group = "country:name"
-            ),
-            prior(
-                normal(0, 1.253314), lb = 0, class = "sd",
-                group = "country:year:month:day"
-            )
-        ),
-        algorithm = "pathfinder",
-        # algorithm = "sampling",
-        control = list(refresh = 1L)
-        # control = list(adapt_delta = 0.95, max_treedepth = 15L)
+        # prior = c(
+        #     prior(normal(0, 1.253314), lb = 0, class = "sd")
+        # ),
+        algorithm = "meanfield",
     )
 )
+
+# %% ---------------------------------------------------------------------------------
+
+saveRDS(glmm, as.character(dirpath / "event.rds"), compress = TRUE)
+
+# %% Generate posterior predictive distribution --------------------------------------
+
+ppd <- posterior_predict(glmm, cores = 16L) %>%
+    t %>%
+    as_tibble %>%
+    add_column(key = data$key, .before = 1L)
+
+write_parquet(ppd, as.character(dirpath / "event-ppd.parquet"))
 
 # %% ---------------------------------------------------------------------------------
