@@ -131,7 +131,7 @@ gpt:
           <<: *gpt_default_header
       batch_size: *gpt_default_batch_size
       sample:
-        size_per_group: 1000
+        size_per_group: 2000
         min_words: 5
         countries: []
         political:
@@ -197,7 +197,7 @@ ml:
           base:
             type: categorical
             choices:
-            - distilbert
+            # - distilbert
             - xlm-large
           ordinal_logit_bias_scale:
             type: float
@@ -207,7 +207,7 @@ ml:
           num_shared_layers:
             type: int
             low: 0
-            high: 4
+            high: 0
           num_head_layers:
             type: int
             low: 0

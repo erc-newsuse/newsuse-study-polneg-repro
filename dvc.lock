@@ -215,40 +215,40 @@ stages:
       md5: 57f50334b0d4b35a80efbed31627e99a
       size: 142197177
   political-classify:
-    cmd: python stages/political_classify.py
+    cmd: python stages/ml/political_classify.py
     deps:
     - path: data/proc/posts-text.parquet
       hash: md5
-      md5: ac82d44c49eec08b7e35c21343a60a6c
-      size: 552734108
+      md5: 14d94c180ca204d0ce849c0db6007afc
+      size: 895953559
     - path: data/proc/posts.parquet
       hash: md5
-      md5: 21b7ad8a997c29c2518337d5caa3057d
-      size: 269870934
+      md5: f9a2b9acda243c225a9430fa00595db2
+      size: 142110678
     - path: stages/ml/political_classify.py
       hash: md5
-      md5: 35bb581ab816ede09134b19b29281b3b
-      size: 1628
+      md5: 12ebc191ea9046b976e87aa0e38de657
+      size: 1583
     outs:
     - path: data/proc/cls-political.parquet
       hash: md5
-      md5: b5cb11b590ee40238d76156289cbc18d
-      size: 138848517
+      md5: 9f196269ecdb0f9bc2627534c28c13a0
+      size: 64940422
   valence-requests:
     cmd: python stages/ml/valence_gpt_requests.py
     deps:
     - path: data/proc/cls-political.parquet
       hash: md5
-      md5: b5cb11b590ee40238d76156289cbc18d
-      size: 138848517
+      md5: 9f196269ecdb0f9bc2627534c28c13a0
+      size: 64940422
     - path: data/proc/dataset.parquet
       hash: md5
-      md5: 1de9edbce6068b2722a0fa6518807809
-      size: 269768414
+      md5: 57f50334b0d4b35a80efbed31627e99a
+      size: 142197177
     - path: data/proc/posts-text.parquet
       hash: md5
-      md5: ac82d44c49eec08b7e35c21343a60a6c
-      size: 552734108
+      md5: 14d94c180ca204d0ce849c0db6007afc
+      size: 895953559
     - path: ml/prompts/valence/valence.md
       hash: md5
       md5: cf2c16b1e6cf4ed763a5387da567c2b8
@@ -271,7 +271,7 @@ stages:
             url: /v1/responses
           batch_size: 2500
           sample:
-            size_per_group: 1000
+            size_per_group: 2000
             min_words: 5
             countries: []
             political:
@@ -290,15 +290,15 @@ stages:
     outs:
     - path: data/proc/gpt/valence-requests.jsonl.gz
       hash: md5
-      md5: 879b023147e4958fc651bb345936754a
-      size: 2339349
+      md5: d2dc78d47ca61f6ac36db1b562b2a255
+      size: 4378662
   valence-jobs:
     cmd: python stages/ml/valence_gpt_jobs.py
     deps:
     - path: data/proc/gpt/valence-requests.jsonl.gz
       hash: md5
-      md5: 879b023147e4958fc651bb345936754a
-      size: 2339349
+      md5: d2dc78d47ca61f6ac36db1b562b2a255
+      size: 4378662
     - path: stages/ml/valence_gpt_jobs.py
       hash: md5
       md5: 32fd5c90dcce6c57b666c2e30c523234
@@ -317,7 +317,7 @@ stages:
             url: /v1/responses
           batch_size: 2500
           sample:
-            size_per_group: 1000
+            size_per_group: 2000
             min_words: 5
             countries: []
             political:
@@ -336,15 +336,15 @@ stages:
     outs:
     - path: data/proc/gpt/valence-jobs.jsonl.gz
       hash: md5
-      md5: 3062aa003a9f7d70cc8430a24d2c146e
-      size: 327
+      md5: d7be6aa564084d2c7b15c6e8eb413a53
+      size: 526
   valence-responses:
     cmd: python stages/ml/valence_gpt_responses.py
     deps:
     - path: data/proc/gpt/valence-jobs.jsonl.gz
       hash: md5
-      md5: 3062aa003a9f7d70cc8430a24d2c146e
-      size: 327
+      md5: d7be6aa564084d2c7b15c6e8eb413a53
+      size: 526
     - path: stages/ml/valence_gpt_responses.py
       hash: md5
       md5: 6bb3d8929704a0a08b87e2053cb15a24
@@ -352,15 +352,15 @@ stages:
     outs:
     - path: data/proc/gpt/valence-responses.jsonl.gz
       hash: md5
-      md5: faf07a71d978f6a86412eb5b37eb8929
-      size: 2236043
+      md5: 4e268360ed85ea9a4a227d59660dd923
+      size: 4056678
   valence-output:
     cmd: python stages/ml/valence_gpt_output.py
     deps:
     - path: data/proc/gpt/valence-responses.jsonl.gz
       hash: md5
-      md5: faf07a71d978f6a86412eb5b37eb8929
-      size: 2236043
+      md5: 4e268360ed85ea9a4a227d59660dd923
+      size: 4056678
     - path: stages/ml/valence_gpt_output.py
       hash: md5
       md5: 8a5e526cd0bc71dc1d047fdd894e7f17
@@ -368,8 +368,8 @@ stages:
     outs:
     - path: data/proc/gpt/valence.parquet
       hash: md5
-      md5: 640c3dd59e37a9d26df14641fe901fb4
-      size: 252256
+      md5: d8cfe8fec4558be2ce2b811fc57c0a33
+      size: 246585
   valence-dataset:
     cmd: python stages/ml/valence_dataset.py
     deps:
@@ -379,12 +379,12 @@ stages:
       size: 70213
     - path: data/proc/gpt/valence-requests.jsonl.gz
       hash: md5
-      md5: 879b023147e4958fc651bb345936754a
-      size: 2339349
+      md5: d2dc78d47ca61f6ac36db1b562b2a255
+      size: 4378662
     - path: data/proc/gpt/valence.parquet
       hash: md5
-      md5: 640c3dd59e37a9d26df14641fe901fb4
-      size: 252256
+      md5: d8cfe8fec4558be2ce2b811fc57c0a33
+      size: 246585
     - path: stages/ml/valence_dataset.py
       hash: md5
       md5: 3be591d77aba23c05a9f96d866f11cd9
@@ -399,8 +399,8 @@ stages:
     outs:
     - path: ml/datasets/valence
       hash: md5
-      md5: d94b5704a2300f94c24bae5e31d17eae.dir
-      size: 3765801
+      md5: 5f34957fa2b4e4557af16edc6a75ca07.dir
+      size: 7288321
       nfiles: 16
   valence-train:
     cmd: python stages/ml/valence_hyper.py

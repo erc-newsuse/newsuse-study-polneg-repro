@@ -32,7 +32,8 @@ dependencies:
   - r-heplots
   - quarto
   # - r-glmmtmb=1.1.10
-  # - r-rstan
-  # - r-brms=2.23.0
+  - cmdstan
+  - r-cmdstanr==0.9.0
+  - r-brms=2.23.0
 variables:
   LIBARROW_MINIMAL: false

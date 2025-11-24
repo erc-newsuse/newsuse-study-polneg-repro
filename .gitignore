@@ -5,6 +5,7 @@
 # Ad-hoc files
 /*.xlsx
 /*.parquet
+**/*-BACKUP
 
 # Root level
 .env

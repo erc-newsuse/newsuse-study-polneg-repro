@@ -36,23 +36,38 @@ data <- as.character(paths$final) %>%
 # %% ---------------------------------------------------------------------------------
 
 frm <- sentiment ~ country * political +
-    (1 + political | country:name) + (1 + political | country:year:month:day)
+    (1 | country:name:political) + (1 | country:year:month:day:political)
+    # (1 + political | country:name) + (1 + political | country:year:month:day)
 
 # %% ---------------------------------------------------------------------------------
+
+# Note: glmmTMB does not support cumulative link models for ordinal data (only ordbeta).
+# We use brms with cmdstanr backend for efficiency.
 
 system.time(
     glmm <- brm(
         formula = frm,
         data = data,
         family = cumulative(link = "logit"),
-        cores = min(parallel::detectCores() - 2L, 16L),
+        backend = "cmdstanr",
+        threads = threading(4), # Adjust based on available cores (chains * threads <= total cores)
+        cores = 4,
         iter = 2000L,
-        algorithm = "sampling",
         prior = c(
-            prior(normal(0, 1), class = "sd", group = "country:name"),
-            prior(normal(0, 1), class = "sd", group = "country:year:month:day")
-        )
-        # warmup = 1000L,
+            prior(
+                normal(0, 1.253314), lb = 0, class = "sd",
+                # group = "country:name"
+                group = "country:name:political"
+            ),
+            prior(
+                normal(0, 1.253314), lb = 0, class = "sd",
+                # group = "country:year:month:day"
+                group = "country:year:month:day:political"
+            )
+        ),
+        # algorithm = "pathfinder",
+        algorithm = "meanfield",
+        control = list(refresh = 5L)
         # control = list(adapt_delta = 0.95, max_treedepth = 15L)
     )
 )

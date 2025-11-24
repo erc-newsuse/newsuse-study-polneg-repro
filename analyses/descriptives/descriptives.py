@@ -59,4 +59,8 @@ make_pivot(data).round(1)
 
 (data.groupby(["ideology"]).apply(make_pivot, include_groups=False).round(1).loc[ideology])
 
+# %% By political --------------------------------------------------------------------
+
+(data.groupby(["political"]).apply(make_pivot, include_groups=False).round(1))
+
 # %% ---------------------------------------------------------------------------------
