@@ -25,7 +25,7 @@ meta = meta.replace(
             "Ireland": "irl",
             "Poland": "pl",
             "France": "fr",
-            "Spain": "es",
+            "Spain": "esp",
         }
     }
 )

@@ -34,7 +34,7 @@ data = (
     .merge(
         DataFrame.from_(paths.labels, columns=["key", "political", "event", "sentiment"])
     )
-    .assign(valence=lambda df: df[["event", "sentiment"]].sum(axis=1))
+    .assign(valence=lambda df: df[["event", "sentiment"]].sum(axis=1, skipna=False))
     .dropna(ignore_index=True)
 )
 

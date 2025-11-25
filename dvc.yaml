@@ -167,29 +167,44 @@ stages:
     - data/proc/final.parquet:
         persist: true
 
-  glmm:
+  glmm-valence:
     foreach:
-    - valence
-    - reactions
-    - comments
-    - shares
+    - event
+    - sentiment
     do:
-      cmd: Rscript stages/glmm_${item}.R
+      cmd: Rscript stages/glmm/valence_{item}.R
       deps:
-      - stages/glmm_${item}.R
-      - data/proc/dataset.parquet
+      - stages/glmm/valence_{item}.R
+      - data/proc/final.parquet
       outs:
-      - models/glmm/${item}:
+      - glmm/valence/${item}.rds:
+          persist: true
+      - glmm/valence/${item}-ppd.parquet:
           persist: true
 
-  articles-sample:
-    cmd: python stages/make_articles_sample.py
-    deps:
-    - stages/make_articles_sample.py
-    - data/raw/articles-sample.xlsx
-    outs:
-    - data/proc/articles-sample.parquet:
-        persist: true
+  # glmm:
+  #   foreach:
+  #   - valence
+  #   - reactions
+  #   - comments
+  #   - shares
+  #   do:
+  #     cmd: Rscript stages/glmm_${item}.R
+  #     deps:
+  #     - stages/glmm_${item}.R
+  #     - data/proc/dataset.parquet
+  #     outs:
+  #     - models/glmm/${item}:
+  #         persist: true
+
+  # articles-sample:
+  #   cmd: python stages/make_articles_sample.py
+  #   deps:
+  #   - stages/make_articles_sample.py
+  #   - data/raw/articles-sample.xlsx
+  #   outs:
+  #   - data/proc/articles-sample.parquet:
+  #       persist: true
 
   # valence-experiment-requests:
   #   cmd: python stages/ml/valence_gpt_experiment_requests.py
