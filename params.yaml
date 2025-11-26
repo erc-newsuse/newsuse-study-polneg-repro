@@ -311,7 +311,7 @@ plotting:
       uk:            ${..palette.brown}
   params:
     font.family:           sans-serif
-    font.sans-serif:       Montserrat
+    # font.sans-serif:       Montserrat
     text.usetex:           ${..usetex}
     text.latex.preamble:   \usepackage{amsmath,amsfonts,amssymb,sfmath,xcolor}
     figure.figsize:        [5, 5]

@@ -39,7 +39,7 @@ sns.set_style("ticks", rc=config.plotting.params)
 here = paths.analyses / "valence"
 modeldir = paths.glmm / "valence"
 
-target = "event"
+target = "sentiment"
 indexcols = [
     "country", "political", "name",
     "year", "month", "day",

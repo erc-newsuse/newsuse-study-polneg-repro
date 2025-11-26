@@ -97,7 +97,7 @@ system.time(
 pat <- "^V\\d+$"
 ppd <- bind_cols(agg, as_tibble(t(ppd))) %>%
     rowwise %>%
-    mutate(posterior = list(c_across(matches(pat)))) %>%
+    mutate(ppd = list(c_across(matches(pat)))) %>%
     select(-matches(pat))
 
 # %% ---------------------------------------------------------------------------------
