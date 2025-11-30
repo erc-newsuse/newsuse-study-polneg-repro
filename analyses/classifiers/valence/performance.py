@@ -40,7 +40,6 @@ pipe = pipeline("text-multi-classification", model=model, tokenizer=tokenizer)
 testing = pd.concat(
     [
         dataset["test"].to_pandas().set_index(["ground_truth", "country", "key"]),
-        dataset["valid"].to_pandas().set_index(["ground_truth", "country", "key"]),
     ]
 )
 
@@ -106,6 +105,8 @@ print(perf.to_markdown(floatfmt=".3f"))
 # %% ---------------------------------------------------------------------------------
 
 perf_country = data.groupby(["country", "target"]).apply(compute_metrics)
+
+perf_country  # noqa  # type: ignore
 
 # %% ---------------------------------------------------------------------------------
 

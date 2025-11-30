@@ -407,8 +407,8 @@ stages:
     deps:
     - path: ml/datasets/valence
       hash: md5
-      md5: d94b5704a2300f94c24bae5e31d17eae.dir
-      size: 3765801
+      md5: 5f34957fa2b4e4557af16edc6a75ca07.dir
+      size: 7288321
       nfiles: 16
     - path: stages/ml/valence_hyper.py
       hash: md5
@@ -430,7 +430,6 @@ stages:
               base:
                 type: categorical
                 choices:
-                - distilbert
                 - xlm-large
               ordinal_logit_bias_scale:
                 type: float
@@ -440,7 +439,7 @@ stages:
               num_shared_layers:
                 type: int
                 low: 0
-                high: 4
+                high: 0
               num_head_layers:
                 type: int
                 low: 0
@@ -535,23 +534,23 @@ stages:
     outs:
     - path: data/proc/valence-hyper.parquet
       hash: md5
-      md5: 8405228ed9b96aaf86e05f4bec5abb9f
-      size: 13942
+      md5: c47f65142dc4521c7f2917dfbd6862f2
+      size: 13911
   valence-classify:
     cmd: python stages/ml/valence_classify.py
     deps:
     - path: data/proc/posts-text.parquet
       hash: md5
-      md5: ac82d44c49eec08b7e35c21343a60a6c
-      size: 552734108
+      md5: 14d94c180ca204d0ce849c0db6007afc
+      size: 895953559
     - path: data/proc/valence-hyper.parquet
       hash: md5
-      md5: 8405228ed9b96aaf86e05f4bec5abb9f
-      size: 13942
+      md5: c47f65142dc4521c7f2917dfbd6862f2
+      size: 13911
     - path: stages/ml/valence_classify.py
       hash: md5
-      md5: 5664490e1c157104debedf8678caef23
-      size: 1874
+      md5: 4e6aa26b39e7360b89cd4582769feee9
+      size: 2084
     params:
       params.yaml:
         ml.inference:
@@ -559,8 +558,8 @@ stages:
     outs:
     - path: data/proc/cls-valence.parquet
       hash: md5
-      md5: 49bcd2c321f115a7e1a3e19fa3a0c6b5
-      size: 142210993
+      md5: 5ec2975444daa5597593830e0234ddae
+      size: 92785096
   merge-cls:
     cmd: python stages/merge_cls.py
     deps:
