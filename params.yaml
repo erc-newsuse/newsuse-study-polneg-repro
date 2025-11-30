@@ -26,6 +26,20 @@ paths:
   valence_hyper:     "@proc/valence-hyper.parquet"
   analyses:          "analyses"
 
+categorical:
+  countries:
+    us:  United States
+    uk:  United Kingdom
+    irl: Ireland
+    pl:  Poland
+    fr:  France
+    esp: Spain
+  political:
+    categories: ["OTHER", "POLITICAL"]
+  valence:
+    categories: [-1, 0, 1]
+    ordered: true
+
 countries:
   order:
   - us
@@ -44,13 +58,12 @@ countries:
 
 annotations:
   political:
-    labels:
+    categories:
     - OTHER
     - POLITICAL
   valence:
-    labels:
-    - OTHER
-    - NEGATIVE
+    categories: [-1, 0, 1]
+    ordered: true
 
 posts:
   start_date: "2020-01-01"
@@ -76,6 +89,18 @@ dataset:
   - ini
   - post_url
   min_posts_per_day: 2
+
+glmm:
+  valence:
+    formula: >
+      {target} ~ 0
+        + country * political
+        + (0 + political | outlet)
+        + (0 + political | country:year:month:day)
+    fit:
+      inference_method: vi
+      method: advi
+      progressbar: true
 
 classification:
   political:

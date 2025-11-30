@@ -565,12 +565,12 @@ stages:
     deps:
     - path: data/proc/cls-political.parquet
       hash: md5
-      md5: b5cb11b590ee40238d76156289cbc18d
-      size: 138848517
+      md5: 9f196269ecdb0f9bc2627534c28c13a0
+      size: 64940422
     - path: data/proc/cls-valence.parquet
       hash: md5
-      md5: 49bcd2c321f115a7e1a3e19fa3a0c6b5
-      size: 142210993
+      md5: 5ec2975444daa5597593830e0234ddae
+      size: 92785096
     - path: stages/merge_cls.py
       hash: md5
       md5: 078cf13d9d2bcdd2a4624d79b87cd6c5
@@ -578,28 +578,32 @@ stages:
     outs:
     - path: data/proc/cls.parquet
       hash: md5
-      md5: e40149ba0e4eb01d77707f812e09ee5d
-      size: 184720165
+      md5: c261b1c8a496a09f08c29b15faa63a2e
+      size: 117347774
   final:
     cmd: python stages/final.py
     deps:
     - path: data/proc/cls.parquet
       hash: md5
-      md5: e40149ba0e4eb01d77707f812e09ee5d
-      size: 184720165
+      md5: c261b1c8a496a09f08c29b15faa63a2e
+      size: 117347774
     - path: data/proc/dataset.parquet
       hash: md5
-      md5: 515c7bf14a2189efdb76f941bf339acd
-      size: 265347745
+      md5: 57f50334b0d4b35a80efbed31627e99a
+      size: 142197177
+    - path: data/proc/outlet-meta.parquet
+      hash: md5
+      md5: dfaa52f42e1965ba8efd3ce54d90b1cf
+      size: 3820
     - path: stages/final.py
       hash: md5
-      md5: f855d7932a9b5a924b1f05e37782e0be
-      size: 1146
+      md5: 55253f064f3e831e1733d35ce6a761f0
+      size: 1344
     outs:
     - path: data/proc/final.parquet
       hash: md5
-      md5: 89faded92570dce204615553f508bd82
-      size: 121407673
+      md5: 50eec7b3fe356db85c21bfed4614a907
+      size: 63881199
   outlet-meta:
     cmd: python stages/outlet_meta.py
     deps:
@@ -609,10 +613,10 @@ stages:
       size: 12191
     - path: stages/outlet_meta.py
       hash: md5
-      md5: dbcaffd8c43f09793538ec2c96fd1dfa
-      size: 1286
+      md5: 45e92b355464ba07dab030f8f5cc28de
+      size: 1217
     outs:
     - path: data/proc/outlet-meta.parquet
       hash: md5
-      md5: 54daaccf3d171e68be36d2bdef4c6bf2
-      size: 3817
+      md5: dfaa52f42e1965ba8efd3ce54d90b1cf
+      size: 3820

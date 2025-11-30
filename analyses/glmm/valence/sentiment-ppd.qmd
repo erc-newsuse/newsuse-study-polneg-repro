@@ -1,0 +1,289 @@
+---
+title: "Event valence"
+subtitle: "Validation of the Bayesian ordinal mixed model"
+author: "Szymon Talaga"
+date: last-modified
+date-format: "MMMM D, YYYY | HH:mm:ss (Z)"
+toc: true
+toc-depth: 3
+toc-location: left
+execute:
+  echo: false
+  warning: false
+  cache: false
+  daemon: false
+format:
+  html:
+    grid:
+      margin-width: 350px
+    embed-resources: true
+  pdf:
+    toc: false
+    number-sections: true
+    colorlinks: true
+reference-location: margin
+citation-location: margin
+---
+
+```{python}
+import numpy as np
+import pandas as pd
+from project import paths, config
+from newsuse.data import DataFrame
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+sns.set_style("ticks", rc=config.plotting.params)
+
+here = paths.analyses / "valence"
+modeldir = paths.glmm / "valence"
+
+target = "sentiment"
+indexcols = [
+    "country", "political", "name",
+    "year", "month", "day",
+]
+
+model = f"{target}-meanfield"
+
+def get_ppd(model: str) -> pd.Series:
+    return (
+        DataFrame.from_(modeldir / f"{model}-ppd.parquet")
+        .assign(
+            country=lambda df: df["country"].astype("category"),
+            political=lambda df: df["political"].astype("category"),
+            year=lambda df: df["year"].astype("int64[pyarrow]"),
+            month=lambda df: df["month"].astype("int64[pyarrow]"),
+            day=lambda df: df["day"].astype("int64[pyarrow]"),
+            n=lambda df: df["n"].astype("int64[pyarrow]"),
+        )
+        .set_index([*indexcols, "n"])["ppd"]
+    )
+```
+
+```{python}
+data = DataFrame.from_(paths.final)
+ppd = get_ppd(model)
+```
+
+```{python}
+def dist(ppd: pd.Series) -> np.ndarray:
+    """Posterior predictive distribution over the response
+    adjusting for the quantization counts of observations.
+    """
+    return (
+        DataFrame(np.stack(ppd.to_numpy()))
+        .apply(pd.Series.value_counts, normalize=True)
+        .fillna(0.0)
+    )
+```
+
+# Posterior Predictive Checks
+
+## Posterior Predictive Distribution
+
+```{python}
+ppd_overall = (
+    dist(ppd)
+    .pipe(lambda s: pd.concat({"overall": s}))
+)
+ppd_political = (
+    ppd
+    .groupby("political")
+    .apply(dist, include_groups=False)
+)
+ppd_country = (
+    ppd
+    .groupby("country")
+    .apply(dist, include_groups=False)
+)
+ppd_country_political = (
+    ppd
+    .groupby(["country", "political"])
+    .apply(dist, include_groups=False)
+)
+```
+
+## Observed Distribution
+
+```{python}
+obs_overall = (
+    data[target]
+    .value_counts(normalize=True)
+    .pipe(lambda s: pd.concat({"overall": s}))
+    .unstack(-1)
+)
+obs_political = (
+    data
+    .groupby("political")[target]
+    .value_counts(normalize=True)
+    .unstack(-1)
+)
+obs_country = (
+    data
+    .groupby("country")[target]
+    .value_counts(normalize=True)
+    .unstack(-1)
+)
+obs_country_political = (
+    data
+    .groupby(["country", "political"])[target]
+    .value_counts(normalize=True)
+    .unstack(-1)
+)
+```
+
+```{python}
+data_pairs = {
+    "overall": (obs_overall, ppd_overall),
+    "political": (obs_political, ppd_political),
+    "country": (obs_country, ppd_country),
+    "country_political": (obs_country_political, ppd_country_political),
+}
+```
+
+## Comparison
+
+```{python}
+def plot_distributions(
+    ax: mpl.axes.Axes,
+    obs: pd.DataFrame,
+    ppd: pd.DataFrame,
+    group: str
+) -> mpl.axes.Axes:
+    target = obs.columns.name
+    df = pd.concat(
+        {
+            "observed": (
+                obs
+                .T.rename(columns={group: "value"})
+                .reset_index()
+            ),
+            "PPD": ppd.loc[group].T.melt(var_name=target)
+        },
+        names=["distribution"]
+    )
+    sns.barplot(
+        data=df,
+        y="value",
+        x=target,
+        hue="distribution",
+        ax=ax,
+    )
+    ax.set_xlabel(f"{target.capitalize()} valence")
+    ax.set_ylabel(None)
+    return ax
+```
+
+```{python}
+group = "overall"
+odf, pdf = data_pairs[group]
+fig, axes = plt.subplots(
+    ncols=(ncols := min(3, len(odf))),
+    nrows=(nrows := int(np.ceil(len(odf) / ncols))),
+    figsize=(4 * ncols, 4 * nrows),
+)
+if isinstance(axes, mpl.axes.Axes):
+    axes = np.array([[axes]])
+
+for ax, level in zip(axes.flat, odf.index):
+    plot_distributions(ax, odf.loc[[level]], pdf.loc[[level]], level)
+
+fig.tight_layout()
+```
+
+```{python}
+group = "political"
+odf, pdf = data_pairs[group]
+fig, axes = plt.subplots(
+    ncols=(ncols := min(3, len(odf))),
+    nrows=(nrows := int(np.ceil(len(odf) / ncols))),
+    figsize=(4 * ncols, 4 * nrows),
+)
+if isinstance(axes, mpl.axes.Axes):
+    axes = np.array([[axes]])
+
+for ax, level in zip(axes.flat, odf.index):
+    plot_distributions(ax, odf.loc[[level]], pdf.loc[[level]], level)
+    ax.set_title(f"{group.capitalize()}: {level}")
+
+fig.tight_layout()
+```
+
+```{python}
+group = "country"
+odf, pdf = data_pairs[group]
+fig, axes = plt.subplots(
+    ncols=(ncols := min(3, len(odf))),
+    nrows=(nrows := int(np.ceil(len(odf) / ncols))),
+    figsize=(4 * ncols, 4 * nrows),
+)
+if isinstance(axes, mpl.axes.Axes):
+    axes = np.array([[axes]])
+
+for ax, level in zip(axes.flat, odf.index):
+    plot_distributions(ax, odf.loc[[level]], pdf.loc[[level]], level)
+    ax.set_title(f"{group.capitalize()}: {level}")
+
+fig.tight_layout()
+```
+
+
+# Ordinal prediction performance
+
+```{python}
+true = data.set_index(ppd.index.names[:-1])[target].to_numpy()
+full = np.repeat(
+    np.stack(ppd.to_numpy()),
+    ppd.index.get_level_values("n").to_numpy(),
+    axis=0,
+)
+mad_scores = (1 - np.abs(true[:, None] - full) / 2).mean(-1)
+data["mad"] = mad_scores
+data["mad"].mean()
+```
+
+```{python}
+data["mad"].hist()
+```
+
+```{python}
+data.hist(
+    column="mad",
+    by="political",
+    layout=(1, 2),
+    figsize=(8, 4),
+    density=True
+)
+```
+
+```{python}
+data.hist(
+    column="mad",
+    by="country",
+    layout=(2, 3),
+    density=True,
+    figsize=(9, 5),
+)
+```
+
+```{python}
+data.hist(
+    column="mad",
+    by=target,
+    layout=(1, 3),
+    density=True,
+    figsize=(7, 2),
+)
+```
+
+```{python}
+data.hist(
+    column="mad",
+    by=[target, "political"],
+    layout=(2, 3),
+    density=True,
+    figsize=(6, 6),
+)
+```

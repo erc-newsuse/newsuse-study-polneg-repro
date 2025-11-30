@@ -16,6 +16,8 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "newsuse-ml @ git+ssh://git@github.com/erc-newsuse/newsuse-ml.git@v1.2.1",
+    "ipython",
+    "watermark",
     "jupyter",
     "ipywidgets",
     "ipykernel",
