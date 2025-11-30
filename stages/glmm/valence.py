@@ -9,7 +9,7 @@ from newsuse.data import DataFrame
 from project import config, paths
 from project.inference import advi_trace_to_inference, make_priors
 
-target = "event"
+target = "valence"
 output_dir = paths.glmm / "valence"
 output_dir.mkdir(parents=True, exist_ok=True)
 

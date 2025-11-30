@@ -92,15 +92,44 @@ dataset:
 
 glmm:
   valence:
-    formula: >
-      {target} ~ 0
-        + country * political
-        + (0 + political | outlet)
-        + (0 + political | country:year:month:day)
-    fit:
-      inference_method: vi
-      method: advi
-      progressbar: true
+    defaults: &glmm_valence_defaults
+      family: cumulative
+      formula: >
+        {target} ~ 0
+          + country * political
+          + (0 + political | outlet)
+          + (0 + political | country:year:month:day)
+      priors:
+        common:
+          name: Normal
+          mu: 0.0
+          sigma: 2.0
+        group_specific:
+          name: Normal
+          mu: 0.0
+          sigma:
+            name: HalfNormal
+            sigma: 1.2533141373155001
+      fit:
+        n: 50_000
+        inference_method: vi
+        method: advi
+        progressbar: false
+        callback:
+          make!: project.inference:ConvergenceCallback
+      sample:
+        draws: 100
+        return_inferencedata: false
+
+    event:
+      <<: *glmm_valence_defaults
+      seed: 1742380
+    sentiment:
+      <<: *glmm_valence_defaults
+      seed: 4823917
+    valence:
+      <<: *glmm_valence_defaults
+      seed: 9534621
 
 classification:
   political:
