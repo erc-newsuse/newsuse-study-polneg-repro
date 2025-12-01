@@ -36,6 +36,16 @@ data = (
     )
     .assign(valence=lambda df: df[["event", "sentiment"]].sum(axis=1, skipna=False))
     .dropna(ignore_index=True)
+    .assign(
+        outlet=lambda df: df["country"] + ":" + df["name"],
+        time=lambda df: df["country"]
+        + ":"
+        + df["year"].astype(str)
+        + ":"
+        + df["month"].astype(str)
+        + ":"
+        + df["day"].astype(str),
+    )
 )
 
 # %% ---------------------------------------------------------------------------------

@@ -93,33 +93,57 @@ dataset:
 glmm:
   valence:
     defaults: &glmm_valence_defaults
-      family: cumulative
+      predictors: ["country", "political", "outlet", "time"]
       formula: >
-        {target} ~ 0
+        {target} ~ 1
           + country * political
-          + (0 + political | outlet)
-          + (0 + political | country:year:month:day)
-      priors:
-        common:
-          name: Normal
-          mu: 0.0
-          sigma: 2.0
-        group_specific:
-          name: Normal
-          mu: 0.0
-          sigma:
-            name: HalfNormal
-            sigma: 1.2533141373155001
-      fit:
-        n: 50_000
-        inference_method: vi
-        method: advi
-        progressbar: false
-        callback:
-          make!: project.inference:ConvergenceCallback
-      sample:
-        draws: 100
-        return_inferencedata: false
+          + (1 + political || outlet)
+          + (1 + political || time)
+      family: cumulative
+      link: logit
+      algorithm: meanfield
+      # link: cloglog
+      # algorithm: fullrank
+      chains: &glmm_valence_chains
+        4
+      cores: *glmm_valence_chains
+      n_threads: &glmm_valence_n_threads
+        4
+      iter: 2000
+      backend: cmdstanr
+      ppd: &glmm_valence_ppd
+        ndraws: 10
+        cores: *glmm_valence_n_threads
+      epd:
+        <<: *glmm_valence_ppd
+        re_formula: "~0"
+      coords:
+        - key
+        - political
+        - country
+        - outlet
+        - time
+      # priors:
+      #   common:
+      #     name: Normal
+      #     mu: 0.0
+      #     sigma: 2.0
+      #   group_specific:
+      #     name: Normal
+      #     mu: 0.0
+      #     sigma:
+      #       name: HalfNormal
+      #       sigma: 1.2533141373155001
+      # fit:
+      #   n: 50_000
+      #   inference_method: vi
+      #   method: advi
+      #   progressbar: false
+      #   callback:
+      #     make!: project.inference:ConvergenceCallback
+      # sample:
+      #   draws: 100
+      #   return_inferencedata: false
 
     event:
       <<: *glmm_valence_defaults
@@ -334,6 +358,10 @@ ml:
         checkpoint: xlm-roberta-large
         <<: *ml_model_valence_defaults
 
+arviz:
+  data.load: eager
+  stats.ci_prob: 0.95
+
 plotting:
   style:  tableau-colorblind10
   usetex: true
@@ -372,8 +400,9 @@ plotting:
     figure.labelsize:      x-large
     figure.titlesize:      xx-large
     figure.titleweight:    bold
+    figure.dpi:            300
     savefig.bbox:          tight
-    axes.grid:             true
+    axes.grid:             false
     axes.axisbelow:        true
     axes.titleweight:      bold
     axes.titlesize:        large

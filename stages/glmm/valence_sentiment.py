@@ -1,77 +1,86 @@
 # %% ---------------------------------------------------------------------------------
 
+from types import SimpleNamespace
 
-import bambi as bmb
+import arviz as az
+import brmspy
 import numpy as np
-import pandas as pd
 from newsuse.data import DataFrame
+from rpy2.robjects.packages import importr
 
 from project import config, paths
-from project.inference import advi_trace_to_inference, make_priors
+from project.inference import (
+    brms_log_likelihood,
+    brms_observed_data,
+    brms_posterior,
+    brms_posterior_epred,
+    brms_posterior_predictive,
+    make_data_coords,
+)
 
 target = "sentiment"
 output_dir = paths.glmm / "valence"
 output_dir.mkdir(parents=True, exist_ok=True)
 
 opts = config.glmm.valence[target]
+coords_cols = list(opts.coords)
+
 rng = np.random.default_rng(opts.seed)
 
+R = SimpleNamespace(
+    base=importr("base"),
+    brms=importr("brms"),
+    posterior=importr("posterior"),
+    emmeans=importr("emmeans"),
+)
+
+az.rcParams.update(config.arviz)
+
 # %% ---------------------------------------------------------------------------------
 
-data = (
-    DataFrame.from_(paths.final)
-    .pipe(
-        lambda df: df.assign(
-            political=pd.Categorical(df["political"], **config.categorical.political),
-            event=pd.Categorical(df["event"], **config.categorical.valence),
-            sentiment=pd.Categorical(df["sentiment"], **config.categorical.valence),
-            outlet=df["country"] + ":" + df["name"],
-            year=df["year"].astype(str),
-            month=df["month"].astype(str),
-            day=df["day"].astype(str),
-        ).pipe(
-            lambda df: df.assign(
-                time=df["country"] + ":" + df["year"] + ":" + df["month"] + ":" + df["day"],
-                country=pd.Categorical(
-                    df["country"],
-                    categories=list(config.categorical.countries),
-                ),
-            )
-        )
-    )
-    .convert_dtypes()
+data = DataFrame.from_(paths.final)
+sample = data.sample(10000, random_state=42)
+
+# %% ---------------------------------------------------------------------------------
+
+data_coords = make_data_coords(data[coords_cols])
+
+# %% ---------------------------------------------------------------------------------
+
+model = brmspy.FitResult(
+    idata=az.InferenceData(), r=R.base.readRDS(str(output_dir / f"{target}.rds"))
 )
 
 # %% ---------------------------------------------------------------------------------
 
-model = bmb.Model(
-    formula=opts.formula.format(target=target),
-    data=data,
-    family=opts.family,
-    priors=make_priors(opts.priors),
+model = brms_observed_data(model, target, data_coords, dtype=int)
+
+# %% ---------------------------------------------------------------------------------
+
+model = brms_posterior(model)
+
+# %% ---------------------------------------------------------------------------------
+
+model = brms_posterior_epred(model, target, **opts.epd)
+
+# %% ---------------------------------------------------------------------------------
+
+model = brms_posterior_predictive(
+    model, target, transform=lambda x: (x - 2).astype(int), **opts.ppd
 )
-model.build()
 
 # %% ---------------------------------------------------------------------------------
 
-fit_opts = opts.fit.copy()
-advi = model.fit(
-    callbacks=[fit_opts.pop("callback").make()],
-    random_seed=rng.integers(0, 2**32 - 1),
-    **fit_opts,
-)
+model = brms_log_likelihood(model, target, **opts.ppd)
 
 # %% ---------------------------------------------------------------------------------
 
-trace = advi.sample(random_state=rng, **opts.sample)
-idata = advi_trace_to_inference(trace, model=model)
+ranef = [k for k in model.idata.posterior if k.startswith("r_")]
+model.idata.add_groups(posterior_ranef=model.idata.posterior[ranef].isel(draw=slice(0, 50)))
+model.idata.posterior = model.idata.posterior.drop_vars(ranef)
 
 # %% ---------------------------------------------------------------------------------
 
-model.predict(idata, kind="response", inplace=True, random_seed=rng)
-
-# %% ---------------------------------------------------------------------------------
-
-idata.to_netcdf(output_dir / f"{target}.nc")
+model.idata.to_netcdf(output_dir / f"{target}.nc")
 
 # %% ---------------------------------------------------------------------------------
