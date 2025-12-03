@@ -117,6 +117,8 @@ glmm:
       epd:
         <<: *glmm_valence_ppd
         re_formula: "~0"
+      ranef:
+        ndraws: 50
       coords:
         - key
         - political

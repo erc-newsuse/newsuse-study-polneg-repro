@@ -53,34 +53,43 @@ model = brmspy.FitResult(
 
 # %% ---------------------------------------------------------------------------------
 
+print("Preparing observed data...")
 model = brms_observed_data(model, target, data_coords, dtype=int)
 
 # %% ---------------------------------------------------------------------------------
 
+print("Preparing posterior samples...")
 model = brms_posterior(model)
 
 # %% ---------------------------------------------------------------------------------
 
+print("Preparing posterior expectations...")
 model = brms_posterior_epred(model, target, **opts.epd)
 
 # %% ---------------------------------------------------------------------------------
 
+print("Preparing posterior predictive samples...")
 model = brms_posterior_predictive(
     model, target, transform=lambda x: (x - 2).astype(int), **opts.ppd
 )
 
 # %% ---------------------------------------------------------------------------------
 
+print("Preparing log-likelihood...")
 model = brms_log_likelihood(model, target, **opts.ppd)
 
 # %% ---------------------------------------------------------------------------------
 
+print("Downsampling and separating random effects...")
 ranef = [k for k in model.idata.posterior if k.startswith("r_")]
-model.idata.add_groups(posterior_ranef=model.idata.posterior[ranef].isel(draw=slice(0, 50)))
+model.idata.add_groups(
+    posterior_ranef=model.idata.posterior[ranef].isel(draw=slice(0, opts.ranef.ndraws))
+)
 model.idata.posterior = model.idata.posterior.drop_vars(ranef)
 
 # %% ---------------------------------------------------------------------------------
 
+print("Saving InferenceData to NetCDF...")
 model.idata.to_netcdf(output_dir / f"{target}.nc")
 
 # %% ---------------------------------------------------------------------------------
