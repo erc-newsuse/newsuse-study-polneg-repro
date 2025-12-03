@@ -38,9 +38,7 @@ data = (
     .dropna(ignore_index=True)
     .assign(
         outlet=lambda df: df["country"] + ":" + df["name"],
-        time=lambda df: df["country"]
-        + ":"
-        + df["year"].astype(str)
+        time=lambda df: df["year"].astype(str)
         + ":"
         + df["month"].astype(str)
         + ":"

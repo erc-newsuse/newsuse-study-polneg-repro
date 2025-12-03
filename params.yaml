@@ -93,17 +93,16 @@ dataset:
 glmm:
   valence:
     defaults: &glmm_valence_defaults
+      index_col: key
       predictors: ["country", "political", "outlet", "time"]
       formula: >
         {target} ~ 1
           + country * political
           + (1 + political || outlet)
-          + (1 + political || time)
+          + (1 + political || country:time)
       family: cumulative
       link: logit
       algorithm: meanfield
-      # link: cloglog
-      # algorithm: fullrank
       chains: &glmm_valence_chains
         4
       cores: *glmm_valence_chains
@@ -116,37 +115,10 @@ glmm:
         cores: *glmm_valence_n_threads
       epd:
         <<: *glmm_valence_ppd
-        re_formula: "~0"
+      loglik:
+        <<: *glmm_valence_ppd
       ranef:
         ndraws: 50
-      coords:
-        - key
-        - political
-        - country
-        - outlet
-        - time
-      # priors:
-      #   common:
-      #     name: Normal
-      #     mu: 0.0
-      #     sigma: 2.0
-      #   group_specific:
-      #     name: Normal
-      #     mu: 0.0
-      #     sigma:
-      #       name: HalfNormal
-      #       sigma: 1.2533141373155001
-      # fit:
-      #   n: 50_000
-      #   inference_method: vi
-      #   method: advi
-      #   progressbar: false
-      #   callback:
-      #     make!: project.inference:ConvergenceCallback
-      # sample:
-      #   draws: 100
-      #   return_inferencedata: false
-
     event:
       <<: *glmm_valence_defaults
       seed: 1742380

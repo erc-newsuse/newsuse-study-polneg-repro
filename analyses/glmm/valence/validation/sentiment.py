@@ -8,29 +8,35 @@ import pandas as pd  # noqa
 import seaborn as sns  # noqa
 
 from project import config, paths
+from project.inference import set_xindex
 from project.plotting import ArvizLabeller
 
 az.rcParams.update(config.arviz)
 mpl.rcParams.update(config.plotting.params)
 
 target = "sentiment"
-
-fixef_opts = {
-    "var_names": "b_",
-    "filter_vars": "like",
-}
+opts = config.glmm.valence[target]
 
 figpath = paths.figures / "glmm" / "valence" / "validation"
 figpath.mkdir(parents=True, exist_ok=True)
 
+countries = config.categorical.countries
+political = config.categorical.political.categories
+
 # %% ---------------------------------------------------------------------------------
 
 idata = az.from_netcdf(paths.glmm / "valence" / f"{target}.nc")
+idata = set_xindex(idata, [opts.index_col, *opts.predictors])
 
 # %% ---------------------------------------------------------------------------------
 
 axes = az.plot_trace(
-    idata, **fixef_opts, combined=True, figsize=(8, 24), labeller=ArvizLabeller()
+    idata,
+    var_names="b_",
+    filter_vars="like",
+    combined=True,
+    figsize=(8, 24),
+    labeller=ArvizLabeller(),
 )
 fig = axes.flatten()[0].figure
 fig.tight_layout()
@@ -82,23 +88,68 @@ fig.savefig(figpath / f"{target}-autocorr.pdf")
 
 # %% ---------------------------------------------------------------------------------
 
-ax = az.plot_ppc(idata, mean=False)
-ax.set_xticks([-0.5, 0.5, 1.5], labels=[-1, 0, 1])
-ax.set_xlabel(target.capitalize())
-fig = ax.figure
-fig.tight_layout()
 
+def plot_ppc(
+    idata: az.InferenceData, ax: plt.Axes | None = None, mean: bool = False, **kwargs
+) -> plt.Axes:
+    """Plot posterior predictive check with mean observed value."""
+    idata = idata.copy()
+    if kwargs:
+        idata.observed_data = idata.observed_data.sel(**kwargs)
+        idata.posterior_predictive = idata.posterior_predictive.sel(**kwargs)
+    if ax is None:
+        ax = plt.gca()
+    az.plot_ppc(idata, ax=ax, mean=mean, legend=False)
+    ax.set_xticks([-0.5, 0.5, 1.5], labels=[-1, 0, 1])
+    ax.set_xlabel(None)
+    return ax
+
+
+# %% ---------------------------------------------------------------------------------
+
+fig, axes = plt.subplots(ncols=3, figsize=(7, 3))
+plot_ppc(idata, axes[0])
+plot_ppc(idata, axes[1], political="POLITICAL")
+plot_ppc(idata, axes[2], political="OTHER")
+
+axes[0].set_title("Overall")
+axes[1].set_title("Political")
+axes[2].set_title("Other")
+
+axes[0].legend()
+
+fig.tight_layout()
 fig.savefig(figpath / f"{target}-ppc.pdf")
 
 # %% ---------------------------------------------------------------------------------
 
-ax = az.plot_bpv(idata, kind="u_value")
-fig = ax.figure
-ax.set_title(target.capitalize())
-ax.set_xlabel("Data point index")
-ax.set_ylabel("U-value")
-fig.tight_layout()
+fig, axes = plt.subplots(ncols=3, nrows=2, figsize=(7, 4))
 
-fig.savefig(figpath / f"{target}-bpv.pdf")
+for ax, country in zip(axes.flat, countries, strict=True):
+    plot_ppc(idata, ax=ax, country=country)
+    ax.set_title(country.upper())
+
+axes[0, 0].legend()
+
+fig.tight_layout()
+fig.savefig(figpath / f"{target}-ppc-by-country.pdf")
+
+# %% ---------------------------------------------------------------------------------
+
+fig, axes = plt.subplots(ncols=6, nrows=2, figsize=(8, 3))
+
+for axrow, pol in zip(axes, political, strict=True):
+    for ax, country in zip(axrow, countries, strict=True):
+        plot_ppc(idata, ax=ax, country=country, political=pol)
+
+for ax, country in zip(axes[0], countries, strict=True):
+    ax.set_title(country.upper())
+    ax.set_xticks([])
+for ax, pol in zip(axes[:, 0], political, strict=True):
+    ax.set_ylabel(pol.capitalize())
+
+fig.supxlabel(target.capitalize(), y=0.05)
+fig.tight_layout()
+fig.savefig(figpath / f"{target}-ppc-by-country-political.pdf")
 
 # %% ---------------------------------------------------------------------------------

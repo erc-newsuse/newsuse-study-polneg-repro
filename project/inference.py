@@ -20,6 +20,7 @@ __all__ = (
     "brms_posterior_epred",
     "brms_posterior_predictive",
     "brms_log_likelihood",
+    "set_xindex",
 )
 
 DataCoordsT = Mapping[str, np.ndarray | tuple[str, np.ndarray]]
@@ -45,41 +46,47 @@ def make_data_coords(df: pd.DataFrame, index_col: Hashable | None = None) -> Dat
     return coords
 
 
-def as_index(ds: xr.Dataset | pd.DataFrame, cols: Sequence[str]) -> pd.MultiIndex:
-    if isinstance(ds, xr.Dataset):
-        ds = ds.coords.to_dataset().to_dataframe()
-    if any(ds.index.names):
-        ds = ds.reset_index()
-    return pd.MultiIndex.from_frame(ds[cols])
+def set_xindex(idata: az.InferenceData, xindex: Sequence[Hashable]) -> az.InferenceData:
+    for group in idata.groups():
+        ds = getattr(idata, group)
+        xs = [col for col in xindex if col in ds.coords]
+        if not xs:
+            continue
+        ds = ds.set_xindex(xs)
+        setattr(idata, group, ds)
+    return idata
 
 
 def brms_observed_data(
     brms: brmspy.FitResult,
-    response_name: str = "y",
-    coords: DataCoordsT | None = None,
+    response_name: Hashable = "y",
+    data: pd.DataFrame | None = None,
+    coords: Sequence[Hashable] | str | None = None,
     dtype: type | None = None,
+    **kwargs: Any,
 ) -> brmspy.FitResult:
     _base = singleton._get_base()
-    # Extract data from the fit object: fit$data
-    if _base:
-        r_data = _base.getElement(brms.r, "data")
-    else:
-        errmsg = "Base uninitialized (Should not happen if _get_brms was done)!"
-        raise Exception(errmsg)
+    if data is None:
+        if _base:
+            r_data = _base.getElement(brms.r, "data")
+        else:
+            errmsg = "Base uninitialized (Should not happen if _get_brms was done)!"
+            raise Exception(errmsg)
 
-    with localconverter(ro.default_converter + pandas2ri.converter):
-        df_data = pandas2ri.rpy2py(r_data)
+        with localconverter(ro.default_converter + pandas2ri.converter):
+            data = pandas2ri.rpy2py(r_data)
 
-    y = df_data[response_name].to_numpy()
+    data = pd.DataFrame(data)
+    if not coords:
+        coords = [c for c in data if c != response_name]
+
+    y = data.pop(response_name).to_numpy()
     if dtype is not None:
         y = y.astype(dtype)
 
-    if coords is None:
-        coords = make_data_coords(pd.DataFrame({}, index=np.arange(len(y))))
-
-    observed_data = xr.Dataset(
-        {response_name: (_OBS_DIM, y)},
-        coords=coords,
+    data_coords = make_data_coords(data, **kwargs)
+    observed_data = xr.Dataset({response_name: (_OBS_DIM, y)}, coords=data_coords).sortby(
+        _OBS_DIM
     )
     brms.idata.add_groups(observed_data=observed_data)
     return brms
@@ -115,40 +122,48 @@ def brms_posterior(brms: brmspy.FitResult, **kwargs: Any) -> brmspy.FitResult:
 
 def brms_posterior_epred(
     brms: brmspy.FitResult,
-    response_name: str = "y",
-    newdata: pd.DataFrame | None = None,
+    data: pd.DataFrame | None = None,
     *,
     re_formula: str | ro.Formula | None = None,
     support: np.ndarray | None = None,
+    _dim: str = "__groups__",
     **kwargs: Any,
 ) -> brmspy.FitResult:
     if isinstance(re_formula, str):
         re_formula = ro.Formula(re_formula)
     if re_formula is not None:
         kwargs["re_formula"] = re_formula
-    if newdata is not None:
-        kwargs["newdata"] = py_to_r(newdata)
+
+    # Handle observed data
+    observed = brms.idata.observed_data
+    response_name = list(observed.data_vars)[0]
+    if data is None:
+        data = pd.DataFrame(
+            brms.idata.observed_data.to_pandas()
+            .reset_index(drop=True)
+            .drop(columns=response_name)
+        )
+    else:
+        # import ipdb; ipdb.set_trace()
+        observed = xr.Dataset.from_pandas(data)
+
+    # Compute
+    kwargs["newdata"] = py_to_r(data)
     posterior_epred = ro.r("brms::posterior_epred")
     epred = posterior_epred(brms.r, **kwargs)
     epred = np.asarray(epred)
-    # Handle observed data subsetting
-    observed = brms.idata.observed_data
-    if newdata is not None:
-        coords_cols = list(observed.coords)
-        observed_index = as_index(observed, coords_cols)
-        newdata_index = as_index(newdata, coords_cols)
-        mask = observed_index.isin(newdata_index)
-        observed = observed.sel(**{_OBS_DIM: mask})
+
     # Build dims and coordinates
     if brms.idata.posterior.sizes["chain"] == 1:
         epred = np.expand_dims(epred, axis=0)
     coords = {
         "chain": ("chain", brms.idata.posterior.coords["chain"].values),
         "draw": ("draw", brms.idata.posterior.coords["draw"][: epred.shape[1]].values),
-        **{k: (_OBS_DIM, v.values) for k, v in observed.coords.items()},
+        **{k: (_dim, v.values) for k, v in observed.coords.items()},
     }
     posterior_dims = ["chain", "draw"]
-    dims = [*posterior_dims, _OBS_DIM]
+    dims = [*posterior_dims, _dim]
+
     # Handle categorical support
     if epred.ndim > len(dims):
         if support is None:
@@ -156,19 +171,15 @@ def brms_posterior_epred(
         support = np.asarray(support)
         dims.append(response_name)
         coords[response_name] = (response_name, np.asarray(support))
+
     # Build dataset
-    ds = xr.Dataset(
-        {"epred": (dims, epred)},
-        coords=coords,
-    )
-    brms.idata.add_groups(posterior_epred=ds.sortby(_OBS_DIM))
+    ds = xr.Dataset({"epred": (dims, epred)}, coords=coords).sortby(_dim)
+    brms.idata.add_groups(posterior_epred=ds)
     return brms
 
 
 def brms_posterior_predictive(
     brms: brmspy.FitResult,
-    response_name: str = "y",
-    newdata: pd.DataFrame | None = None,
     *,
     re_formula: str | ro.Formula | None = None,
     transform: Callable[[np.ndarray], np.ndarray] | None = None,
@@ -178,21 +189,24 @@ def brms_posterior_predictive(
         re_formula = ro.Formula(re_formula)
     if re_formula is not None:
         kwargs["re_formula"] = re_formula
-    if newdata is not None:
-        kwargs["newdata"] = py_to_r(newdata)
+
+    # Handle observed data
+    observed = brms.idata.observed_data
+    response_name = list(observed.data_vars)[0]
+    data = (
+        brms.idata.observed_data.to_pandas()
+        .reset_index(drop=True)
+        .drop(columns=response_name)
+    )
+
+    # Compute
+    kwargs["newdata"] = py_to_r(data)
     posterior_predictive = ro.r("brms::posterior_predict")
     ppred = posterior_predictive(brms.r, **kwargs)
     ppred = np.asarray(ppred)
     if transform is not None:
         ppred = transform(ppred)
-    # Handle observed data subsetting
-    observed = brms.idata.observed_data
-    if newdata is not None:
-        coords_cols = list(observed.coords)
-        observed_index = as_index(observed, coords_cols)
-        newdata_index = as_index(newdata, coords_cols)
-        mask = observed_index.isin(newdata_index)
-        observed = observed.sel(**{_OBS_DIM: mask})
+
     # Build dims and coordinates
     if brms.idata.posterior.sizes["chain"] == 1:
         ppred = np.expand_dims(ppred, axis=0)
@@ -202,19 +216,15 @@ def brms_posterior_predictive(
         **{k: (_OBS_DIM, v.values) for k, v in observed.coords.items()},
     }
     dims = ["chain", "draw", _OBS_DIM]
+
     # Build dataset
-    ds = xr.Dataset(
-        {response_name: (dims, ppred)},
-        coords=coords,
-    )
-    brms.idata.add_groups(posterior_predictive=ds.sortby(_OBS_DIM))
+    ds = xr.Dataset({response_name: (dims, ppred)}, coords=coords).sortby(_OBS_DIM)
+    brms.idata.add_groups(posterior_predictive=ds)
     return brms
 
 
 def brms_log_likelihood(
     brms: brmspy.FitResult,
-    response_name: str,
-    newdata: pd.DataFrame | None = None,
     *,
     re_formula: str | ro.Formula | None = None,
     pointwise: bool = True,
@@ -227,19 +237,18 @@ def brms_log_likelihood(
         re_formula = ro.Formula(re_formula)
     if re_formula is not None:
         kwargs["re_formula"] = re_formula
-    if newdata is not None:
-        kwargs["newdata"] = py_to_r(newdata)
+
+    # Handle observed data
+    observed = brms.idata.observed_data
+    response_name = list(observed.data_vars)[0]
+    data = brms.idata.observed_data.to_pandas().reset_index(drop=True)
+
+    # Compute
+    kwargs["newdata"] = py_to_r(data)
     log_lik_func = ro.r("brms::log_lik")
     log_lik = log_lik_func(brms.r, **kwargs)
     log_lik = np.asarray(log_lik)
-    # Handle observed data subsetting
-    observed = brms.idata.observed_data
-    if newdata is not None:
-        coords_cols = list(observed.coords)
-        observed_index = as_index(observed, coords_cols)
-        newdata_index = as_index(newdata, coords_cols)
-        mask = observed_index.isin(newdata_index)
-        observed = observed.sel(**{_OBS_DIM: mask})
+
     # Build dims and coordinates
     if brms.idata.posterior.sizes["chain"] == 1:
         log_lik = np.expand_dims(log_lik, axis=0)
@@ -249,7 +258,8 @@ def brms_log_likelihood(
         **{k: (_OBS_DIM, v.values) for k, v in observed.coords.items()},
     }
     dims = ["chain", "draw", _OBS_DIM]
+
     # Build dataset
-    ds = xr.Dataset({response_name: (dims, log_lik)}, coords=coords)
-    brms.idata.add_groups(log_likelihood=ds.sortby(_OBS_DIM))
+    ds = xr.Dataset({response_name: (dims, log_lik)}, coords=coords).sortby(_OBS_DIM)
+    brms.idata.add_groups(log_likelihood=ds)
     return brms
