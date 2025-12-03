@@ -126,7 +126,7 @@ def brms_posterior_epred(
     *,
     re_formula: str | ro.Formula | None = None,
     support: np.ndarray | None = None,
-    _dim: str = "__groups__",
+    _dim: str = "__group__",
     **kwargs: Any,
 ) -> brmspy.FitResult:
     if isinstance(re_formula, str):
@@ -137,6 +137,8 @@ def brms_posterior_epred(
     # Handle observed data
     observed = brms.idata.observed_data
     response_name = list(observed.data_vars)[0]
+    if support is None:
+        support = np.unique(observed[response_name])
     if data is None:
         data = pd.DataFrame(
             brms.idata.observed_data.to_pandas()
@@ -144,8 +146,10 @@ def brms_posterior_epred(
             .drop(columns=response_name)
         )
     else:
-        # import ipdb; ipdb.set_trace()
-        observed = xr.Dataset.from_pandas(data)
+        observed = (
+            data.reset_index(names=_dim).set_index(_dim).pipe(xr.Dataset.from_dataframe)
+        )
+        observed = observed.assign_coords(observed.data_vars)
 
     # Compute
     kwargs["newdata"] = py_to_r(data)
@@ -166,8 +170,6 @@ def brms_posterior_epred(
 
     # Handle categorical support
     if epred.ndim > len(dims):
-        if support is None:
-            support = np.unique(observed[response_name])
         support = np.asarray(support)
         dims.append(response_name)
         coords[response_name] = (response_name, np.asarray(support))

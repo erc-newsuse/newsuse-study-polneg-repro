@@ -6,11 +6,13 @@ import matplotlib.pyplot as plt  # noqa
 import numpy as np  # noqa
 import pandas as pd  # noqa
 import seaborn as sns  # noqa
+import xarray as xr
 
 from project import config, paths
 from project.inference import set_xindex
 from project.plotting import ArvizLabeller
 
+xr.set_options(**config.xarray)
 az.rcParams.update(config.arviz)
 mpl.rcParams.update(config.plotting.params)
 

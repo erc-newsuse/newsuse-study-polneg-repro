@@ -34,9 +34,6 @@ data <- as.character(paths$final) %>%
         event = factor(event, ordered = TRUE),
         sentiment = factor(sentiment, ordered = TRUE),
         valence = factor(valence, ordered = TRUE),
-        year = as.factor(year),
-        month = as.factor(month),
-        day = as.factor(day),
     )
 
 # %% ---------------------------------------------------------------------------------

@@ -115,6 +115,7 @@ glmm:
         cores: *glmm_valence_n_threads
       epd:
         <<: *glmm_valence_ppd
+        support: [-1, 0, 1]
       loglik:
         <<: *glmm_valence_ppd
       ranef:
@@ -331,6 +332,9 @@ ml:
       xlm-large:
         checkpoint: xlm-roberta-large
         <<: *ml_model_valence_defaults
+
+xarray:
+  display_style: text
 
 arviz:
   data.load: eager

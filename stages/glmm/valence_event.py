@@ -1,12 +1,11 @@
 # %% ---------------------------------------------------------------------------------
 
-from types import SimpleNamespace
 
 import arviz as az
 import brmspy
 import numpy as np
 from newsuse.data import DataFrame
-from rpy2.robjects.packages import importr
+from rpy2.robjects import r as R
 
 from project import config, paths
 from project.inference import (
@@ -25,25 +24,18 @@ opts = config.glmm.valence[target]
 
 rng = np.random.default_rng(opts.seed)
 
-R = SimpleNamespace(
-    base=importr("base"),
-    brms=importr("brms"),
-    posterior=importr("posterior"),
-    emmeans=importr("emmeans"),
-)
-
 az.rcParams.update(config.arviz)
 
 # %% ---------------------------------------------------------------------------------
 
-data = DataFrame.from_(
-    paths.final, columns=[opts.index_col, target, *opts.predictors]
-).sample(10**5, random_state=42)
+data = DataFrame.from_(paths.final, columns=[opts.index_col, target, *opts.predictors])
+quantized = data[[*opts.predictors]].drop_duplicates(ignore_index=True)
+data = data.sample(10**5, random_state=42)
 
 # %% ---------------------------------------------------------------------------------
 
 model = brmspy.FitResult(
-    idata=az.InferenceData(), r=R.base.readRDS(str(output_dir / f"{target}.rds"))
+    idata=az.InferenceData(), r=R(f"readRDS('{output_dir / f'{target}.rds'}')")
 )
 
 # %% ---------------------------------------------------------------------------------
@@ -59,10 +51,7 @@ model = brms_posterior(model)
 # %% ---------------------------------------------------------------------------------
 
 print("Preparing posterior expectations...")
-quantized = (
-    data.groupby(list(opts.predictors)).size().reset_index(name="n").reset_index(drop=True)
-)
-model = brms_posterior_epred(model, **opts.epd)
+model = brms_posterior_epred(model, quantized, **opts.epd)
 
 # %% ---------------------------------------------------------------------------------
 

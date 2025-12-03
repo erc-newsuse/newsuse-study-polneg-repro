@@ -1,5 +1,6 @@
 # %% ---------------------------------------------------------------------------------
 
+import numpy as np
 from newsuse.data import DataFrame
 
 from project import paths
@@ -37,6 +38,7 @@ data = (
     .assign(valence=lambda df: df[["event", "sentiment"]].sum(axis=1, skipna=False))
     .dropna(ignore_index=True)
     .assign(
+        political=lambda df: np.where(df["political"] == "OTHER", 0, 1),
         outlet=lambda df: df["country"] + ":" + df["name"],
         time=lambda df: df["year"].astype(str)
         + ":"
@@ -44,6 +46,7 @@ data = (
         + ":"
         + df["day"].astype(str),
     )
+    .convert_dtypes()
 )
 
 # %% ---------------------------------------------------------------------------------
