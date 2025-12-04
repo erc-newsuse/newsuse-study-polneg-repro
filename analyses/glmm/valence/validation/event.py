@@ -7,9 +7,10 @@ import numpy as np  # noqa
 import pandas as pd  # noqa
 import seaborn as sns  # noqa
 import xarray as xr
+from newsuse.data import DataFrame
 
 from project import config, paths
-from project.inference import set_xindex
+from project.inference import set_xindex, waic_metrics
 from project.plotting import ArvizLabeller
 
 xr.set_options(**config.xarray)
@@ -22,19 +23,24 @@ opts = config.glmm.valence[target]
 figpath = paths.figures / "glmm" / "valence" / "validation"
 figpath.mkdir(parents=True, exist_ok=True)
 
-countries = config.categorical.countries
-political = config.categorical.political.categories
+labels = {
+    "countries": config.categorical.countries,
+    "political": dict(enumerate(config.categorical.political)),
+    target: config.categorical[target],
+}
+
+data = DataFrame.from_(paths.final)
 
 # %% ---------------------------------------------------------------------------------
 
 idata = az.from_netcdf(paths.glmm / "valence" / f"{target}.nc")
-idata = set_xindex(idata, [opts.index_col, *opts.predictors])
+idata = set_xindex(idata, [opts.index_col, *opts.fixef, *opts.ranef])
 
 # %% ---------------------------------------------------------------------------------
 
 axes = az.plot_trace(
     idata,
-    var_names="b_",
+    var_names=["b_", "sd_"],
     filter_vars="like",
     combined=True,
     figsize=(8, 24),
@@ -42,12 +48,6 @@ axes = az.plot_trace(
 )
 fig = axes.flatten()[0].figure
 fig.tight_layout()
-
-for ax in axes[:, 0]:
-    title = ax.get_title()
-    ax.set_ylabel(title)
-for ax in axes.flat:
-    ax.set_title(None)
 
 axes[0, 0].set_title("Posterior density", fontsize="x-large")
 axes[0, 1].set_title("Trace plot", fontsize="x-large")
@@ -111,8 +111,8 @@ def plot_ppc(
 
 fig, axes = plt.subplots(ncols=3, figsize=(7, 3))
 plot_ppc(idata, axes[0])
-plot_ppc(idata, axes[1], political="POLITICAL")
-plot_ppc(idata, axes[2], political="OTHER")
+plot_ppc(idata, axes[1], political=1)
+plot_ppc(idata, axes[2], political=0)
 
 axes[0].set_title("Overall")
 axes[1].set_title("Political")
@@ -127,7 +127,7 @@ fig.savefig(figpath / f"{target}-ppc.pdf")
 
 fig, axes = plt.subplots(ncols=3, nrows=2, figsize=(7, 4))
 
-for ax, country in zip(axes.flat, countries, strict=True):
+for ax, country in zip(axes.flat, labels["countries"], strict=True):
     plot_ppc(idata, ax=ax, country=country)
     ax.set_title(country.upper())
 
@@ -140,18 +140,25 @@ fig.savefig(figpath / f"{target}-ppc-by-country.pdf")
 
 fig, axes = plt.subplots(ncols=6, nrows=2, figsize=(8, 3))
 
-for axrow, pol in zip(axes, political, strict=True):
-    for ax, country in zip(axrow, countries, strict=True):
+for axrow, pol in zip(axes, labels["political"], strict=True):
+    for ax, country in zip(axrow, labels["countries"], strict=True):
         plot_ppc(idata, ax=ax, country=country, political=pol)
 
-for ax, country in zip(axes[0], countries, strict=True):
+for ax, country in zip(axes[0], labels["countries"], strict=True):
     ax.set_title(country.upper())
     ax.set_xticks([])
-for ax, pol in zip(axes[:, 0], political, strict=True):
-    ax.set_ylabel(pol.capitalize())
+for ax, pol in zip(axes[:, 0], labels["political"], strict=True):
+    ax.set_ylabel(labels["political"][pol])
 
 fig.supxlabel(target.capitalize(), y=0.05)
 fig.tight_layout()
 fig.savefig(figpath / f"{target}-ppc-by-country-political.pdf")
 
 # %% ---------------------------------------------------------------------------------
+
+obs_freqs = data[target].value_counts(normalize=True).sort_index()
+waic = az.waic(idata)
+metrics = waic_metrics(waic, null_elpd=np.log(obs_freqs).mean())
+print(metrics)
+
+# %% --------------------------------------------------------------------------------

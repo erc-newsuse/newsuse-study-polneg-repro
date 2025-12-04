@@ -7,6 +7,7 @@ library(tibble)
 library(brms)
 
 use_python(normalizePath(R.home("../../bin/python")), required = TRUE)
+builtins <- import("builtins")
 
 project <- import("project")
 config  <- project$config
@@ -15,8 +16,7 @@ paths   <- project$paths
 dirpath <- paths$glmm / "valence"
 dirpath$mkdir(parents = TRUE, exist_ok = TRUE)
 
-countries <- config$countries$order
-countries <- countries[0L:length(countries)]
+countries <- names(builtins$dict(config$categorical$countries))
 
 target <- "sentiment"
 opts   <- config$glmm$valence[[target]]

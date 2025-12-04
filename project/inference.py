@@ -8,8 +8,7 @@ import numpy as np
 import pandas as pd
 import rpy2.robjects as ro
 import xarray as xr
-from brmspy.helpers import singleton
-from brmspy.helpers.conversion import py_to_r
+from brmspy.helpers import conversion, singleton
 from rpy2.robjects import pandas2ri
 from rpy2.robjects.conversion import localconverter
 
@@ -21,10 +20,31 @@ __all__ = (
     "brms_posterior_predictive",
     "brms_log_likelihood",
     "set_xindex",
+    "waic_metrics",
 )
 
 DataCoordsT = Mapping[str, np.ndarray | tuple[str, np.ndarray]]
 _OBS_DIM = "__obs__"
+
+
+def waic_metrics(waic: az.ELPDData, null_elpd: float) -> dict[str, Any]:
+    mean_elpd = waic.elpd_waic / waic.n_data_points
+    mean_elpd_se = waic.se / np.sqrt(waic.n_data_points)
+    z = (mean_elpd - null_elpd) / mean_elpd_se
+    pseudo_r2 = 1 - (mean_elpd / null_elpd)
+    return pd.Series(
+        {
+            "mean_elpd": mean_elpd,
+            "mean_elpd_se": mean_elpd_se,
+            "pseudo_r2": pseudo_r2,
+            "z": z,
+        }
+    )
+
+
+def py_to_r(data: pd.DataFrame) -> ro.DataFrame:
+    data = data.convert_dtypes(dtype_backend="numpy_nullable")
+    return conversion.py_to_r(data)
 
 
 def pydf(df: ro.RObject) -> object:

@@ -34,27 +34,10 @@ categorical:
     pl:  Poland
     fr:  France
     esp: Spain
-  political:
-    categories: ["OTHER", "POLITICAL"]
-  valence:
-    categories: [-1, 0, 1]
-    ordered: true
-
-countries:
-  order:
-  - us
-  - esp
-  - fr
-  - pl
-  - irl
-  - uk
-  labels:
-    us:  United States
-    esp: Spain
-    fr:  France
-    pl:  Poland
-    irl: Ireland
-    uk:  United Kingdom
+  political: ["other", "political"]
+  event: [-1, 0, 1]
+  sentiment: [-1, 0, 1]
+  valence: [-2, -1, 0, 1, 2]
 
 annotations:
   political:
@@ -93,9 +76,15 @@ dataset:
 glmm:
   valence:
     defaults: &glmm_valence_defaults
-      subsample: 200_000
+      subsample: 300_000
       index_col: key
-      predictors: ["country", "political", "outlet", "time"]
+      predictors:
+        fixed:
+          - political
+          - country
+        groups:
+          - outlet
+          - time
       formula: >
         {target} ~ 1
           + country * political
@@ -111,16 +100,16 @@ glmm:
         4
       iter: 2000
       backend: cmdstanr
-      ppd: &glmm_valence_ppd
-        ndraws: 10
+      ppd:  &glmm_valence_ppd
+        ndraws: 200
         cores: *glmm_valence_n_threads
       epd:
         <<: *glmm_valence_ppd
+        ndraws: 1000
+        re_formula: "~0"
         support: [-1, 0, 1]
       loglik:
         <<: *glmm_valence_ppd
-      ranef:
-        ndraws: 50
     event:
       <<: *glmm_valence_defaults
       seed: 1742380
@@ -370,6 +359,9 @@ plotting:
       pl:            ${..palette.red}
       irl:           ${..palette.green}
       uk:            ${..palette.brown}
+    political:
+      - ${..semantics.other}
+      - ${..semantics.political}
   params:
     font.family:           sans-serif
     # font.sans-serif:       Montserrat
@@ -390,3 +382,13 @@ plotting:
     scatter.edgecolors:    black
     lines.markeredgecolor: black
     lines.markeredgewidth: 1
+  objects:
+    dot:
+      pointsize: 10
+      edgecolor: black
+      edgewidth: 1
+      artist_kws:
+        zorder: 10
+    range:
+      color: black
+      linewidth: 2
