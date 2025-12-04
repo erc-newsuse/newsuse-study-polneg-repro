@@ -30,7 +30,10 @@ az.rcParams.update(config.arviz)
 
 data = DataFrame.from_(paths.final, columns=[opts.index_col, target, *opts.predictors])
 quantized = data[[*opts.predictors]].drop_duplicates(ignore_index=True)
-data = data.sample(10**5, random_state=42)
+
+if subsample := opts.get("subsample"):
+    print(f"Subsampling data to {subsample} rows for faster processing...")
+    data = data.sample(n=subsample, random_state=rng)
 
 # %% ---------------------------------------------------------------------------------
 

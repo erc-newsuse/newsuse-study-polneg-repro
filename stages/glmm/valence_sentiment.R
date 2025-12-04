@@ -30,7 +30,6 @@ data <- as.character(paths$final) %>%
     read_parquet %>%
     mutate(
         country = factor(country, levels = countries),
-        political = factor(political, levels = c("OTHER", "POLITICAL")),
         event = factor(event, ordered = TRUE),
         sentiment = factor(sentiment, ordered = TRUE),
         valence = factor(valence, ordered = TRUE),
@@ -68,7 +67,7 @@ fit <- function(formula, data, seed = NULL, ...) {
 # We use brms with cmdstanr backend for efficiency.
 
 system.time(
-    glmm <- fit(formula, data, seed = 432487L)
+    glmm <- fit(formula, data, seed = opts$seed)
 )
 
 saveRDS(

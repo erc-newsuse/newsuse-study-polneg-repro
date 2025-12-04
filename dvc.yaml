@@ -172,14 +172,19 @@ stages:
     - event
     - sentiment
     do:
-      cmd: Rscript stages/glmm/valence_{item}.R
+      cmd: Rscript stages/glmm/valence_${item}.R && python stages/glmm/valence_${item}.py
+      params:
+      - glmm.valence.${item}
       deps:
-      - stages/glmm/valence_{item}.R
+      - stages/glmm/valence_${item}.R
+      - stages/glmm/valence_${item}.py
       - data/proc/final.parquet
       outs:
       - glmm/valence/${item}.rds:
           persist: true
-      - glmm/valence/${item}-ppd.parquet:
+      - glmm/valence/${item}.nc:
+          persist: true
+      - glmm/valence/${item}-ranef.nc:
           persist: true
 
   # glmm:
