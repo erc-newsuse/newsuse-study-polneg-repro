@@ -597,13 +597,13 @@ stages:
       size: 3820
     - path: stages/final.py
       hash: md5
-      md5: caf03a26a77d8ab482a002d3b2158b8b
-      size: 1679
+      md5: cd09b33a307be2e814ebf4d38d4e5c60
+      size: 1881
     outs:
     - path: data/proc/final.parquet
       hash: md5
-      md5: cbdf4eba05cdf7f494e5c85ede6ac0e8
-      size: 65435877
+      md5: 8aa51e6d9b11d17dd12abe1dc6febd99
+      size: 65486488
   outlet-meta:
     cmd: python stages/outlet_meta.py
     deps:
@@ -626,127 +626,153 @@ stages:
     deps:
     - path: data/proc/final.parquet
       hash: md5
-      md5: cbdf4eba05cdf7f494e5c85ede6ac0e8
-      size: 65435877
+      md5: 8aa51e6d9b11d17dd12abe1dc6febd99
+      size: 65486488
     - path: stages/glmm/valence_event.R
       hash: md5
-      md5: 9db428d41ac89bf2556c52d51b41280d
-      size: 2337
+      md5: dcb04c51878ddad82b81bca37f5433bb
+      size: 2365
     - path: stages/glmm/valence_event.py
       hash: md5
-      md5: a0a2829f120b2e7a67871d2ad678dfe7
-      size: 3051
+      md5: 2bbb3e16f1532d024c665b32d7ee4092
+      size: 3099
     params:
       params.yaml:
         glmm.valence.event:
-          subsample: 200000
+          subsample: 500000
           index_col: key
           predictors:
-          - country
-          - political
-          - outlet
-          - time
-          formula: "{target} ~ 1\n  + country * political\n  + (1 + political || outlet)\n\
-            \  + (1 + political || country:time)\n"
+            fixed:
+            - political
+            - country
+            groups:
+            - outlet
+            - time
+          formula: "{target} ~ 1\n  + political + country + political:country\n  +
+            (1 + political || outlet)\n  + (1 + political || country:time)\n"
           family: cumulative
           link: logit
-          algorithm: meanfield
-          chains: 4
-          cores: 4
+          prior:
+          - prior: student_t(3, 0, 2)
+            class: b
+          - prior: student_t(3, 0, 2)
+            class: Intercept
           n_threads: 4
-          iter: 2000
-          backend: cmdstanr
+          solver:
+            algorithm: meanfield
+            chains: 4
+            cores: 4
+            iter: 2000
+            backend: cmdstanr
           ppd:
-            ndraws: 100
+            ndraws: 250
             cores: 4
           epd:
-            ndraws: 100
-            cores: 4
+            re_formulas:
+              grand_mean: ~0
+              outlets: ~(1 + political || outlet)
+              full: ~(1 + political || outlet) + (1 + political || country:time)
             support:
             - -1
             - 0
             - 1
+            allow_new_levels: true
+            sample_new_levels: gaussian
           loglik:
-            ndraws: 100
+            ndraws: 250
             cores: 4
           ranef:
-            ndraws: 100
+            ndraws: 50
+            cores: 4
           seed: 1742380
     outs:
     - path: glmm/valence/event-ranef.nc
       hash: md5
-      md5: 3d03c04034ec9cabf71ef3b988240526
-      size: 80259470
+      md5: f37d7611cd8556a79a4e100f8a1e3365
+      size: 1938285766
     - path: glmm/valence/event.nc
       hash: md5
-      md5: 04780e627cbc6230e10729206be940d3
-      size: 853906036
+      md5: 14afd9ce67263452660e9ad75b2c04a2
+      size: 1326201799
     - path: glmm/valence/event.rds
       hash: md5
-      md5: 81991e7347d7c4f872f66cb4c8a968de
-      size: 136101436
+      md5: 01043b32d0a5af082062eb47036a4721
+      size: 136244894
   glmm-valence@sentiment:
     cmd: Rscript stages/glmm/valence_sentiment.R && python
       stages/glmm/valence_sentiment.py
     deps:
     - path: data/proc/final.parquet
       hash: md5
-      md5: cbdf4eba05cdf7f494e5c85ede6ac0e8
-      size: 65435877
+      md5: 8aa51e6d9b11d17dd12abe1dc6febd99
+      size: 65486488
     - path: stages/glmm/valence_sentiment.R
       hash: md5
-      md5: 2ce048111c09a38e3179081acc0a9669
-      size: 2275
+      md5: 4fa3cd4bbf1b5d1d924e0c3d0cfc3654
+      size: 2369
     - path: stages/glmm/valence_sentiment.py
       hash: md5
-      md5: a30f83edb4b4c75970f849fba6aa413c
-      size: 3055
+      md5: 0727d78dd21b583b52960dffa875f644
+      size: 3103
     params:
       params.yaml:
         glmm.valence.sentiment:
-          subsample: 200000
+          subsample: 500000
           index_col: key
           predictors:
-          - country
-          - political
-          - outlet
-          - time
-          formula: "{target} ~ 1\n  + country * political\n  + (1 + political || outlet)\n\
-            \  + (1 + political || country:time)\n"
+            fixed:
+            - political
+            - country
+            groups:
+            - outlet
+            - time
+          formula: "{target} ~ 1\n  + political + country + political:country\n  +
+            (1 + political || outlet)\n  + (1 + political || country:time)\n"
           family: cumulative
           link: logit
-          algorithm: meanfield
-          chains: 4
-          cores: 4
+          prior:
+          - prior: student_t(3, 0, 2)
+            class: b
+          - prior: student_t(3, 0, 2)
+            class: Intercept
           n_threads: 4
-          iter: 2000
-          backend: cmdstanr
+          solver:
+            algorithm: meanfield
+            chains: 4
+            cores: 4
+            iter: 2000
+            backend: cmdstanr
           ppd:
-            ndraws: 100
+            ndraws: 250
             cores: 4
           epd:
-            ndraws: 100
-            cores: 4
+            re_formulas:
+              grand_mean: ~0
+              outlets: ~(1 + political || outlet)
+              full: ~(1 + political || outlet) + (1 + political || country:time)
             support:
             - -1
             - 0
             - 1
+            allow_new_levels: true
+            sample_new_levels: gaussian
           loglik:
-            ndraws: 100
+            ndraws: 250
             cores: 4
           ranef:
-            ndraws: 100
+            ndraws: 50
+            cores: 4
           seed: 4823917
     outs:
     - path: glmm/valence/sentiment-ranef.nc
       hash: md5
-      md5: d5cb0088de839d0b225b1da15aa45ea2
-      size: 80486823
+      md5: 9d21f5324e02eb695c65cc1ed9af938b
+      size: 1938285766
     - path: glmm/valence/sentiment.nc
       hash: md5
-      md5: 76657c6bb118cf1ef04b197479382abc
-      size: 853583014
+      md5: 7fae9f8ac9184c7df02b5e5a6ec8eada
+      size: 1325915316
     - path: glmm/valence/sentiment.rds
       hash: md5
-      md5: 7ac159ba1cbb9e5d03ac1cb87560124e
-      size: 140860403
+      md5: 959e011d56fe5c146681bfec62cc6049
+      size: 139995324

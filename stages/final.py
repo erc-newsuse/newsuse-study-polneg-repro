@@ -13,11 +13,15 @@ meta = DataFrame.from_(paths.outlet_meta)
 
 data = (
     DataFrame.from_(paths.dataset)
+    .query("date < '2024-04-01'")
     .merge(DataFrame.from_(paths.labels, columns=["key", "event", "sentiment"]))
     .assign(
         year=lambda df: df["date"].dt.year,
         month=lambda df: df["date"].dt.month,
         day=lambda df: df["date"].dt.day,
+        isotime=lambda df: df["date"]
+        .dt.isocalendar()
+        .pipe(lambda df: df["year"].astype(str) + ":" + df["week"].astype(str)),
     )[
         [
             "key",
@@ -26,6 +30,7 @@ data = (
             "year",
             "month",
             "day",
+            "isotime",
             "reactions",
             "comments",
             "shares",
