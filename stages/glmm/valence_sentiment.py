@@ -29,9 +29,10 @@ az.rcParams.update(config.arviz)
 # %% ---------------------------------------------------------------------------------
 
 data = DataFrame.from_(
-    paths.final, columns=[opts.index_col, target, *opts.fixef, *opts.ranef]
+    paths.final,
+    columns=[opts.index_col, target, *opts.predictors.fixed, *opts.predictors.groups],
 )
-quantized = data[[*opts.fixef, *opts.epd.ranef]].drop_duplicates(ignore_index=True)
+quantized = data[[*opts.predictors.fixed]].drop_duplicates(ignore_index=True)
 
 if subsample := opts.get("subsample"):
     print(f"Subsampling data to {subsample} rows for faster processing...")
@@ -56,8 +57,7 @@ model = brms_posterior(model)
 # %% ---------------------------------------------------------------------------------
 
 print("Preparing posterior expectations...")
-re_formula = "~" + " + ".join(opts.epd.pop("ranef", []) or [0])
-model = brms_posterior_epred(model, quantized, re_formula=re_formula, **opts.epd)
+model = brms_posterior_epred(model, quantized, **opts.epd)
 
 # %% ---------------------------------------------------------------------------------
 

@@ -23,7 +23,7 @@ alpha = 1 - az.rcParams["stats.ci_prob"]
 conf = (1 - alpha) * 100
 q0, q1 = alpha / 2, 1 - alpha / 2
 
-target = "event"
+target = "sentiment"
 support = [*config.categorical[target]]
 opts = config.glmm.valence[target]
 

@@ -34,7 +34,7 @@ data = DataFrame.from_(paths.final)
 # %% ---------------------------------------------------------------------------------
 
 idata = az.from_netcdf(paths.glmm / "valence" / f"{target}.nc")
-idata = set_xindex(idata, [opts.index_col, *opts.predictors])
+idata = set_xindex(idata, [opts.index_col, *opts.predictors.fixed, *opts.predictors.groups])
 
 # %% ---------------------------------------------------------------------------------
 
@@ -48,12 +48,6 @@ axes = az.plot_trace(
 )
 fig = axes.flatten()[0].figure
 fig.tight_layout()
-
-for ax in axes[:, 0]:
-    title = ax.get_title()
-    ax.set_ylabel(title)
-for ax in axes.flat:
-    ax.set_title(None)
 
 axes[0, 0].set_title("Posterior density", fontsize="x-large")
 axes[0, 1].set_title("Trace plot", fontsize="x-large")

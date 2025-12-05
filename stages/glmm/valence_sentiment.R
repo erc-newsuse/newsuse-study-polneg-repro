@@ -5,6 +5,7 @@ library(arrow)
 library(dplyr)
 library(tibble)
 library(brms)
+library(purrr)
 
 use_python(normalizePath(R.home("../../bin/python")), required = TRUE)
 builtins <- import("builtins")
@@ -22,7 +23,6 @@ target <- "sentiment"
 opts   <- config$glmm$valence[[target]]
 
 n_threads <- min(opts$n_threads, parallel::detectCores() - 2L)
-
 
 # %% Get data ------------------------------------------------------------------------
 
@@ -44,19 +44,25 @@ formula <- opts$formula %>%
 
 # %% ---------------------------------------------------------------------------------
 
+prior <- tryCatch(
+    {
+        map(builtins$list(opts$prior), ~do.call(set_prior, builtins$dict(.x))) %>%
+            reduce(c)
+    },
+    error = function(e) NULL
+)
+
+# %% ---------------------------------------------------------------------------------
+
 fit <- function(formula, data, seed = NULL, ...) {
     opts <- rlang::ll(
-        formula = formula, data = data, seed = seed,
-        !!!rlang::ll(
-            family = cumulative(link = opts$link),
-            algorithm = opts$algorithm,
-            backend = opts$backend,
-            threads = threading(n_threads),
-            iter = opts$iter,
-            # prior = c(
-            #     prior(normal(0, 1.253314), lb = 0, class = "sd")
-            # ),
-        )
+        formula = formula,
+        data = data,
+        seed = seed,
+        family = cumulative(link = opts$link),
+        prior = prior,
+        threads = threading(n_threads),
+        !!!builtins$dict(opts$solver),
     )
     do.call(brm, opts)
 }

@@ -76,7 +76,7 @@ dataset:
 glmm:
   valence:
     defaults: &glmm_valence_defaults
-      subsample: 300_000
+      subsample: 500_000
       index_col: key
       predictors:
         fixed:
@@ -87,29 +87,46 @@ glmm:
           - time
       formula: >
         {target} ~ 1
-          + country * political
+          + political + country + political:country
           + (1 + political || outlet)
           + (1 + political || country:time)
       family: cumulative
       link: logit
-      algorithm: meanfield
-      chains: &glmm_valence_chains
-        4
-      cores: *glmm_valence_chains
+      prior:
+        # - prior: normal(0, 3)
+        - prior: student_t(3, 0, 2)
+          class: b
+        # - prior: normal(0, 3)
+        - prior: student_t(3, 0, 2)
+          class: Intercept
+        # - prior: normal(0, 1.253314)
+        #   lb: 0
+        #   class: sd
       n_threads: &glmm_valence_n_threads
         4
-      iter: 2000
-      backend: cmdstanr
+      solver:
+        algorithm: meanfield
+        # grad_samples: 4
+        chains: *glmm_valence_n_threads
+        cores: *glmm_valence_n_threads
+        iter: 2000
+        backend: cmdstanr
       ppd:  &glmm_valence_ppd
-        ndraws: 200
+        ndraws: 250
         cores: *glmm_valence_n_threads
       epd:
-        <<: *glmm_valence_ppd
-        ndraws: 1000
-        re_formula: "~0"
+        re_formulas:
+          grand_mean: ~0
+          outlets: ~(1 + political || outlet)
+          full: ~(1 + political || outlet) + (1 + political || country:time)
         support: [-1, 0, 1]
+        allow_new_levels: true
+        sample_new_levels: gaussian
       loglik:
         <<: *glmm_valence_ppd
+      ranef:
+        <<: *glmm_valence_ppd
+        ndraws: 50
     event:
       <<: *glmm_valence_defaults
       seed: 1742380
