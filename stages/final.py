@@ -19,6 +19,8 @@ data = (
         year=lambda df: df["date"].dt.year,
         month=lambda df: df["date"].dt.month,
         day=lambda df: df["date"].dt.day,
+        weekday=lambda df: df["date"].dt.weekday,
+        weekend=lambda df: np.where(df["weekday"] >= 5, 1, 0),
         isotime=lambda df: df["date"]
         .dt.isocalendar()
         .pipe(lambda df: df["year"].astype(str) + ":" + df["week"].astype(str)),
@@ -30,6 +32,8 @@ data = (
             "year",
             "month",
             "day",
+            "weekday",
+            "weekend",
             "isotime",
             "reactions",
             "comments",

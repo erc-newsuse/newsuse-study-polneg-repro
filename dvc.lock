@@ -597,13 +597,13 @@ stages:
       size: 3820
     - path: stages/final.py
       hash: md5
-      md5: cd09b33a307be2e814ebf4d38d4e5c60
-      size: 1881
+      md5: a607b92d77da449fddcb2f4801823155
+      size: 2040
     outs:
     - path: data/proc/final.parquet
       hash: md5
-      md5: 8aa51e6d9b11d17dd12abe1dc6febd99
-      size: 65486488
+      md5: 49d6934056d2d23768d513a03244075d
+      size: 65615765
   outlet-meta:
     cmd: python stages/outlet_meta.py
     deps:
