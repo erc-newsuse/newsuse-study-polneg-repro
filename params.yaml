@@ -84,19 +84,20 @@ glmm:
           - country
         groups:
           - outlet
-          - time
+          - weekend
+          - isotime
       model:  &glmm_valence_model
         formula: >
           {target} ~ 1
-            + political + country + political:country
-            + (1 + political || outlet)
-            + (1 + political || country:time)
-        family: acat
+            + political * country
+            + (1 + political | outlet:weekend)
+            + (1 + political | country:isotime)
+        family: cumulative
         link: logit
         prior:
-          - prior: student_t(3, 0, 2)
+          - prior: student_t(3, 0, 5)
             class: b
-          - prior: student_t(3, 0, 2)
+          - prior: student_t(3, 0, 5)
             class: Intercept
           # - prior: normal(0, 1.253314)
           #   lb: 0
@@ -110,14 +111,13 @@ glmm:
         iter: 2000
         backend: cmdstanr
       inference:
-        subsample: 500_000
+        subsample: 250_000
         ppd:  &glmm_valence_ppd
           ndraws: 250
           cores: *glmm_valence_n_threads
         epd:
           re_formulas:
             grand_mean: ~0
-            outlets: ~(1 + political || outlet)
             full: null
           support: [-1, 0, 1]
           allow_new_levels: true
@@ -130,32 +130,40 @@ glmm:
     models:
       advi: &glmm_valence_model_advi
         <<: *glmm_valence_defaults
+      fullrank: &glmm_valence_model_fullrank
+        <<: *glmm_valence_defaults
+        solver:
+          <<: *glmm_valence_solver
+          algorithm: fullrank
+      pathfinder: &glmm_valence_model_pathfinder
+        <<: *glmm_valence_defaults
+        solver:
+          <<: *glmm_valence_solver
+          algorithm: pathfinder
+          model:
+            <<: *glmm_valence_model
+            prior:
+              - prior: student_t(3, 0, 5)
+                class: b
+              - prior: student_t(3, 0, 5)
+                class: Intercept
+              - prior: normal(0.2, 0.1)
+                lb: 0.01
+                class: Lcor
       nuts: &glmm_valence_model_nuts
         <<: *glmm_valence_defaults
-        predictors:
-          <<: *glmm_valence_predictors
-          groups:
-            - outlet
-            - isotime
-        model:
-          <<: *glmm_valence_model
-          formula: >
-            {target} ~ 1
-              + political + country + political:country
-              + (1 + political || outlet:weekend)
-              + (1 + political || country:isotime)
         solver:
           <<: *glmm_valence_solver
           algorithm: sampling
     targets:
       event:
-        <<: *glmm_valence_model_advi
+        <<: *glmm_valence_model_pathfinder
         seed: 1742380
       sentiment:
-        <<: *glmm_valence_model_advi
+        <<: *glmm_valence_model_pathfinder
         seed: 4823917
       valence:
-        <<: *glmm_valence_model_advi
+        <<: *glmm_valence_model_pathfinder
         seed: 9534621
 
 classification:
