@@ -12,7 +12,7 @@ sources = DataFrame.from_(paths.dataset, columns=["country", "name"]).drop_dupli
 
 # %% ---------------------------------------------------------------------------------
 
-meta = DataFrame.from_(paths.raw / "outlet-meta.xlsx")[
+meta = DataFrame.from_(paths.aux / "outlet-meta.xlsx")[
     ["Unnamed: 0", "Unnamed: 1", "bias_trichotomized", "Quality_trichotomized"]
 ]
 meta.columns = ["country", "name", "ideology", "quality"]

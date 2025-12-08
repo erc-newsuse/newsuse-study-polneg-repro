@@ -17,7 +17,7 @@ def get_ground_truth(annotations: list[dict]) -> dict:
 
 
 ground_truth = (
-    DataFrame.from_(paths.raw / f"{domain}-ground-truth.json.gz")
+    DataFrame.from_(paths.aux / f"{domain}-ground-truth.json.gz")
     .assign(
         key=lambda df: df["data"].map(lambda d: d["key"]),
         country=lambda df: df["data"].map(lambda d: d["country"]),

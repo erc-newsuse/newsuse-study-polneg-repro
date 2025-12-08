@@ -3,13 +3,13 @@ stages:
   valence-ground-truth:
     cmd: python stages/ml/valence_ground_truth.py
     deps:
-    - path: data/raw/valence-ground-truth.json.gz
+    - path: data/aux/valence-ground-truth.json.gz
       hash: md5
       md5: 832d9253adb5ea60bb4fe7654054ac25
       size: 266934
     - path: stages/ml/valence_ground_truth.py
       hash: md5
-      md5: d6d3776a6950faa73801f05c5578ca81
+      md5: 9fc0a358d848c947b24bf9c03930d18c
       size: 1337
     outs:
     - path: data/proc/gpt/valence-ground-truth.parquet
@@ -607,13 +607,13 @@ stages:
   outlet-meta:
     cmd: python stages/outlet_meta.py
     deps:
-    - path: data/raw/outlet-meta.xlsx
+    - path: data/aux/outlet-meta.xlsx
       hash: md5
       md5: c829d7a931b44f8c61718d317534b29b
       size: 12191
     - path: stages/outlet_meta.py
       hash: md5
-      md5: 45e92b355464ba07dab030f8f5cc28de
+      md5: 36a71dcda8ce29098f1d7ae07a93ed6f
       size: 1217
     outs:
     - path: data/proc/outlet-meta.parquet

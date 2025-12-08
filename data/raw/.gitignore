@@ -3,5 +3,3 @@
 /posts-text.parquet
 /followers.parquet
 /posts
-/valence-ground-truth.json.gz
-/outlet-meta.xlsx

@@ -42,7 +42,7 @@ stages:
     cmd: python stages/outlet_meta.py
     deps:
     - stages/outlet_meta.py
-    - data/raw/outlet-meta.xlsx
+    - data/aux/outlet-meta.xlsx
     outs:
     - data/proc/outlet-meta.parquet:
         persist: true
@@ -61,7 +61,7 @@ stages:
     cmd: python stages/ml/valence_ground_truth.py
     deps:
     - stages/ml/valence_ground_truth.py
-    - data/raw/valence-ground-truth.json.gz
+    - data/aux/valence-ground-truth.json.gz
     outs:
     - data/proc/gpt/valence-ground-truth.parquet:
         persist: true
@@ -186,67 +186,3 @@ stages:
           persist: true
       - glmm/valence/${item}-ranef.nc:
           persist: true
-
-  # glmm:
-  #   foreach:
-  #   - valence
-  #   - reactions
-  #   - comments
-  #   - shares
-  #   do:
-  #     cmd: Rscript stages/glmm_${item}.R
-  #     deps:
-  #     - stages/glmm_${item}.R
-  #     - data/proc/dataset.parquet
-  #     outs:
-  #     - models/glmm/${item}:
-  #         persist: true
-
-  # articles-sample:
-  #   cmd: python stages/make_articles_sample.py
-  #   deps:
-  #   - stages/make_articles_sample.py
-  #   - data/raw/articles-sample.xlsx
-  #   outs:
-  #   - data/proc/articles-sample.parquet:
-  #       persist: true
-
-  # valence-experiment-requests:
-  #   cmd: python stages/ml/valence_gpt_experiment_requests.py
-  #   params:
-  #   - gpt.valence.experiment
-  #   deps:
-  #   - stages/ml/valence_gpt_experiment_requests.py
-  #   - data/proc/gpt/valence-ground-truth.parquet
-  #   outs:
-  #   - data/proc/gpt/valence-experiment-requests.jsonl.gz:
-  #       persist: true
-
-  # valence-experiment-jobs:
-  #   cmd: python stages/ml/valence_gpt_experiment_jobs.py
-  #   params:
-  #   - gpt.valence.experiment
-  #   deps:
-  #   - stages/ml/valence_gpt_experiment_jobs.py
-  #   - data/proc/gpt/valence-experiment-requests.jsonl.gz
-  #   outs:
-  #   - data/proc/gpt/valence-experiment-jobs.jsonl.gz:
-  #       persist: true
-
-  # valence-experiment-responses:
-  #   cmd: python stages/ml/valence_gpt_experiment_responses.py
-  #   deps:
-  #   - stages/ml/valence_gpt_experiment_responses.py
-  #   - data/proc/gpt/valence-experiment-jobs.jsonl.gz
-  #   outs:
-  #   - data/proc/gpt/valence-experiment-responses.jsonl.gz:
-  #       persist: true
-
-  # valence-experiment-output:
-  #   cmd: python stages/ml/valence_gpt_experiment_output.py
-  #   deps:
-  #   - stages/ml/valence_gpt_experiment_output.py
-  #   - data/proc/gpt/valence-experiment-responses.jsonl.gz
-  #   outs:
-  #   - data/proc/gpt/valence-experiment.parquet:
-  #       persist: true

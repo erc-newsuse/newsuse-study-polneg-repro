@@ -3,6 +3,7 @@ paths:
   data:             "data"
   raw:              "@data/raw"
   proc:             "@data/proc"
+  aux:              "@data/aux"
   posts:            "@proc/posts.parquet"
   text:             "@proc/posts-text.parquet"
   dataset:          "@proc/dataset.parquet"
