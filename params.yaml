@@ -91,7 +91,7 @@ glmm:
             + political + country + political:country
             + (1 + political || outlet)
             + (1 + political || country:time)
-        family: cumulative
+        family: acat
         link: logit
         prior:
           - prior: student_t(3, 0, 2)
