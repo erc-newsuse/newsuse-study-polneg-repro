@@ -142,7 +142,7 @@ glmm:
           formula: >
             {target} ~ 1
               + political + country + political:country
-              + (1 + political || outlet)
+              + (1 + political || outlet:weekend)
               + (1 + political || country:isotime)
         solver:
           <<: *glmm_valence_solver
