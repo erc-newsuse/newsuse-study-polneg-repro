@@ -20,7 +20,7 @@ dirpath$mkdir(parents = TRUE, exist_ok = TRUE)
 countries <- names(builtins$dict(config$categorical$countries))
 
 target <- "event"
-opts   <- config$glmm$valence[[target]]
+opts   <- config$glmm$valence$targets[[target]]
 
 n_threads <- min(opts$n_threads, parallel::detectCores() - 2L)
 
@@ -37,7 +37,7 @@ data <- as.character(paths$final) %>%
 
 # %% ---------------------------------------------------------------------------------
 
-formula <- opts$formula %>%
+formula <- opts$model$formula %>%
     str_glue %>%
     str_replace_all("[\n\\s]+", " ") %>%
     as.formula
@@ -46,7 +46,7 @@ formula <- opts$formula %>%
 
 prior <- tryCatch(
     {
-        map(builtins$list(opts$prior), ~do.call(set_prior, builtins$dict(.x))) %>%
+        map(builtins$list(opts$model$prior), ~do.call(set_prior, builtins$dict(.x))) %>%
             reduce(c)
     },
     error = function(e) NULL
@@ -59,7 +59,7 @@ fit <- function(formula, data, seed = NULL, ...) {
         formula = formula,
         data = data,
         seed = seed,
-        family = cumulative(link = opts$link),
+        family = c(opts$model$family, opts$model$link),
         prior = prior,
         threads = threading(n_threads),
         !!!builtins$dict(opts$solver),
@@ -75,6 +75,8 @@ fit <- function(formula, data, seed = NULL, ...) {
 system.time(
     glmm <- fit(formula, data, seed = opts$seed)
 )
+
+# %% ---------------------------------------------------------------------------------
 
 saveRDS(
     glmm,

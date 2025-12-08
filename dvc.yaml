@@ -174,7 +174,7 @@ stages:
     do:
       cmd: Rscript stages/glmm/valence_${item}.R && python stages/glmm/valence_${item}.py
       params:
-      - glmm.valence.${item}
+      - glmm.valence.targets.${item}
       deps:
       - stages/glmm/valence_${item}.R
       - stages/glmm/valence_${item}.py

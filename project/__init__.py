@@ -5,7 +5,6 @@ import dvc.config
 from dotenv import load_dotenv
 from newsuse.config import Config
 
-from . import inference
 from .__about__ import __version__
 
 __all__ = ("__version__", "config", "paths")

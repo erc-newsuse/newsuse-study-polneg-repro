@@ -25,7 +25,7 @@ q0, q1 = alpha / 2, 1 - alpha / 2
 
 target = "sentiment"
 support = [*config.categorical[target]]
-opts = config.glmm.valence[target]
+opts = config.glmm.valence.targets[target]
 
 figpath = paths.figures / "glmm" / "valence"
 figpath.mkdir(parents=True, exist_ok=True)

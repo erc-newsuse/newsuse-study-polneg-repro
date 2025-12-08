@@ -20,7 +20,7 @@ target = "sentiment"
 output_dir = paths.glmm / "valence"
 output_dir.mkdir(parents=True, exist_ok=True)
 
-opts = config.glmm.valence[target]
+opts = config.glmm.valence.targets[target]
 
 rng = np.random.default_rng(opts.seed)
 
@@ -34,7 +34,7 @@ data = DataFrame.from_(
 )
 quantized = data[[*opts.predictors.fixed]].drop_duplicates(ignore_index=True)
 
-if subsample := opts.get("subsample"):
+if subsample := opts.inference.get("subsample"):
     print(f"Subsampling data to {subsample} rows for faster processing...")
     data = data.sample(n=subsample, random_state=rng)
 
@@ -57,26 +57,28 @@ model = brms_posterior(model)
 # %% ---------------------------------------------------------------------------------
 
 print("Preparing posterior expectations...")
-model = brms_posterior_epred(model, quantized, **opts.epd)
+model = brms_posterior_epred(model, quantized, **opts.inference.epd)
 
 # %% ---------------------------------------------------------------------------------
 
 print("Preparing posterior predictive samples...")
 model = brms_posterior_predictive(
-    model, transform=lambda x: (x - 2).astype(int), **opts.ppd
+    model, transform=lambda x: (x - 2).astype(int), **opts.inference.ppd
 )
 
 # %% ---------------------------------------------------------------------------------
 
 print("Preparing log-likelihood...")
-model = brms_log_likelihood(model, **opts.loglik)
+model = brms_log_likelihood(model, **opts.inference.loglik)
 
 # %% ---------------------------------------------------------------------------------
 
 print("Downsampling and separating random effects...")
 ranef = [k for k in model.idata.posterior if k.startswith("r_")]
 ranef_idata = az.InferenceData(
-    posterior=(model.idata.posterior[ranef].isel(draw=slice(-opts.ranef.ndraws, None)))
+    posterior=(
+        model.idata.posterior[ranef].isel(draw=slice(-opts.inference.ranef.ndraws, None))
+    )
 )
 model.idata.posterior = model.idata.posterior.drop_vars(ranef)
 

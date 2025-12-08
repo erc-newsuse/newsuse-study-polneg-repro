@@ -250,6 +250,8 @@ def brms_posterior_epred(
         opts = kwargs.copy()
         if isinstance(formula, str):
             formula = ro.Formula(formula)
+        elif formula is None:
+            formula = ro.NULL  # type: ignore
         opts["re_formula"] = formula
         epred = np.asarray(posterior_epred(brms.r, **opts))
 

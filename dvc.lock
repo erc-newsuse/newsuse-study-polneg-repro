@@ -630,16 +630,15 @@ stages:
       size: 65486488
     - path: stages/glmm/valence_event.R
       hash: md5
-      md5: dcb04c51878ddad82b81bca37f5433bb
-      size: 2365
+      md5: c8775e18cff51619d1d305521350b5a0
+      size: 2482
     - path: stages/glmm/valence_event.py
       hash: md5
-      md5: 2bbb3e16f1532d024c665b32d7ee4092
-      size: 3099
+      md5: fcff71a1b95b640811503e0da9d63813
+      size: 3171
     params:
       params.yaml:
-        glmm.valence.event:
-          subsample: 500000
+        glmm.valence.targets.event:
           index_col: key
           predictors:
             fixed:
@@ -648,15 +647,16 @@ stages:
             groups:
             - outlet
             - time
-          formula: "{target} ~ 1\n  + political + country + political:country\n  +
-            (1 + political || outlet)\n  + (1 + political || country:time)\n"
-          family: cumulative
-          link: logit
-          prior:
-          - prior: student_t(3, 0, 2)
-            class: b
-          - prior: student_t(3, 0, 2)
-            class: Intercept
+          model:
+            formula: "{target} ~ 1\n  + political + country + political:country\n\
+              \  + (1 + political || outlet)\n  + (1 + political || country:time)\n"
+            family: cumulative
+            link: logit
+            prior:
+            - prior: student_t(3, 0, 2)
+              class: b
+            - prior: student_t(3, 0, 2)
+              class: Intercept
           n_threads: 4
           solver:
             algorithm: meanfield
@@ -664,26 +664,28 @@ stages:
             cores: 4
             iter: 2000
             backend: cmdstanr
-          ppd:
-            ndraws: 250
-            cores: 4
-          epd:
-            re_formulas:
-              grand_mean: ~0
-              outlets: ~(1 + political || outlet)
-              full: ~(1 + political || outlet) + (1 + political || country:time)
-            support:
-            - -1
-            - 0
-            - 1
-            allow_new_levels: true
-            sample_new_levels: gaussian
-          loglik:
-            ndraws: 250
-            cores: 4
-          ranef:
-            ndraws: 50
-            cores: 4
+          inference:
+            subsample: 500000
+            ppd:
+              ndraws: 250
+              cores: 4
+            epd:
+              re_formulas:
+                grand_mean: ~0
+                outlets: ~(1 + political || outlet)
+                full:
+              support:
+              - -1
+              - 0
+              - 1
+              allow_new_levels: true
+              sample_new_levels: gaussian
+            loglik:
+              ndraws: 250
+              cores: 4
+            ranef:
+              ndraws: 50
+              cores: 4
           seed: 1742380
     outs:
     - path: glmm/valence/event-ranef.nc
@@ -708,16 +710,15 @@ stages:
       size: 65486488
     - path: stages/glmm/valence_sentiment.R
       hash: md5
-      md5: 4fa3cd4bbf1b5d1d924e0c3d0cfc3654
-      size: 2369
+      md5: e4243c05ae8d02efd93502b15a603070
+      size: 2486
     - path: stages/glmm/valence_sentiment.py
       hash: md5
-      md5: 0727d78dd21b583b52960dffa875f644
-      size: 3103
+      md5: 6671bfdef7dec7478ffa0ee0e9a549f1
+      size: 3175
     params:
       params.yaml:
-        glmm.valence.sentiment:
-          subsample: 500000
+        glmm.valence.targets.sentiment:
           index_col: key
           predictors:
             fixed:
@@ -726,15 +727,16 @@ stages:
             groups:
             - outlet
             - time
-          formula: "{target} ~ 1\n  + political + country + political:country\n  +
-            (1 + political || outlet)\n  + (1 + political || country:time)\n"
-          family: cumulative
-          link: logit
-          prior:
-          - prior: student_t(3, 0, 2)
-            class: b
-          - prior: student_t(3, 0, 2)
-            class: Intercept
+          model:
+            formula: "{target} ~ 1\n  + political + country + political:country\n\
+              \  + (1 + political || outlet)\n  + (1 + political || country:time)\n"
+            family: cumulative
+            link: logit
+            prior:
+            - prior: student_t(3, 0, 2)
+              class: b
+            - prior: student_t(3, 0, 2)
+              class: Intercept
           n_threads: 4
           solver:
             algorithm: meanfield
@@ -742,26 +744,28 @@ stages:
             cores: 4
             iter: 2000
             backend: cmdstanr
-          ppd:
-            ndraws: 250
-            cores: 4
-          epd:
-            re_formulas:
-              grand_mean: ~0
-              outlets: ~(1 + political || outlet)
-              full: ~(1 + political || outlet) + (1 + political || country:time)
-            support:
-            - -1
-            - 0
-            - 1
-            allow_new_levels: true
-            sample_new_levels: gaussian
-          loglik:
-            ndraws: 250
-            cores: 4
-          ranef:
-            ndraws: 50
-            cores: 4
+          inference:
+            subsample: 500000
+            ppd:
+              ndraws: 250
+              cores: 4
+            epd:
+              re_formulas:
+                grand_mean: ~0
+                outlets: ~(1 + political || outlet)
+                full:
+              support:
+              - -1
+              - 0
+              - 1
+              allow_new_levels: true
+              sample_new_levels: gaussian
+            loglik:
+              ndraws: 250
+              cores: 4
+            ranef:
+              ndraws: 50
+              cores: 4
           seed: 4823917
     outs:
     - path: glmm/valence/sentiment-ranef.nc

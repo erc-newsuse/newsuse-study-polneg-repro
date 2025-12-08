@@ -18,7 +18,7 @@ az.rcParams.update(config.arviz)
 mpl.rcParams.update(config.plotting.params)
 
 target = "event"
-opts = config.glmm.valence[target]
+opts = config.glmm.valence.targets[target]
 
 figpath = paths.figures / "glmm" / "valence" / "validation"
 figpath.mkdir(parents=True, exist_ok=True)
