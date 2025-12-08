@@ -35,7 +35,6 @@ dvc:
 	rm -f data/raw/*.dvc
 	rm -f ml/datasets/*.dvc
 	@if [ "`ls data/raw`" ]; then dvc add data/raw/*; fi
-	@if [ "`ls data/proc`" ]; then dvc add ml/datasets/*; fi
 	dvc commit
 
 init: structure packages dvc
