@@ -91,6 +91,7 @@ glmm:
           {target} ~ 1
             + political * country
             + (1 + political | outlet:weekend)
+            + (1 + political | outlet:isotime)
         family: acat
         link: logit
         prior:
@@ -136,13 +137,6 @@ glmm:
           algorithm: fullrank
       pathfinder: &glmm_valence_model_pathfinder
         <<: *glmm_valence_defaults
-        model:
-          <<: *glmm_valence_model
-          prior:
-            - prior: student_t(3, 0, 5)
-              class: b
-            - prior: student_t(3, 0, 5)
-              class: Intercept
         solver:
           <<: *glmm_valence_solver
           algorithm: pathfinder
