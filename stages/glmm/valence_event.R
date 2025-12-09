@@ -65,7 +65,6 @@ prior <- tryCatch(
 fit <- function(formula, data, seed = NULL, ...) {
     solver <- builtins$dict(opts$solver)
     solver$control <- builtins$dict(solver$control)
-    browser()
     opts <- rlang::ll(
         formula = formula,
         data = data,
