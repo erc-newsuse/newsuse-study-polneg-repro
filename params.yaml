@@ -92,7 +92,7 @@ glmm:
             + political * country
             + (1 + political | outlet:weekend)
             + (1 + political | country:isotime)
-        family: cumulative
+        family: acat
         link: logit
         prior:
           - prior: student_t(3, 0, 5)
@@ -137,33 +137,45 @@ glmm:
           algorithm: fullrank
       pathfinder: &glmm_valence_model_pathfinder
         <<: *glmm_valence_defaults
+        model:
+          <<: *glmm_valence_model
+          prior:
+            - prior: student_t(3, 0, 5)
+              class: b
+            - prior: student_t(3, 0, 5)
+              class: Intercept
         solver:
           <<: *glmm_valence_solver
           algorithm: pathfinder
-          model:
-            <<: *glmm_valence_model
-            prior:
-              - prior: student_t(3, 0, 5)
-                class: b
-              - prior: student_t(3, 0, 5)
-                class: Intercept
-              - prior: normal(0.2, 0.1)
-                lb: 0.01
-                class: Lcor
       nuts: &glmm_valence_model_nuts
         <<: *glmm_valence_defaults
+        subsample: 500_000
+        predictors:
+          <<: *glmm_valence_predictors
+          groups:
+            - outlet
+            - weekend
+            - year
+            - month
+        model:
+          <<: *glmm_valence_model
+        formula: >
+          {target} ~ 1
+            + political * country
+            + (1 + political | outlet:weekend)
+            + (1 + political | outlet:year:month)
         solver:
           <<: *glmm_valence_solver
           algorithm: sampling
     targets:
       event:
-        <<: *glmm_valence_model_pathfinder
+        <<: *glmm_valence_model_nuts
         seed: 1742380
       sentiment:
-        <<: *glmm_valence_model_pathfinder
+        <<: *glmm_valence_model_nuts
         seed: 4823917
       valence:
-        <<: *glmm_valence_model_pathfinder
+        <<: *glmm_valence_model_nuts
         seed: 9534621
 
 classification:

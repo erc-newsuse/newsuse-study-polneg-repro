@@ -35,6 +35,14 @@ data <- as.character(paths$final) %>%
         valence = factor(valence, ordered = TRUE),
     )
 
+# %% Subsample data ------------------------------------------------------------------
+
+subsample <- builtins$dict(opts)$subsample
+if (!is.null(subsample)) {
+    set.seed(opts$seed + 17L)
+    data <- sample_n(data, subsample)
+}
+
 # %% ---------------------------------------------------------------------------------
 
 formula <- opts$model$formula %>%

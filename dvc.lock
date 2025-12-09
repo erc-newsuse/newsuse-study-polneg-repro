@@ -650,8 +650,8 @@ stages:
             - isotime
           model:
             formula: "{target} ~ 1\n  + political * country\n  + (1 + political |
-              outlet:weekend)\n  + (1 | country:isotime)\n"
-            family: cumulative
+              outlet:weekend)\n  + (1 + political | country:isotime)\n"
+            family: acat
             link: logit
             prior:
             - prior: student_t(3, 0, 5)
@@ -690,16 +690,16 @@ stages:
     outs:
     - path: glmm/valence/event-ranef.nc
       hash: md5
-      md5: b1099c1db9168add8ab14566dfd3dd73
-      size: 8538494
+      md5: d070b70f4e3f3178f758f4d967147df6
+      size: 21899577
     - path: glmm/valence/event.nc
       hash: md5
-      md5: 92ca9a636ba065db73bbcf1a8e260042
-      size: 654172017
+      md5: fc47a5ee5d51bb6a9cf50c09fbae4d67
+      size: 653576321
     - path: glmm/valence/event.rds
       hash: md5
-      md5: 3f7bcf65df80b0641a215910e039f166
-      size: 21010937
+      md5: 778e664640dce79ac1ef1ad54ed0c600
+      size: 30273386
   glmm-valence@sentiment:
     cmd: Rscript stages/glmm/valence_sentiment.R && python
       stages/glmm/valence_sentiment.py
@@ -730,8 +730,8 @@ stages:
             - isotime
           model:
             formula: "{target} ~ 1\n  + political * country\n  + (1 + political |
-              outlet:weekend)\n  + (1 | country:isotime)\n"
-            family: cumulative
+              outlet:weekend)\n  + (1 + political | country:isotime)\n"
+            family: acat
             link: logit
             prior:
             - prior: student_t(3, 0, 5)
@@ -770,13 +770,13 @@ stages:
     outs:
     - path: glmm/valence/sentiment-ranef.nc
       hash: md5
-      md5: 22e176465066c78df41fbf31d88d6ec2
-      size: 8558429
+      md5: ce245d39514328be0274b5d598951f32
+      size: 21899577
     - path: glmm/valence/sentiment.nc
       hash: md5
-      md5: fa2d75a85c2db4270e9b2ba32d24d556
-      size: 654383932
+      md5: cec073e8740bbb3ff43269b6e21bd06b
+      size: 653768422
     - path: glmm/valence/sentiment.rds
       hash: md5
-      md5: 5c7a1b896eb10993c426228906debd99
-      size: 21327458
+      md5: 6c254643206e52216f0e6ebd9368271f
+      size: 30833642
