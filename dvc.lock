@@ -549,8 +549,8 @@ stages:
       size: 13911
     - path: stages/ml/valence_classify.py
       hash: md5
-      md5: 4e6aa26b39e7360b89cd4582769feee9
-      size: 2084
+      md5: 5d0730c728cfd3399334db4c3725750c
+      size: 2729
     params:
       params.yaml:
         ml.inference:

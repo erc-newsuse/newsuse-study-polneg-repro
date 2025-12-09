@@ -2,6 +2,7 @@
 /cls-political.parquet
 /cls-valence.parquet
 /cls.parquet
+/cls_full.parquet
 /sentiment.parquet
 /daily-counts.parquet
 /posts.parquet
