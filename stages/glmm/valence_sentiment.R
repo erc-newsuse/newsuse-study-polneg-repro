@@ -69,7 +69,7 @@ fit <- function(formula, data, seed = NULL, ...) {
         seed = seed,
         family = c(opts$model$family, opts$model$link),
         prior = prior,
-        threads = threading(n_threads),
+        # threads = threading(n_threads),
         !!!builtins$dict(opts$solver),
     )
     do.call(brm, opts)

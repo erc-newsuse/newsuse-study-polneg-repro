@@ -91,13 +91,12 @@ glmm:
           {target} ~ 1
             + political * country
             + (1 + political | outlet:weekend)
-            + (1 + political | country:isotime)
         family: acat
         link: logit
         prior:
-          - prior: student_t(3, 0, 5)
+          - prior: student_t(3, 0, 2)
             class: b
-          - prior: student_t(3, 0, 5)
+          - prior: student_t(3, 0, 2)
             class: Intercept
           # - prior: normal(0, 1.253314)
           #   lb: 0
@@ -163,19 +162,19 @@ glmm:
           {target} ~ 1
             + political * country
             + (1 + political | outlet:weekend)
-            + (1 + political | outlet:year:month)
+            + (1 + political | outlet:year)
         solver:
           <<: *glmm_valence_solver
           algorithm: sampling
     targets:
       event:
-        <<: *glmm_valence_model_nuts
+        <<: *glmm_valence_model_advi
         seed: 1742380
       sentiment:
-        <<: *glmm_valence_model_nuts
+        <<: *glmm_valence_model_advi
         seed: 4823917
       valence:
-        <<: *glmm_valence_model_nuts
+        <<: *glmm_valence_model_advi
         seed: 9534621
 
 classification:
