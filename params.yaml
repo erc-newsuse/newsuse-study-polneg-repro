@@ -92,16 +92,16 @@ glmm:
             + political * country
             + (1 + political | outlet:weekend)
             + (1 + political | outlet:isotime)
-        family: acat
+        family: cumulative
         link: logit
         prior:
           - prior: student_t(3, 0, 2)
             class: b
           - prior: student_t(3, 0, 2)
             class: Intercept
-          # - prior: normal(0, 1.253314)
-          #   lb: 0
-          #   class: sd
+          - prior: normal(0, 1.253314)
+            lb: 0
+            class: sd
       n_threads: &glmm_valence_n_threads
         4
       solver: &glmm_valence_solver
@@ -110,6 +110,7 @@ glmm:
         cores: *glmm_valence_n_threads
         iter: 2000
         backend: cmdstanr
+        control: {}
       inference:
         subsample: 250_000
         ppd:  &glmm_valence_ppd
@@ -130,36 +131,29 @@ glmm:
     models:
       advi: &glmm_valence_model_advi
         <<: *glmm_valence_defaults
-      fullrank: &glmm_valence_model_fullrank
-        <<: *glmm_valence_defaults
-        solver:
-          <<: *glmm_valence_solver
-          algorithm: fullrank
-      pathfinder: &glmm_valence_model_pathfinder
-        <<: *glmm_valence_defaults
-        solver:
-          <<: *glmm_valence_solver
-          algorithm: pathfinder
       nuts: &glmm_valence_model_nuts
         <<: *glmm_valence_defaults
-        subsample: 500_000
+        subsample: 100_000
         predictors:
           <<: *glmm_valence_predictors
           groups:
             - outlet
             - weekend
-            - year
-            - month
         model:
           <<: *glmm_valence_model
-        formula: >
-          {target} ~ 1
-            + political * country
-            + (1 + political | outlet:weekend)
-            + (1 + political | outlet:year)
+          formula: >
+            {target} ~ 1
+              + political * country
+              + (1 + political | outlet:weekend)
+          family: cumulative
+          link: logit
         solver:
           <<: *glmm_valence_solver
           algorithm: sampling
+          control:
+            adapt_delta: 0.95
+            max_treedepth: 15
+            metric: dense_e
     targets:
       event:
         <<: *glmm_valence_model_advi

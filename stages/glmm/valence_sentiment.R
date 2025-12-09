@@ -63,6 +63,9 @@ prior <- tryCatch(
 # %% ---------------------------------------------------------------------------------
 
 fit <- function(formula, data, seed = NULL, ...) {
+    solver <- builtins$dict(opts$solver)
+    solver$control <- builtins$dict(solver$control)
+    browser()
     opts <- rlang::ll(
         formula = formula,
         data = data,
@@ -70,7 +73,7 @@ fit <- function(formula, data, seed = NULL, ...) {
         family = c(opts$model$family, opts$model$link),
         prior = prior,
         # threads = threading(n_threads),
-        !!!builtins$dict(opts$solver),
+        !!!solver,
     )
     do.call(brm, opts)
 }
