@@ -89,19 +89,19 @@ glmm:
       model:  &glmm_valence_model
         formula: >
           {target} ~ 1
-            + political * country
-            + (1 + political | outlet:weekend)
-            + (1 + political | outlet:isotime)
-        family: cumulative
+            + political * country + weekend
+            + (1 | outlet:political)
+            + (1 | country:isotime:political)
+        family: categorical
         link: logit
-        prior:
-          - prior: student_t(3, 0, 2)
-            class: b
-          - prior: student_t(3, 0, 2)
-            class: Intercept
-          - prior: normal(0, 1.253314)
-            lb: 0
-            class: sd
+        # prior:
+        #   - prior: student_t(3, 0, 2)
+        #     class: b
+        #   - prior: student_t(3, 0, 2)
+        #     class: Intercept
+        #   - prior: normal(0, 1.253314)
+        #     lb: 0
+        #     class: sd
       n_threads: &glmm_valence_n_threads
         4
       solver: &glmm_valence_solver
