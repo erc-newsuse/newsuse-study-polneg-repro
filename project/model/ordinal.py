@@ -11,6 +11,7 @@ __all__ = (
     "ordinal_loss",
     "extend_ordinal_labels",
     "ordinal_probs",
+    "ordinal_inverse",
 )
 
 
@@ -82,7 +83,8 @@ def ordinal_probs(logits: torch.Tensor) -> torch.Tensor:
     )
     surv[..., 0] = 1.0
     surv[..., 1:-1] = probs
-    return surv[..., :-1] - surv[..., 1:]
+    cprobs = surv[..., :-1] - surv[..., 1:]
+    return cprobs
 
 
 @ordinal_probs.register
@@ -95,3 +97,14 @@ def _(logits: np.ndarray) -> np.ndarray:
     cmf[..., 0] = 1.0
     cmf[..., 1:-1] = probs
     return cmf[..., :-1] - cmf[..., 1:]
+
+
+@singledispatch
+def ordinal_inverse(probs: torch.Tensor) -> torch.Tensor:
+    """Convert ordinal class probabilities to logits."""
+    return -torch.log(1 / (1 - probs.cumsum(-1)[..., :-1]) - 1)
+
+
+@ordinal_inverse.register
+def _(probs: np.ndarray) -> np.ndarray:
+    return -np.log(1 / (1 - probs.cumsum(-1)[..., :-1]) - 1)

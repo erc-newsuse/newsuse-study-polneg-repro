@@ -1,13 +1,26 @@
 # %% ---------------------------------------------------------------------------------
 
+
 import numpy as np
 from newsuse.data import DataFrame
+from transformers import AutoModel
 
 from project import paths
+from project.model.ordinal import ordinal_inverse, ordinal_probs
+
+domain = "valence"
 
 # %% ---------------------------------------------------------------------------------
 
 meta = DataFrame.from_(paths.outlet_meta)
+
+hyper = DataFrame.from_(paths.proc / f"{domain}-hyper.parquet")
+best_model = hyper.loc[hyper.value.idxmax()].params_base
+model = AutoModel.from_pretrained(paths.ml / "models" / domain / best_model)
+
+biases = {
+    target: head.ordinal.bias.detach().cpu().numpy() for target, head in model.heads.items()
+}
 
 # %% ---------------------------------------------------------------------------------
 
@@ -41,11 +54,9 @@ data = (
         ]
     ]
     .merge(meta, how="left", on=["country", "name"])
-    .merge(
-        DataFrame.from_(paths.labels, columns=["key", "political", "event", "sentiment"])
-    )
+    .merge(DataFrame.from_(paths.labels))
     .assign(valence=lambda df: df[["event", "sentiment"]].sum(axis=1, skipna=False))
-    .dropna(ignore_index=True)
+    # .dropna(ignore_index=True)
     .assign(
         political=lambda df: np.where(df["political"] == "OTHER", 0, 1),
         outlet=lambda df: df["country"] + ":" + df["name"],
@@ -57,6 +68,23 @@ data = (
     )
     .convert_dtypes()
 )
+
+# %% Recover latent scores ----------------------------------------------------------
+
+for target, bias in biases.items():
+    probs = (
+        data[[f"{target}_score_{v}" for v in ["negative", "neutral", "positive"]]]
+        .astype(float)
+        .to_numpy()
+    )
+    logits = ordinal_inverse(probs)
+    latent = (logits - bias[None, ...]).mean(axis=-1)
+    reconstructed_probs = ordinal_probs(latent[:, None] + bias)
+    mask = ~np.isnan(probs).any(axis=1)
+    assert np.allclose(
+        probs[mask], reconstructed_probs[mask], rtol=1e-3, atol=1e-3
+    ), f"reconstructed '{target}' probabilities do not match the original"
+    data[f"{target}_latent"] = latent
 
 # %% ---------------------------------------------------------------------------------
 

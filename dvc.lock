@@ -549,8 +549,8 @@ stages:
       size: 13911
     - path: stages/ml/valence_classify.py
       hash: md5
-      md5: 5d0730c728cfd3399334db4c3725750c
-      size: 2729
+      md5: ee8e3aecbdd314b7410cbbec03b319e0
+      size: 2661
     params:
       params.yaml:
         ml.inference:
@@ -558,8 +558,8 @@ stages:
     outs:
     - path: data/proc/cls-valence.parquet
       hash: md5
-      md5: 5ec2975444daa5597593830e0234ddae
-      size: 92785096
+      md5: 8fba7c58f811cca25ee24755450518ed
+      size: 4315982
   merge-cls:
     cmd: python stages/merge_cls.py
     deps:
@@ -569,8 +569,8 @@ stages:
       size: 64940422
     - path: data/proc/cls-valence.parquet
       hash: md5
-      md5: 5ec2975444daa5597593830e0234ddae
-      size: 92785096
+      md5: 8fba7c58f811cca25ee24755450518ed
+      size: 4315982
     - path: stages/merge_cls.py
       hash: md5
       md5: 078cf13d9d2bcdd2a4624d79b87cd6c5
@@ -578,15 +578,15 @@ stages:
     outs:
     - path: data/proc/cls.parquet
       hash: md5
-      md5: c261b1c8a496a09f08c29b15faa63a2e
-      size: 117347774
+      md5: d1e27382df4a8b5f16c161bf2d9dbcf4
+      size: 69550686
   final:
     cmd: python stages/final.py
     deps:
     - path: data/proc/cls.parquet
       hash: md5
-      md5: c261b1c8a496a09f08c29b15faa63a2e
-      size: 117347774
+      md5: d1e27382df4a8b5f16c161bf2d9dbcf4
+      size: 69550686
     - path: data/proc/dataset.parquet
       hash: md5
       md5: 57f50334b0d4b35a80efbed31627e99a
@@ -597,13 +597,13 @@ stages:
       size: 3820
     - path: stages/final.py
       hash: md5
-      md5: a607b92d77da449fddcb2f4801823155
-      size: 2040
+      md5: 954a2f24f669fb09df5fdaccad2e2f5b
+      size: 3073
     outs:
     - path: data/proc/final.parquet
       hash: md5
-      md5: 49d6934056d2d23768d513a03244075d
-      size: 65615765
+      md5: b09b9017add30e748da7b6ca376f8e69
+      size: 100073225
   outlet-meta:
     cmd: python stages/outlet_meta.py
     deps:

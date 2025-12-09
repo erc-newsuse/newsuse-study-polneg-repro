@@ -82,9 +82,9 @@ glmm:
         fixed:
           - political
           - country
+          - weekend
         groups:
           - outlet
-          - weekend
           - isotime
       model:  &glmm_valence_model
         formula: >
