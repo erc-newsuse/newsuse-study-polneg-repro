@@ -171,6 +171,7 @@ stages:
     foreach:
     - event
     - sentiment
+    - valence
     do:
       cmd: Rscript stages/glmm/valence_${item}.R && python stages/glmm/valence_${item}.py
       params:
