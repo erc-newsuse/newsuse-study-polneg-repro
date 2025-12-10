@@ -5,7 +5,7 @@ from newsuse.ml import Dataset, DatasetDict
 
 from project import config, paths
 
-LABELS = list(config.annotations.political.labels)
+LABELS = [n.upper() for n in config.categorical.political]
 
 paths.political.mkdir(parents=True, exist_ok=True)
 

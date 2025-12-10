@@ -41,14 +41,10 @@ categorical:
   sentiment: [-1, 0, 1]
   valence: [-2, -1, 0, 1, 2]
 
-annotations:
-  political:
-    categories:
-    - OTHER
-    - POLITICAL
-  valence:
-    categories: [-1, 0, 1]
-    ordered: true
+engagement:
+  - reactions
+  - comments
+  - shares
 
 posts:
   start_date: "2020-01-01"
@@ -112,12 +108,12 @@ glmm:
         iter: 2000
         backend: cmdstanr
         control: {}
-      inference:
+      inference:  &glmm_valence_inference
         subsample: 250_000
         ppd:  &glmm_valence_ppd
           ndraws: 250
           cores: *glmm_valence_n_threads
-        epd:
+        epd:  &glmm_valence_epd
           re_formulas:
             grand_mean: ~0
             full: null
@@ -132,29 +128,6 @@ glmm:
     models:
       advi: &glmm_valence_model_advi
         <<: *glmm_valence_defaults
-      nuts: &glmm_valence_model_nuts
-        <<: *glmm_valence_defaults
-        subsample: 100_000
-        predictors:
-          <<: *glmm_valence_predictors
-          groups:
-            - outlet
-            - weekend
-        model:
-          <<: *glmm_valence_model
-          formula: >
-            {target} ~ 1
-              + political * country
-              + (1 + political | outlet:weekend)
-          family: cumulative
-          link: logit
-        solver:
-          <<: *glmm_valence_solver
-          algorithm: sampling
-          control:
-            adapt_delta: 0.95
-            max_treedepth: 15
-            metric: dense_e
     targets:
       event:
         <<: *glmm_valence_model_advi
@@ -165,6 +138,15 @@ glmm:
       valence:
         <<: *glmm_valence_model_advi
         seed: 9534621
+        model:
+          <<: *glmm_valence_model
+          family: cumulative
+          link: logit
+        inference:
+          <<: *glmm_valence_inference
+          epd:
+            <<: *glmm_valence_epd
+            support: [-2, -1, 0, 1, 2]
 
 classification:
   political:

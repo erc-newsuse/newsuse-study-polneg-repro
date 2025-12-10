@@ -1,5 +1,6 @@
 # %% ---------------------------------------------------------------------------------
 
+from itertools import batched
 from typing import Any
 
 import matplotlib as mpl
@@ -19,10 +20,11 @@ targets = ["event", "sentiment", "valence"]
 quality = ["low", "medium", "high"]
 ideology = ["left", "center", "right"]
 
-figpath = paths.figures / "descriptives"
+domain = "valence"
+
+figpath = paths.figures / "descriptives" / domain
 figpath.mkdir(parents=True, exist_ok=True)
 
-domain = "valence"
 
 # %% ---------------------------------------------------------------------------------
 
@@ -31,6 +33,7 @@ data = DataFrame.from_(paths.final).assign(
         df["country"], categories=list(config.categorical.countries), ordered=True
     ),
     quality=lambda df: pd.Categorical(df["quality"], categories=quality, ordered=True),
+    ideology=lambda df: pd.Categorical(df["ideology"], categories=ideology),
 )
 
 # %% ---------------------------------------------------------------------------------
@@ -105,7 +108,7 @@ for ax, (country, df) in zip(
     ax.set_title(config.categorical.countries[country])
 
 fig.tight_layout()
-fig.savefig(figpath / f"{target}-frequencies.pdf", dpi=300)
+fig.savefig(figpath / f"{target}-frequencies.pdf")
 
 # %% --------------------------------------------------------------------------------
 
@@ -128,7 +131,7 @@ for ax, (country, df) in zip(
     ax.set_title(config.categorical.countries[country])
 
 fig.tight_layout()
-fig.savefig(figpath / f"{target}-frequencies-political.pdf", dpi=300)
+fig.savefig(figpath / f"{target}-frequencies-political.pdf")
 
 # %% --------------------------------------------------------------------------------
 
@@ -151,7 +154,7 @@ for ax, (country, df) in zip(
     ax.set_title(config.categorical.countries[country])
 
 fig.tight_layout()
-fig.savefig(figpath / f"{target}-frequencies.pdf", dpi=300)
+fig.savefig(figpath / f"{target}-frequencies.pdf")
 
 # %% --------------------------------------------------------------------------------
 
@@ -174,7 +177,7 @@ for ax, (country, df) in zip(
     ax.set_title(config.categorical.countries[country])
 
 fig.tight_layout()
-fig.savefig(figpath / f"{target}-frequencies-political.pdf", dpi=300)
+fig.savefig(figpath / f"{target}-frequencies-political.pdf")
 
 # %% ---------------------------------------------------------------------------------
 
@@ -197,7 +200,7 @@ for ax, (country, df) in zip(
     ax.set_title(config.categorical.countries[country])
 
 fig.tight_layout()
-fig.savefig(figpath / f"{target}-frequencies.pdf", dpi=300)
+fig.savefig(figpath / f"{target}-frequencies.pdf")
 
 # %% --------------------------------------------------------------------------------
 
@@ -220,7 +223,7 @@ for ax, (country, df) in zip(
     ax.set_title(config.categorical.countries[country])
 
 fig.tight_layout()
-fig.savefig(figpath / f"{target}-frequencies-political.pdf", dpi=300)
+fig.savefig(figpath / f"{target}-frequencies-political.pdf")
 
 
 # %% Event latent valence ------------------------------------------------------------
@@ -279,7 +282,7 @@ ax.set_ylabel(None)
 
 fig.tight_layout()
 fig.supxlabel(target.capitalize() + " latent valence", y=-0.05)
-fig.savefig(figpath / f"{target}-latent-valence.pdf", dpi=300)
+fig.savefig(figpath / f"{target}-latent-valence.pdf")
 
 # %% Sentiment latent valence --------------------------------------------------------
 
@@ -296,6 +299,9 @@ sns.kdeplot(
     palette=config.plotting.color.political,
 )
 ax.set_xlabel(None)
+
+for threshold in biases[target]:
+    ax.axvline(threshold, color="black", linestyle="--", linewidth=1)
 
 ax = axes[1]
 sns.boxplot(
@@ -316,7 +322,7 @@ ax.set_ylabel(None)
 
 fig.tight_layout()
 fig.supxlabel(target.capitalize() + " latent valence", y=-0.05)
-fig.savefig(figpath / f"{target}-latent-valence.pdf", dpi=300)
+fig.savefig(figpath / f"{target}-latent-valence.pdf")
 
 # %% Expected total valence ----------------------------------------------------------------
 
@@ -355,18 +361,18 @@ ax.set_ylabel(None)
 
 fig.tight_layout()
 fig.supxlabel(f"Expected {target}", y=-0.05)
-fig.savefig(figpath / f"{target}-expected.pdf", dpi=300)
+fig.savefig(figpath / f"{target}-expected.pdf")
 
 
 # %% Event and sentiment valence by quality ------------------------------------------
 
 fig, axes = plt.subplot_mosaic(
     """
-    AAABB
-    AAADD
-    AAAFF
+    AAABBCC
+    AAADDEE
+    AAAFFGG
     """,
-    figsize=(9, 5),
+    figsize=(12, 5),
 )
 
 ax = axes["A"]
@@ -389,27 +395,63 @@ for target, thresholds in biases.items():
 ax.set_xlabel("Event latent valence")
 ax.set_ylabel("Sentiment latent valence")
 
-for key, target in zip(list(axes)[1:], [*biases, "valence"], strict=True):
-    ax = axes[key]
-    y = target + ("_expected" if target == "valence" else "_latent")
-    sns.boxplot(
-        data,
-        x="quality",
-        y=y,
-        hue="political",
-        ax=ax,
-        palette=config.plotting.color.political,
-        legend=False,
-    )
-    ax.set_title(target.capitalize() if target != "valence" else "Expected valence")
-    ax.set_ylabel(None)
-    if key != "F":
-        ax.set_xlabel(None)
-        ax.tick_params(axis="x", bottom=False, labelbottom=False)
-    else:
-        ax.set_xlabel("Outlet quality")
+for keys, target in zip(batched(list(axes)[1:], 2), [*biases, "valence"], strict=True):
+    for key, split in zip(keys, ["quality", "ideology"], strict=True):
+        ax = axes[key]
+        y = target + ("_expected" if target == "valence" else "_latent")
+        sns.boxplot(
+            data,
+            x=split,
+            y=y,
+            hue="political",
+            ax=ax,
+            palette=config.plotting.color.political,
+            legend=False,
+        )
+        ax.set_title(target.capitalize() if target != "valence" else "Expected valence")
+        ax.set_ylabel(None)
+        if key == "F":
+            ax.set_xlabel("Outlet quality")
+        elif key == "G":
+            ax.set_xlabel("Outlet ideology")
+        else:
+            ax.set_xlabel(None)
+            ax.tick_params(axis="x", bottom=False, labelbottom=False)
 
 fig.tight_layout()
-fig.savefig(figpath / "event-sentiment-valence-by-quality.pdf", dpi=300)
+fig.savefig(figpath / "event-sentiment-valence-by-quality.pdf")
+
+
+# %% Spearman correlations between valence dimensions by outlet ----------------------
+
+Rho = (
+    data.groupby(["country", "quality", "name", "political"], observed=True)
+    .apply(
+        lambda df: df[[f"{t}_latent" for t in biases]].corr(method="spearman").iloc[0, 1],
+        include_groups=False,
+    )
+    .reset_index(name="rho")
+)
+
+fig, ax = plt.subplots()
+sns.boxplot(
+    Rho,
+    x="quality",
+    y="rho",
+    hue="political",
+    ax=ax,
+    palette=config.plotting.color.political,
+    legend=True,
+)
+ax.legend(loc="lower right")
+ax.set_ylim(0, 1)
+ax.set_xlabel(None)
+ax.set_ylabel("Spearman correlation")
+fig.tight_layout()
+fig.savefig(figpath / "outlet-valence-rho-by-quality.pdf")
+
+# %% ---------------------------------------------------------------------------------
+
+(data.groupby(["country", "quality", "name"]))
 
 # %% ---------------------------------------------------------------------------------

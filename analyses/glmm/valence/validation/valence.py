@@ -17,7 +17,7 @@ xr.set_options(**config.xarray)
 az.rcParams.update(config.arviz)
 mpl.rcParams.update(config.plotting.params)
 
-target = "sentiment"
+target = "valence"
 opts = config.glmm.valence.targets[target]
 support = opts.inference.epd.support
 

@@ -63,7 +63,7 @@ model = brms_posterior_epred(model, quantized, **opts.inference.epd)
 
 print("Preparing posterior predictive samples...")
 model = brms_posterior_predictive(
-    model, transform=lambda x: (x - 2).astype(int), **opts.inference.ppd
+    model, transform=lambda x: (x - 3).astype(int), **opts.inference.ppd
 )
 
 # %% ---------------------------------------------------------------------------------

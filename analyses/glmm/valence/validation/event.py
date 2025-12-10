@@ -19,6 +19,7 @@ mpl.rcParams.update(config.plotting.params)
 
 target = "event"
 opts = config.glmm.valence.targets[target]
+support = opts.inference.epd.support
 
 figpath = paths.figures / "glmm" / "valence" / "validation"
 figpath.mkdir(parents=True, exist_ok=True)
@@ -92,7 +93,11 @@ fig.savefig(figpath / f"{target}-autocorr.pdf")
 
 
 def plot_ppc(
-    idata: az.InferenceData, ax: plt.Axes | None = None, mean: bool = False, **kwargs
+    idata: az.InferenceData,
+    ax: plt.Axes | None = None,
+    mean: bool = False,
+    support: list[int] = tuple(support),
+    **kwargs,
 ) -> plt.Axes:
     """Plot posterior predictive check with mean observed value."""
     idata = idata.copy()
@@ -102,7 +107,8 @@ def plot_ppc(
     if ax is None:
         ax = plt.gca()
     az.plot_ppc(idata, ax=ax, mean=mean, legend=False)
-    ax.set_xticks([-0.5, 0.5, 1.5], labels=[-1, 0, 1])
+    xticks = np.array(support) + 0.5
+    ax.set_xticks(xticks, labels=list(support))
     ax.set_xlabel(None)
     return ax
 

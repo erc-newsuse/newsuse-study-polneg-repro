@@ -772,3 +772,81 @@ stages:
       hash: md5
       md5: 72dff21168c04126f51ae40a1debfbbf
       size: 53242594
+  glmm-valence@valence:
+    cmd: Rscript stages/glmm/valence_valence.R && python
+      stages/glmm/valence_valence.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 032a6742b7dc44777f8692f913edc70d
+      size: 104753616
+    - path: stages/glmm/valence_valence.R
+      hash: md5
+      md5: a710c2074501f5573139abe3f63f00c0
+      size: 2926
+    - path: stages/glmm/valence_valence.py
+      hash: md5
+      md5: 84312e61a6554b0b2ff2c064a21ed0de
+      size: 3173
+    params:
+      params.yaml:
+        glmm.valence.targets.valence:
+          index_col: key
+          predictors:
+            fixed:
+            - political
+            - country
+            - weekend
+            groups:
+            - outlet
+            - isotime
+          model:
+            formula: "{target} ~ 1\n  + political * country + weekend\n  + (1 | outlet:political)\n\
+              \  + (1 | country:isotime:political)\n"
+            family: cumulative
+            link: logit
+          n_threads: 4
+          solver:
+            algorithm: meanfield
+            chains: 4
+            cores: 4
+            iter: 2000
+            backend: cmdstanr
+            control: {}
+          inference:
+            subsample: 250000
+            ppd:
+              ndraws: 250
+              cores: 4
+            epd:
+              re_formulas:
+                grand_mean: ~0
+                full:
+              support:
+              - -2
+              - -1
+              - 0
+              - 1
+              - 2
+              allow_new_levels: true
+              sample_new_levels: gaussian
+            loglik:
+              ndraws: 250
+              cores: 4
+            ranef:
+              ndraws: 50
+              cores: 4
+          seed: 9534621
+    outs:
+    - path: glmm/valence/valence-ranef.nc
+      hash: md5
+      md5: cf9531b57113e1f1a9f778e1c0034d1c
+      size: 19753871
+    - path: glmm/valence/valence.nc
+      hash: md5
+      md5: 1adb560d0e6cd6b5768946907d7c2569
+      size: 668387100
+    - path: glmm/valence/valence.rds
+      hash: md5
+      md5: c2e759a5bccc21db59f7ce635869fe11
+      size: 35270902
