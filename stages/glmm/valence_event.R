@@ -33,6 +33,11 @@ data <- as.character(paths$final) %>%
         event = factor(event, ordered = TRUE),
         sentiment = factor(sentiment, ordered = TRUE),
         valence = factor(valence, ordered = TRUE),
+    ) %>%
+    select(
+        !!target,
+        !!!builtins$list(opts$predictors$fixed),
+        !!!builtins$list(opts$predictors$groups)
     )
 
 # %% Subsample data ------------------------------------------------------------------

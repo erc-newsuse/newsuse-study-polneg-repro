@@ -35,6 +35,7 @@ categorical:
     pl:  Poland
     fr:  France
     esp: Spain
+  quality: ["low", "medium", "high"]
   political: ["other", "political"]
   event: [-1, 0, 1]
   sentiment: [-1, 0, 1]

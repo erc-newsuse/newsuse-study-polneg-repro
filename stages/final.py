@@ -86,8 +86,20 @@ for target, bias in biases.items():
     ), f"reconstructed '{target}' probabilities do not match the original"
     data[f"{target}_latent"] = latent
 
+# %% Compute expected valence -------------------------------------------------------
+
+data["valence_expected"] = (
+    data.filter(regex=r"^(event|sentiment)_score_.*$")
+    .astype(float)
+    .pipe(lambda df: (df.to_numpy() * np.array([-1, 0, 1] * 2)[None, :]).sum(axis=-1))
+)
+
 # %% ---------------------------------------------------------------------------------
 
-data.to_(paths.final)
+(
+    data.convert_dtypes()
+    # .dropna(ignore_index=True)
+    .to_(paths.final)
+)
 
 # %% ---------------------------------------------------------------------------------

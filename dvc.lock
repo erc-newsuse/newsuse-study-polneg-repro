@@ -578,15 +578,15 @@ stages:
     outs:
     - path: data/proc/cls.parquet
       hash: md5
-      md5: d1e27382df4a8b5f16c161bf2d9dbcf4
-      size: 69550686
+      md5: 09e09a15c3a0690757c7e2b411efd377
+      size: 71461451
   final:
     cmd: python stages/final.py
     deps:
     - path: data/proc/cls.parquet
       hash: md5
-      md5: d1e27382df4a8b5f16c161bf2d9dbcf4
-      size: 69550686
+      md5: 09e09a15c3a0690757c7e2b411efd377
+      size: 71461451
     - path: data/proc/dataset.parquet
       hash: md5
       md5: 57f50334b0d4b35a80efbed31627e99a
@@ -597,13 +597,13 @@ stages:
       size: 3820
     - path: stages/final.py
       hash: md5
-      md5: 954a2f24f669fb09df5fdaccad2e2f5b
-      size: 3073
+      md5: 91c37dc4dffedaedeb98da4fadd5ac48
+      size: 3435
     outs:
     - path: data/proc/final.parquet
       hash: md5
-      md5: b09b9017add30e748da7b6ca376f8e69
-      size: 100073225
+      md5: 032a6742b7dc44777f8692f913edc70d
+      size: 104753616
   outlet-meta:
     cmd: python stages/outlet_meta.py
     deps:
@@ -626,12 +626,12 @@ stages:
     deps:
     - path: data/proc/final.parquet
       hash: md5
-      md5: 49d6934056d2d23768d513a03244075d
-      size: 65615765
+      md5: 032a6742b7dc44777f8692f913edc70d
+      size: 104753616
     - path: stages/glmm/valence_event.R
       hash: md5
-      md5: c8775e18cff51619d1d305521350b5a0
-      size: 2482
+      md5: b86c22768a87bb9750bc38cb6b31eea5
+      size: 2924
     - path: stages/glmm/valence_event.py
       hash: md5
       md5: fcff71a1b95b640811503e0da9d63813
@@ -644,20 +644,15 @@ stages:
             fixed:
             - political
             - country
+            - weekend
             groups:
             - outlet
-            - weekend
             - isotime
           model:
-            formula: "{target} ~ 1\n  + political * country\n  + (1 + political |
-              outlet:weekend)\n  + (1 + political | country:isotime)\n"
-            family: acat
+            formula: "{target} ~ 1\n  + political * country + weekend\n  + (1 | outlet:political)\n\
+              \  + (1 | country:isotime:political)\n"
+            family: categorical
             link: logit
-            prior:
-            - prior: student_t(3, 0, 5)
-              class: b
-            - prior: student_t(3, 0, 5)
-              class: Intercept
           n_threads: 4
           solver:
             algorithm: meanfield
@@ -665,6 +660,7 @@ stages:
             cores: 4
             iter: 2000
             backend: cmdstanr
+            control: {}
           inference:
             subsample: 250000
             ppd:
@@ -690,16 +686,16 @@ stages:
     outs:
     - path: glmm/valence/event-ranef.nc
       hash: md5
-      md5: d070b70f4e3f3178f758f4d967147df6
-      size: 21899577
+      md5: b33b5be3a64a9821e6409711ae1dadcd
+      size: 39679298
     - path: glmm/valence/event.nc
       hash: md5
-      md5: fc47a5ee5d51bb6a9cf50c09fbae4d67
-      size: 653576321
+      md5: 2d29da5e260e29ec64761009bc04ea33
+      size: 655335729
     - path: glmm/valence/event.rds
       hash: md5
-      md5: 778e664640dce79ac1ef1ad54ed0c600
-      size: 30273386
+      md5: 1ceb1ca87f82e15b12e3eba5bf80e39c
+      size: 50681548
   glmm-valence@sentiment:
     cmd: Rscript stages/glmm/valence_sentiment.R && python
       stages/glmm/valence_sentiment.py
