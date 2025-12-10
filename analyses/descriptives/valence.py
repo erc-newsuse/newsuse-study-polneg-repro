@@ -30,7 +30,8 @@ figpath.mkdir(parents=True, exist_ok=True)
 
 data = DataFrame.from_(paths.final).assign(
     country=lambda df: pd.Categorical(
-        df["country"], categories=list(config.categorical.countries), ordered=True
+        df["country"],
+        categories=list(config.categorical.countries),
     ),
     quality=lambda df: pd.Categorical(df["quality"], categories=quality, ordered=True),
     ideology=lambda df: pd.Categorical(df["ideology"], categories=ideology),

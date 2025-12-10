@@ -374,22 +374,48 @@ plotting:
       gray:       "#bdbaba"
       black:      "black"
     semantics:
-      other:         ${..palette.gray}
-      political:     ${..palette.gold}
-      negative:      ${..palette.red}
-      non-political: ${.other}
-      non-negative:  ${.other}
-      valence:    ${.negative}
-      overall:       ${..palette.black}
-      us:            ${..palette.blue}
-      esp:           ${..palette.gold}
-      fr:            ${..palette.gray}
-      pl:            ${..palette.red}
-      irl:           ${..palette.green}
-      uk:            ${..palette.brown}
+      other:      ${..palette.gray}
+      overall:    ${..palette.black}
+      political:  ${..palette.gold}
+      negative:   ${..palette.red}
+      positive:   ${..palette.green}
+      countries:
+        us:        ${...palette.blue}
+        uk:        ${...palette.red}
+        irl:       ${...palette.green}
+        pl:        ${...palette.gold}
+        fr:        ${...palette.purple}
+        esp:       ${...palette.brown}
+      quality:
+        low:      "#b6b6d8"
+        medium:   "#8683bd"
+        high:     "#61409b"
+      ideology:
+        left:     "#00AEF3"
+        center:   ${...palette.gray}
+        right:    "#D81F29"
+    valence:
+      - ${..semantics.negative}
+      - ${..semantics.other}
+      - ${..semantics.positive}
+    quality:
+      - ${..semantics.quality.low}
+      - ${..semantics.quality.medium}
+      - ${..semantics.quality.high}
+    ideology:
+      - ${..semantics.ideology.left}
+      - ${..semantics.ideology.center}
+      - ${..semantics.ideology.right}
     political:
       - ${..semantics.other}
       - ${..semantics.political}
+    countries:
+      - ${..semantics.countries.us}
+      - ${..semantics.countries.uk}
+      - ${..semantics.countries.irl}
+      - ${..semantics.countries.pl}
+      - ${..semantics.countries.fr}
+      - ${..semantics.countries.esp}
   params:
     font.family:           sans-serif
     # font.sans-serif:       Montserrat
