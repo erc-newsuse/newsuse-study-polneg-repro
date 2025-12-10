@@ -702,12 +702,12 @@ stages:
     deps:
     - path: data/proc/final.parquet
       hash: md5
-      md5: 49d6934056d2d23768d513a03244075d
-      size: 65615765
+      md5: 032a6742b7dc44777f8692f913edc70d
+      size: 104753616
     - path: stages/glmm/valence_sentiment.R
       hash: md5
-      md5: e4243c05ae8d02efd93502b15a603070
-      size: 2486
+      md5: fca4085d17b3f907c9278eb42d9651fe
+      size: 2928
     - path: stages/glmm/valence_sentiment.py
       hash: md5
       md5: 6671bfdef7dec7478ffa0ee0e9a549f1
@@ -720,20 +720,15 @@ stages:
             fixed:
             - political
             - country
+            - weekend
             groups:
             - outlet
-            - weekend
             - isotime
           model:
-            formula: "{target} ~ 1\n  + political * country\n  + (1 + political |
-              outlet:weekend)\n  + (1 + political | country:isotime)\n"
-            family: acat
+            formula: "{target} ~ 1\n  + political * country + weekend\n  + (1 | outlet:political)\n\
+              \  + (1 | country:isotime:political)\n"
+            family: categorical
             link: logit
-            prior:
-            - prior: student_t(3, 0, 5)
-              class: b
-            - prior: student_t(3, 0, 5)
-              class: Intercept
           n_threads: 4
           solver:
             algorithm: meanfield
@@ -741,6 +736,7 @@ stages:
             cores: 4
             iter: 2000
             backend: cmdstanr
+            control: {}
           inference:
             subsample: 250000
             ppd:
@@ -766,13 +762,13 @@ stages:
     outs:
     - path: glmm/valence/sentiment-ranef.nc
       hash: md5
-      md5: ce245d39514328be0274b5d598951f32
-      size: 21899577
+      md5: 8485fc5ea0c62f398ef34f2c14d50b57
+      size: 39589668
     - path: glmm/valence/sentiment.nc
       hash: md5
-      md5: cec073e8740bbb3ff43269b6e21bd06b
-      size: 653768422
+      md5: 2c4eadf4c8ad5fe934f92c95d9bff4c4
+      size: 657208729
     - path: glmm/valence/sentiment.rds
       hash: md5
-      md5: 6c254643206e52216f0e6ebd9368271f
-      size: 30833642
+      md5: 72dff21168c04126f51ae40a1debfbbf
+      size: 53242594

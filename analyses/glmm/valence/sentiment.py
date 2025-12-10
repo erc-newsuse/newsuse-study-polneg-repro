@@ -38,6 +38,9 @@ political = dict(enumerate(config.categorical.political))
 idata = az.from_netcdf(paths.glmm / "valence" / f"{target}.nc")
 idata = set_xindex(idata, [opts.index_col, *sum(opts.predictors.values(), start=[])])
 epred = az.extract(idata, group="posterior_epred")
+# Average out week effects to focus on main effects
+if "weekend" in epred.coords:
+    epred = (epred.sel(weekend=0) + epred.sel(weekend=1)) / 2
 
 # %% ---------------------------------------------------------------------------------
 
