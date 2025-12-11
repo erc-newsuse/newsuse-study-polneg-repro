@@ -850,3 +850,37 @@ stages:
       hash: md5
       md5: c2e759a5bccc21db59f7ce635869fe11
       size: 35270902
+  descriptives@valence:
+    cmd: python analyses/descriptives/valence.py
+    deps:
+    - path: analyses/descriptives/valence.py
+      hash: md5
+      md5: 3f48692b377553dfded23ade8c7d74a8
+      size: 13174
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    outs:
+    - path: figures/descriptives/valence
+      hash: md5
+      md5: f690ea5d511ba1c4704754aafc77d1fa.dir
+      size: 1434344
+      nfiles: 11
+  descriptives@engagement:
+    cmd: python analyses/descriptives/engagement.py
+    deps:
+    - path: analyses/descriptives/engagement.py
+      hash: md5
+      md5: 3044486ba65297f0e2c4c22eb23a0d25
+      size: 5416
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    outs:
+    - path: figures/descriptives/engagement
+      hash: md5
+      md5: 2ecba2d1630504e024bf51abf9f6ef07.dir
+      size: 78504128
+      nfiles: 20

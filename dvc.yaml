@@ -167,6 +167,19 @@ stages:
     - data/proc/final.parquet:
         persist: true
 
+  descriptives:
+    foreach:
+    - valence
+    - engagement
+    do:
+      cmd: python analyses/descriptives/${item}.py
+      deps:
+      - analyses/descriptives/${item}.py
+      - data/proc/final.parquet
+      outs:
+      - figures/descriptives/${item}:
+          persist: true
+
   glmm-valence:
     foreach:
     - event

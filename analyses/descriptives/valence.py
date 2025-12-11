@@ -364,7 +364,6 @@ fig.tight_layout()
 fig.supxlabel(f"Expected {target}", y=-0.05)
 fig.savefig(figpath / f"{target}-expected.pdf")
 
-
 # %% Event and sentiment valence by quality ------------------------------------------
 
 fig, axes = plt.subplot_mosaic(
@@ -379,7 +378,6 @@ fig, axes = plt.subplot_mosaic(
 ax = axes["A"]
 sns.kdeplot(
     data,
-    # data.sample(n=5*10**5, random_state=42),
     x="event_latent",
     y="sentiment_latent",
     hue="political",
@@ -426,34 +424,33 @@ fig.savefig(figpath / "event-sentiment-valence-by-quality.pdf")
 
 # %% Spearman correlations between valence dimensions by outlet ----------------------
 
-Rho = (
-    data.groupby(["country", "quality", "name", "political"], observed=True)
-    .apply(
-        lambda df: df[[f"{t}_latent" for t in biases]].corr(method="spearman").iloc[0, 1],
-        include_groups=False,
+for x in ["quality", "ideology"]:
+    Rho = (
+        data.groupby(["country", x, "name", "political"], observed=True)
+        .apply(
+            lambda df: (
+                df[[f"{t}_latent" for t in biases]].corr(method="spearman").iloc[0, 1]
+            ),
+            include_groups=False,
+        )
+        .reset_index(name="rho")
     )
-    .reset_index(name="rho")
-)
 
-fig, ax = plt.subplots()
-sns.boxplot(
-    Rho,
-    x="quality",
-    y="rho",
-    hue="political",
-    ax=ax,
-    palette=config.plotting.color.political,
-    legend=True,
-)
-ax.legend(loc="lower right")
-ax.set_ylim(0, 1)
-ax.set_xlabel(None)
-ax.set_ylabel("Spearman correlation")
-fig.tight_layout()
-fig.savefig(figpath / "outlet-valence-rho-by-quality.pdf")
-
-# %% ---------------------------------------------------------------------------------
-
-# (data.groupby(["country", "quality", "name"]))
+    fig, ax = plt.subplots()
+    sns.boxplot(
+        Rho,
+        x=x,
+        y="rho",
+        hue="political",
+        ax=ax,
+        palette=config.plotting.color.political,
+        legend=True,
+    )
+    ax.legend(loc="lower right", title="political")
+    ax.set_ylim(0, 1)
+    ax.set_xlabel(None)
+    ax.set_ylabel("Spearman correlation")
+    fig.tight_layout()
+    fig.savefig(figpath / f"outlet-valence-rho-by-{x}.pdf")
 
 # %% ---------------------------------------------------------------------------------
