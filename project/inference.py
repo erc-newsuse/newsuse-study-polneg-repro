@@ -357,6 +357,7 @@ def brms_log_likelihood(
 def brms_inference(
     model: brmspy.FitResult,
     target: Hashable,
+    data: pd.DataFrame | None = None,
     *,
     response_dtype: type | None = None,
     epred_data: pd.DataFrame,
@@ -383,7 +384,7 @@ def brms_inference(
     kwargs = {}
     if response_dtype is not None:
         kwargs["dtype"] = response_dtype
-    model = brms_observed_data(model, target, **kwargs)
+    model = brms_observed_data(model, target, data, **kwargs)
 
     if verbose:
         print("Preparing posterior samples...")

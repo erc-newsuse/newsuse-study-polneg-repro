@@ -41,7 +41,7 @@ data = DataFrame.from_(paths.final).assign(
         categories=[*config.categorical.valence],
         ordered=True,
     ),
-)[[target, *opts.predictors.fixed, *opts.predictors.groups]]
+)[["key", target, *opts.predictors.fixed, *opts.predictors.groups]]
 
 # %% ---------------------------------------------------------------------------------
 
@@ -81,6 +81,7 @@ quantized = data[[*opts.predictors.fixed]].drop_duplicates(ignore_index=True)
 model, ranef = brms_inference(
     model,
     target,
+    data,
     response_dtype=int,
     epred_data=quantized,
     epred_opts=opts.inference.epd,
