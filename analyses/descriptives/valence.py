@@ -31,7 +31,7 @@ figpath.mkdir(parents=True, exist_ok=True)
 data = DataFrame.from_(paths.final).assign(
     country=lambda df: pd.Categorical(
         df["country"],
-        categories=list(config.categorical.countries),
+        categories=list(config.categorical.country),
     ),
     quality=lambda df: pd.Categorical(df["quality"], categories=quality, ordered=True),
     ideology=lambda df: pd.Categorical(df["ideology"], categories=ideology),
@@ -106,7 +106,7 @@ for ax, (country, df) in zip(
 ):
     dist = df[target].value_counts(normalize=True).sort_index().reset_index()
     plot_frequencies(ax, dist, target, legend=False)
-    ax.set_title(config.categorical.countries[country])
+    ax.set_title(config.categorical.country[country])
 
 fig.tight_layout()
 fig.savefig(figpath / f"{target}-frequencies.pdf")
@@ -129,7 +129,7 @@ for ax, (country, df) in zip(
 ):
     dist = df[[target, "political"]].value_counts(normalize=True).sort_index().reset_index()
     plot_frequencies(ax, dist, target, hue="political", legend=False)
-    ax.set_title(config.categorical.countries[country])
+    ax.set_title(config.categorical.country[country])
 
 fig.tight_layout()
 fig.savefig(figpath / f"{target}-frequencies-political.pdf")
@@ -152,7 +152,7 @@ for ax, (country, df) in zip(
 ):
     dist = df[target].value_counts(normalize=True).sort_index().reset_index()
     plot_frequencies(ax, dist, target, legend=False)
-    ax.set_title(config.categorical.countries[country])
+    ax.set_title(config.categorical.country[country])
 
 fig.tight_layout()
 fig.savefig(figpath / f"{target}-frequencies.pdf")
@@ -175,7 +175,7 @@ for ax, (country, df) in zip(
 ):
     dist = df[[target, "political"]].value_counts(normalize=True).sort_index().reset_index()
     plot_frequencies(ax, dist, target, hue="political", legend=False)
-    ax.set_title(config.categorical.countries[country])
+    ax.set_title(config.categorical.country[country])
 
 fig.tight_layout()
 fig.savefig(figpath / f"{target}-frequencies-political.pdf")
@@ -198,7 +198,7 @@ for ax, (country, df) in zip(
 ):
     dist = df[target].value_counts(normalize=True).sort_index().reset_index()
     plot_frequencies(ax, dist, target, legend=False)
-    ax.set_title(config.categorical.countries[country])
+    ax.set_title(config.categorical.country[country])
 
 fig.tight_layout()
 fig.savefig(figpath / f"{target}-frequencies.pdf")
@@ -221,7 +221,7 @@ for ax, (country, df) in zip(
 ):
     dist = df[[target, "political"]].value_counts(normalize=True).sort_index().reset_index()
     plot_frequencies(ax, dist, target, hue="political", legend=False)
-    ax.set_title(config.categorical.countries[country])
+    ax.set_title(config.categorical.country[country])
 
 fig.tight_layout()
 fig.savefig(figpath / f"{target}-frequencies-political.pdf")
@@ -269,14 +269,14 @@ sns.boxplot(
     data,
     x=f"{target}_latent",
     y="country",
-    hue="political",  # hue_order=list(config.categorical.countries),
+    hue="political",  # hue_order=list(config.categorical.country),
     ax=ax,
     palette=config.plotting.color.political,
     legend=False,
 )
 ax.set_yticks(
-    [*config.categorical.countries],
-    labels=list(config.categorical.countries.values()),
+    [*config.categorical.country],
+    labels=list(config.categorical.country.values()),
 )
 ax.set_xlabel(None)
 ax.set_ylabel(None)
@@ -315,8 +315,8 @@ sns.boxplot(
     legend=False,
 )
 ax.set_yticks(
-    [*config.categorical.countries],
-    labels=list(config.categorical.countries.values()),
+    [*config.categorical.country],
+    labels=list(config.categorical.country.values()),
 )
 ax.set_xlabel(None)
 ax.set_ylabel(None)
@@ -354,8 +354,8 @@ sns.boxplot(
     legend=False,
 )
 ax.set_yticks(
-    [*config.categorical.countries],
-    labels=list(config.categorical.countries.values()),
+    [*config.categorical.country],
+    labels=list(config.categorical.country.values()),
 )
 ax.set_xlabel(None)
 ax.set_ylabel(None)

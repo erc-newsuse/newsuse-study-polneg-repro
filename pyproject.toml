@@ -30,7 +30,7 @@ dependencies = [
     "transformers[torch]>=4.45.2",
     "dlordinal>=2.4.4",
     "scikit-learn>=1.7.2",
-    "brmspy>=0.1.9",
+    "brmspy>=0.2.1",
     "arviz>=0.22.0",
 ]
 dynamic = ["version"]

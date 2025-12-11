@@ -186,11 +186,10 @@ stages:
     - sentiment
     - valence
     do:
-      cmd: Rscript stages/glmm/valence_${item}.R && python stages/glmm/valence_${item}.py
+      cmd: python stages/glmm/valence_${item}.py
       params:
       - glmm.valence.targets.${item}
       deps:
-      - stages/glmm/valence_${item}.R
       - stages/glmm/valence_${item}.py
       - data/proc/final.parquet
       outs:

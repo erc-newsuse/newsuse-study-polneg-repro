@@ -6,11 +6,12 @@ import arviz as az
 import brmspy
 import numpy as np
 import pandas as pd
-import rpy2.robjects as ro
 import xarray as xr
-from brmspy.helpers import conversion, singleton
+from rpy2 import robjects as ro
 from rpy2.robjects import pandas2ri
 from rpy2.robjects.conversion import localconverter
+
+from .brms import df_to_r
 
 __all__ = (
     "make_data_coords",
@@ -19,6 +20,7 @@ __all__ = (
     "brms_posterior_epred",
     "brms_posterior_predictive",
     "brms_log_likelihood",
+    "brms_inference",
     "set_xindex",
     "waic_metrics",
     "StatsAccessor",
@@ -88,7 +90,7 @@ def set_xindex(idata: az.InferenceData, xindex: Sequence[Hashable]) -> az.Infere
 
 
 def brms_observed_data(
-    brms: brmspy.FitResult,
+    model: brmspy.FitResult,
     response_name: Hashable = "y",
     data: pd.DataFrame | None = None,
     coords: Sequence[Hashable] | str | None = None,
@@ -99,7 +101,7 @@ def brms_observed_data(
 
     Parameters
     ----------
-    brms
+    model
         A brmspy.FitResult object containing the fitted model.
     response_name
         The name of the response variable in the data.
@@ -114,14 +116,8 @@ def brms_observed_data(
     **kwargs
         Additional keyword arguments to pass to the `make_data_coords` function.
     """
-    _base = singleton._get_base()
     if data is None:
-        if _base:
-            r_data = _base.getElement(brms.r, "data")
-        else:
-            errmsg = "Base uninitialized (Should not happen if _get_brms was done)!"
-            raise Exception(errmsg)
-
+        r_data = ro.r["[["](model.r, "data")
         with localconverter(ro.default_converter + pandas2ri.converter):
             data = pandas2ri.rpy2py(r_data)
 
@@ -137,23 +133,23 @@ def brms_observed_data(
     observed_data = xr.Dataset({response_name: (OBS_DIM, y)}, coords=data_coords).sortby(
         OBS_DIM
     )
-    brms.idata.add_groups(observed_data=observed_data)
-    return brms
+    model.idata.add_groups(observed_data=observed_data)
+    return model
 
 
-def brms_posterior(brms: brmspy.FitResult, **kwargs: Any) -> brmspy.FitResult:
+def brms_posterior(model: brmspy.FitResult, **kwargs: Any) -> brmspy.FitResult:
     """Compute posterior distributions.
 
     Parameters
     ----------
-    brms
+    model
         A brmspy.FitResult object containing the fitted model.
     **kwargs
         Additional keyword arguments to pass to the `posterior::as_draws_df` function.
     """
     # Safely get the as_draws_df function
     as_draws_df = typing.cast(typing.Callable, ro.r("posterior::as_draws_df"))
-    draws_r = as_draws_df(brms.r, **kwargs)
+    draws_r = as_draws_df(model.r, **kwargs)
 
     with localconverter(ro.default_converter + pandas2ri.converter):
         df = pandas2ri.rpy2py(draws_r)
@@ -174,12 +170,12 @@ def brms_posterior(brms: brmspy.FitResult, **kwargs: Any) -> brmspy.FitResult:
             posterior[col] = samples
 
     posterior = az.from_dict(posterior=posterior).posterior
-    brms.idata.add_groups(posterior=posterior)
-    return brms
+    model.idata.add_groups(posterior=posterior)
+    return model
 
 
 def brms_posterior_epred(
-    brms: brmspy.FitResult,
+    model: brmspy.FitResult,
     data: pd.DataFrame | None = None,
     *,
     re_formulas: Mapping[str, FormulaT] | FormulaT | None = None,
@@ -190,7 +186,7 @@ def brms_posterior_epred(
 
     Parameters
     ----------
-    brms
+    model
         A brmspy.FitResult object containing the fitted model and posterior samples.
     data
         A pandas DataFrame containing the new data for which to compute epred.
@@ -206,13 +202,13 @@ def brms_posterior_epred(
         Additional keyword arguments to pass to the `brms::posterior_epred` function.
     """
     # Handle observed data
-    observed = brms.idata.observed_data
+    observed = model.idata.observed_data
     response_name = list(observed.data_vars)[0]
     if support is None:
         support = np.unique(observed[response_name])
     if data is None:
         data = pd.DataFrame(
-            brms.idata.observed_data.to_pandas()
+            model.idata.observed_data.to_pandas()
             .reset_index(drop=True)
             .drop(columns=response_name)
         )
@@ -225,10 +221,10 @@ def brms_posterior_epred(
         observed = observed.assign_coords(observed.data_vars)
 
     # Build dims and coordinates
-    ndraws = brms.idata.posterior.sizes["draw"]
+    ndraws = model.idata.posterior.sizes["draw"]
     coords = {
-        "chain": ("chain", brms.idata.posterior.coords["chain"].values),
-        "draw": ("draw", brms.idata.posterior.coords["draw"][:ndraws].values),
+        "chain": ("chain", model.idata.posterior.coords["chain"].values),
+        "draw": ("draw", model.idata.posterior.coords["draw"][:ndraws].values),
         **{k: (GROUP_DIM, v.values) for k, v in observed.coords.items()},
     }
     posterior_dims = ["chain", "draw"]
@@ -241,7 +237,7 @@ def brms_posterior_epred(
         re_formulas = {"epred": re_formulas}  # type: ignore
 
     # Prepare shared kwargs
-    kwargs.update(newdata=_py_to_r(data), draws=ndraws)
+    kwargs.update(newdata=df_to_r(data), draws=ndraws)
 
     # Compute
     epreds = {}
@@ -253,10 +249,10 @@ def brms_posterior_epred(
         elif formula is None:
             formula = ro.NULL  # type: ignore
         opts["re_formula"] = formula
-        epred = np.asarray(posterior_epred(brms.r, **opts))
+        epred = np.asarray(posterior_epred(model.r, **opts))
 
         # Build dims and coordinates
-        if brms.idata.posterior.sizes["chain"] == 1:
+        if model.idata.posterior.sizes["chain"] == 1:
             epred = np.expand_dims(epred, axis=0)
         # Handle categorical support
         if epred.ndim > len(dims):
@@ -267,12 +263,12 @@ def brms_posterior_epred(
 
     # Build dataset
     ds = xr.Dataset(epreds, coords=coords).sortby(GROUP_DIM)
-    brms.idata.add_groups(posterior_epred=ds)
-    return brms
+    model.idata.add_groups(posterior_epred=ds)
+    return model
 
 
 def brms_posterior_predictive(
-    brms: brmspy.FitResult,
+    model: brmspy.FitResult,
     *,
     re_formula: str | ro.Formula | None = None,
     transform: Callable[[np.ndarray], np.ndarray] | None = None,
@@ -284,40 +280,40 @@ def brms_posterior_predictive(
         kwargs["re_formula"] = re_formula
 
     # Handle observed data
-    observed = brms.idata.observed_data
+    observed = model.idata.observed_data
     response_name = list(observed.data_vars)[0]
     data = (
-        brms.idata.observed_data.to_pandas()
+        model.idata.observed_data.to_pandas()
         .reset_index(drop=True)
         .drop(columns=response_name)
     )
 
     # Compute
-    kwargs["newdata"] = _py_to_r(data)
+    kwargs["newdata"] = df_to_r(data)
     posterior_predictive = ro.r("brms::posterior_predict")
-    ppred = posterior_predictive(brms.r, **kwargs)
+    ppred = posterior_predictive(model.r, **kwargs)
     ppred = np.asarray(ppred)
     if transform is not None:
         ppred = transform(ppred)
 
     # Build dims and coordinates
-    if brms.idata.posterior.sizes["chain"] == 1:
+    if model.idata.posterior.sizes["chain"] == 1:
         ppred = np.expand_dims(ppred, axis=0)
     coords = {
-        "chain": ("chain", brms.idata.posterior.coords["chain"].values),
-        "draw": ("draw", brms.idata.posterior.coords["draw"][: ppred.shape[1]].values),
+        "chain": ("chain", model.idata.posterior.coords["chain"].values),
+        "draw": ("draw", model.idata.posterior.coords["draw"][: ppred.shape[1]].values),
         **{k: (OBS_DIM, v.values) for k, v in observed.coords.items()},
     }
     dims = ["chain", "draw", OBS_DIM]
 
     # Build dataset
     ds = xr.Dataset({response_name: (dims, ppred)}, coords=coords).sortby(OBS_DIM)
-    brms.idata.add_groups(posterior_predictive=ds)
-    return brms
+    model.idata.add_groups(posterior_predictive=ds)
+    return model
 
 
 def brms_log_likelihood(
-    brms: brmspy.FitResult,
+    model: brmspy.FitResult,
     *,
     re_formula: str | ro.Formula | None = None,
     pointwise: bool = True,
@@ -332,30 +328,104 @@ def brms_log_likelihood(
         kwargs["re_formula"] = re_formula
 
     # Handle observed data
-    observed = brms.idata.observed_data
+    observed = model.idata.observed_data
     response_name = list(observed.data_vars)[0]
-    data = brms.idata.observed_data.to_pandas().reset_index(drop=True)
+    data = model.idata.observed_data.to_pandas().reset_index(drop=True)
 
     # Compute
-    kwargs["newdata"] = _py_to_r(data)
+    kwargs["newdata"] = df_to_r(data)
     log_lik_func = ro.r("brms::log_lik")
-    log_lik = log_lik_func(brms.r, **kwargs)
+    log_lik = log_lik_func(model.r, **kwargs)
     log_lik = np.asarray(log_lik)
 
     # Build dims and coordinates
-    if brms.idata.posterior.sizes["chain"] == 1:
+    if model.idata.posterior.sizes["chain"] == 1:
         log_lik = np.expand_dims(log_lik, axis=0)
     coords = {
-        "chain": ("chain", brms.idata.posterior.coords["chain"].values),
-        "draw": ("draw", brms.idata.posterior.coords["draw"][: log_lik.shape[1]].values),
+        "chain": ("chain", model.idata.posterior.coords["chain"].values),
+        "draw": ("draw", model.idata.posterior.coords["draw"][: log_lik.shape[1]].values),
         **{k: (OBS_DIM, v.values) for k, v in observed.coords.items()},
     }
     dims = ["chain", "draw", OBS_DIM]
 
     # Build dataset
     ds = xr.Dataset({response_name: (dims, log_lik)}, coords=coords).sortby(OBS_DIM)
-    brms.idata.add_groups(log_likelihood=ds)
-    return brms
+    model.idata.add_groups(log_likelihood=ds)
+    return model
+
+
+def brms_inference(
+    model: brmspy.FitResult,
+    target: Hashable,
+    *,
+    response_dtype: type | None = None,
+    epred_data: pd.DataFrame,
+    epred_opts: Mapping[str, Any] | None = None,
+    ppd_transform: Callable[[np.ndarray], np.ndarray] | None = None,
+    ppd_opts: Mapping[str, Any] | None = None,
+    loglik_opts: Mapping[str, Any] | None = None,
+    ranef_ndraws: int | None = None,
+    verbose: bool = True,
+) -> tuple[brmspy.FitResult, az.InferenceData | None]:
+    """Compute all inference components for a brms model.
+
+    Returns
+    -------
+    model
+        The updated brmspy.FitResult object with all inference components added.
+    ranef_idata
+        An ArviZ InferenceData object containing the random effects posterior samples,
+        or `None` if no random effects were found.
+    """
+    # ruff: noqa: C901
+    if verbose:
+        print("Preparing observed data...")
+    kwargs = {}
+    if response_dtype is not None:
+        kwargs["dtype"] = response_dtype
+    model = brms_observed_data(model, target, **kwargs)
+
+    if verbose:
+        print("Preparing posterior samples...")
+    model = brms_posterior(model)
+
+    if verbose:
+        print("Preparing posterior expectations...")
+    epred_opts = epred_opts or {}
+    model = brms_posterior_epred(model, data=epred_data, **epred_opts)
+
+    if verbose:
+        print("Preparing posterior predictive samples...")
+    ppd_opts = ppd_opts or {}
+
+    def transform(x: np.ndarray) -> np.ndarray:
+        if ppd_transform is not None:
+            x = ppd_transform(x)
+        if response_dtype is not None:
+            x = x.astype(response_dtype)
+        return x
+
+    model = brms_posterior_predictive(model, transform=transform, **ppd_opts)
+
+    if verbose:
+        print("Preparing log-likelihood...")
+    loglik_opts = loglik_opts or {}
+    model = brms_log_likelihood(model, **loglik_opts)
+
+    if verbose:
+        print("Downsampling and separating random effects...")
+    ranef = [k for k in model.idata.posterior if k.startswith("r_")]
+    if ranef:
+        isel_kwargs = {}
+        if ranef_ndraws is not None and ranef_ndraws > 0:
+            isel_kwargs["draw"] = slice(-ranef_ndraws, None)
+        ranef_idata = az.InferenceData(
+            posterior=model.idata.posterior[ranef].isel(**isel_kwargs)
+        )
+        model.idata.posterior = model.idata.posterior.drop_vars(ranef)
+    else:
+        ranef_idata = None
+    return model, ranef_idata
 
 
 # XArray Accessor -------------------------------------------------------------------
@@ -397,12 +467,3 @@ class StatsAccessor:
             ds1 = ds1.mean(marginalize)
             ds2 = ds2.mean(marginalize)
         return ds1 - ds2
-
-
-# Internals --------------------------------------------------------------------------
-
-
-def _py_to_r(data: pd.DataFrame) -> ro.DataFrame:
-    """Convert a pandas DataFrame to an R DataFrame."""
-    data = data.convert_dtypes(dtype_backend="numpy_nullable")
-    return conversion.py_to_r(data)

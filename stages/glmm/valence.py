@@ -34,7 +34,7 @@ data = (
                 time=df["country"] + ":" + df["year"] + ":" + df["month"] + ":" + df["day"],
                 country=pd.Categorical(
                     df["country"],
-                    categories=list(config.categorical.countries),
+                    categories=list(config.categorical.country),
                 ),
             )
         )

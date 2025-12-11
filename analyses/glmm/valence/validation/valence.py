@@ -25,7 +25,7 @@ figpath = paths.figures / "glmm" / "valence" / "validation"
 figpath.mkdir(parents=True, exist_ok=True)
 
 labels = {
-    "countries": config.categorical.countries,
+    "countries": config.categorical.country,
     "political": dict(enumerate(config.categorical.political)),
     target: config.categorical[target],
 }

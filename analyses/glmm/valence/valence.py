@@ -30,7 +30,7 @@ opts = config.glmm.valence.targets[target]
 figpath = paths.figures / "glmm" / "valence"
 figpath.mkdir(parents=True, exist_ok=True)
 
-countries = config.categorical.countries
+countries = config.categorical.country
 political = dict(enumerate(config.categorical.political))
 
 # %% ---------------------------------------------------------------------------------

@@ -18,6 +18,7 @@ packages:
 	pre-commit install
 	R -e 'remotes::install_version("glmmTMB", version = "1.1.10", repos = "http://cran.us.r-project.org", upgrade = "never")'
 	R -e 'cmdstanr::install_cmdstan()'
+	python -c "from brmspy import brms; brms.install_brms()"
 
 structure:
 	git init
