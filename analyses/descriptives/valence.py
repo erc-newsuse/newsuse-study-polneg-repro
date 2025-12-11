@@ -338,7 +338,7 @@ sns.kdeplot(
     ax=ax,
     fill=True,
     palette=config.plotting.color.political,
-    bw_adjust=2,
+    bw_adjust=5,
     clip=(-2, 2),
 )
 ax.set_xlabel(None)
@@ -379,6 +379,7 @@ fig, axes = plt.subplot_mosaic(
 ax = axes["A"]
 sns.kdeplot(
     data,
+    # data.sample(n=5*10**5, random_state=42),
     x="event_latent",
     y="sentiment_latent",
     hue="political",
@@ -453,6 +454,6 @@ fig.savefig(figpath / "outlet-valence-rho-by-quality.pdf")
 
 # %% ---------------------------------------------------------------------------------
 
-(data.groupby(["country", "quality", "name"]))
+# (data.groupby(["country", "quality", "name"]))
 
 # %% ---------------------------------------------------------------------------------
