@@ -558,8 +558,8 @@ stages:
     outs:
     - path: data/proc/cls-valence.parquet
       hash: md5
-      md5: 8fba7c58f811cca25ee24755450518ed
-      size: 4315982
+      md5: 5f09f52729a7eea400c968720115d555
+      size: 195544645
   merge-cls:
     cmd: python stages/merge_cls.py
     deps:
@@ -569,8 +569,8 @@ stages:
       size: 64940422
     - path: data/proc/cls-valence.parquet
       hash: md5
-      md5: 8fba7c58f811cca25ee24755450518ed
-      size: 4315982
+      md5: 5f09f52729a7eea400c968720115d555
+      size: 195544645
     - path: stages/merge_cls.py
       hash: md5
       md5: 078cf13d9d2bcdd2a4624d79b87cd6c5
@@ -578,15 +578,15 @@ stages:
     outs:
     - path: data/proc/cls.parquet
       hash: md5
-      md5: 09e09a15c3a0690757c7e2b411efd377
-      size: 71461451
+      md5: 5d3e6799ca2d5232839bc98be2d8dc69
+      size: 220107430
   final:
     cmd: python stages/final.py
     deps:
     - path: data/proc/cls.parquet
       hash: md5
-      md5: 09e09a15c3a0690757c7e2b411efd377
-      size: 71461451
+      md5: 5d3e6799ca2d5232839bc98be2d8dc69
+      size: 220107430
     - path: data/proc/dataset.parquet
       hash: md5
       md5: 57f50334b0d4b35a80efbed31627e99a
@@ -597,13 +597,13 @@ stages:
       size: 3820
     - path: stages/final.py
       hash: md5
-      md5: 91c37dc4dffedaedeb98da4fadd5ac48
-      size: 3435
+      md5: 047104371814d255d8870024be7db0b5
+      size: 3416
     outs:
     - path: data/proc/final.parquet
       hash: md5
-      md5: 032a6742b7dc44777f8692f913edc70d
-      size: 104753616
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
   outlet-meta:
     cmd: python stages/outlet_meta.py
     deps:
