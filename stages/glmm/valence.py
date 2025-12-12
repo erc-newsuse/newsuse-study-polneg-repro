@@ -29,21 +29,13 @@ data = DataFrame.from_(paths.final).assign(
     country=lambda df: pd.Categorical(
         df["country"], categories=[*config.categorical.country]
     ),
-    event=lambda df: pd.Categorical(
-        df["event"],
-        categories=[*config.categorical.event],
-        ordered=True,
-    ),
-    sentiment=lambda df: pd.Categorical(
-        df["sentiment"],
-        categories=[*config.categorical.sentiment],
-        ordered=True,
-    ),
-    valence=lambda df: pd.Categorical(
-        df["valence"],
-        categories=[*config.categorical.valence],
-        ordered=True,
-    ),
+    **{
+        target: lambda df: pd.Categorical(
+            df[target] - df[target].min(),
+            categories=(cats := np.array([*config.categorical[target]])) - cats.min(),
+            ordered=True,
+        )
+    },
 )[["key", target, *opts.predictors.fixed, *opts.predictors.groups]]
 
 # %% ---------------------------------------------------------------------------------

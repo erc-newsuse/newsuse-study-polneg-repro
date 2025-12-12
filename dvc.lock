@@ -621,7 +621,7 @@ stages:
       md5: dfaa52f42e1965ba8efd3ce54d90b1cf
       size: 3820
   glmm-valence@event:
-    cmd: NEWSUSE_POLNEG_GLMM_VALENCE_TARGET=event python stages/glmm/valence.py
+    cmd: TARGET=event python stages/glmm/valence.py
     deps:
     - path: data/proc/final.parquet
       hash: md5
@@ -629,8 +629,8 @@ stages:
       size: 382132909
     - path: stages/glmm/valence.py
       hash: md5
-      md5: 827df66196abefa92710a632a8d7b7f5
-      size: 2491
+      md5: 89b85e4dfa64fd943b08d30e1dd4e616
+      size: 2676
     params:
       params.yaml:
         glmm.valence.targets.event:
@@ -665,10 +665,6 @@ stages:
               re_formulas:
                 grand_mean: ~0
                 full:
-              support:
-              - -1
-              - 0
-              - 1
               allow_new_levels: true
               sample_new_levels: gaussian
             loglik:
@@ -692,21 +688,16 @@ stages:
       md5: 1ceb1ca87f82e15b12e3eba5bf80e39c
       size: 50681548
   glmm-valence@sentiment:
-    cmd: Rscript stages/glmm/valence_sentiment.R && python
-      stages/glmm/valence_sentiment.py
+    cmd: TARGET=sentiment python stages/glmm/valence.py
     deps:
     - path: data/proc/final.parquet
       hash: md5
-      md5: 032a6742b7dc44777f8692f913edc70d
-      size: 104753616
-    - path: stages/glmm/valence_sentiment.R
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/glmm/valence.py
       hash: md5
-      md5: fca4085d17b3f907c9278eb42d9651fe
-      size: 2928
-    - path: stages/glmm/valence_sentiment.py
-      hash: md5
-      md5: 6671bfdef7dec7478ffa0ee0e9a549f1
-      size: 3175
+      md5: 89b85e4dfa64fd943b08d30e1dd4e616
+      size: 2676
     params:
       params.yaml:
         glmm.valence.targets.sentiment:
@@ -741,10 +732,6 @@ stages:
               re_formulas:
                 grand_mean: ~0
                 full:
-              support:
-              - -1
-              - 0
-              - 1
               allow_new_levels: true
               sample_new_levels: gaussian
             loglik:
