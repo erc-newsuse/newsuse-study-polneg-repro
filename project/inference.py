@@ -20,7 +20,6 @@ __all__ = (
     "brms_posterior_epred",
     "brms_posterior_predictive",
     "brms_log_likelihood",
-    "brms_inference",
     "set_xindex",
     "waic_metrics",
     "StatsAccessor",
@@ -269,6 +268,7 @@ def brms_posterior_epred(
 
 def brms_posterior_predictive(
     model: brmspy.FitResult,
+    newdata: pd.DataFrame | None = None,
     *,
     re_formula: str | ro.Formula | None = None,
     transform: Callable[[np.ndarray], np.ndarray] | None = None,
@@ -279,17 +279,19 @@ def brms_posterior_predictive(
     if re_formula is not None:
         kwargs["re_formula"] = re_formula
 
-    # Handle observed data
-    observed = model.idata.observed_data
-    response_name = list(observed.data_vars)[0]
-    data = (
-        model.idata.observed_data.to_pandas()
-        .reset_index(drop=True)
-        .drop(columns=response_name)
-    )
+    # Handle observed data when 'newdata' is not provided
+    if newdata is not None:
+        observed = model.idata.observed_data
+        response_name = list(observed.data_vars)[0]
+        newdata = (
+            model.idata.observed_data.to_pandas()
+            .reset_index(drop=True)
+            .drop(columns=response_name)
+            .pipe(pd.DataFrame)
+        )
 
     # Compute
-    kwargs["newdata"] = df_to_r(data)
+    kwargs["newdata"] = df_to_r(newdata)
     posterior_predictive = ro.r("brms::posterior_predict")
     ppred = posterior_predictive(model.r, **kwargs)
     ppred = np.asarray(ppred)
@@ -314,6 +316,7 @@ def brms_posterior_predictive(
 
 def brms_log_likelihood(
     model: brmspy.FitResult,
+    newdata: pd.DataFrame | None = None,
     *,
     re_formula: str | ro.Formula | None = None,
     pointwise: bool = True,
@@ -330,10 +333,11 @@ def brms_log_likelihood(
     # Handle observed data
     observed = model.idata.observed_data
     response_name = list(observed.data_vars)[0]
-    data = model.idata.observed_data.to_pandas().reset_index(drop=True)
+    if newdata is None:
+        newdata = pd.DataFrame(model.idata.observed_data.to_pandas().reset_index(drop=True))
 
     # Compute
-    kwargs["newdata"] = df_to_r(data)
+    kwargs["newdata"] = df_to_r(newdata)
     log_lik_func = ro.r("brms::log_lik")
     log_lik = log_lik_func(model.r, **kwargs)
     log_lik = np.asarray(log_lik)
@@ -352,81 +356,6 @@ def brms_log_likelihood(
     ds = xr.Dataset({response_name: (dims, log_lik)}, coords=coords).sortby(OBS_DIM)
     model.idata.add_groups(log_likelihood=ds)
     return model
-
-
-def brms_inference(
-    model: brmspy.FitResult,
-    target: Hashable,
-    data: pd.DataFrame | None = None,
-    *,
-    response_dtype: type | None = None,
-    epred_data: pd.DataFrame,
-    epred_opts: Mapping[str, Any] | None = None,
-    ppd_transform: Callable[[np.ndarray], np.ndarray] | None = None,
-    ppd_opts: Mapping[str, Any] | None = None,
-    loglik_opts: Mapping[str, Any] | None = None,
-    ranef_ndraws: int | None = None,
-    verbose: bool = True,
-) -> tuple[brmspy.FitResult, az.InferenceData | None]:
-    """Compute all inference components for a brms model.
-
-    Returns
-    -------
-    model
-        The updated brmspy.FitResult object with all inference components added.
-    ranef_idata
-        An ArviZ InferenceData object containing the random effects posterior samples,
-        or `None` if no random effects were found.
-    """
-    # ruff: noqa: C901
-    if verbose:
-        print("Preparing observed data...")
-    kwargs = {}
-    if response_dtype is not None:
-        kwargs["dtype"] = response_dtype
-    model = brms_observed_data(model, target, data, **kwargs)
-
-    if verbose:
-        print("Preparing posterior samples...")
-    model = brms_posterior(model)
-
-    if verbose:
-        print("Preparing posterior expectations...")
-    epred_opts = epred_opts or {}
-    model = brms_posterior_epred(model, data=epred_data, **epred_opts)
-
-    if verbose:
-        print("Preparing posterior predictive samples...")
-    ppd_opts = ppd_opts or {}
-
-    def transform(x: np.ndarray) -> np.ndarray:
-        if ppd_transform is not None:
-            x = ppd_transform(x)
-        if response_dtype is not None:
-            x = x.astype(response_dtype)
-        return x
-
-    model = brms_posterior_predictive(model, transform=transform, **ppd_opts)
-
-    if verbose:
-        print("Preparing log-likelihood...")
-    loglik_opts = loglik_opts or {}
-    model = brms_log_likelihood(model, **loglik_opts)
-
-    if verbose:
-        print("Downsampling and separating random effects...")
-    ranef = [k for k in model.idata.posterior if k.startswith("r_")]
-    if ranef:
-        isel_kwargs = {}
-        if ranef_ndraws is not None and ranef_ndraws > 0:
-            isel_kwargs["draw"] = slice(-ranef_ndraws, None)
-        ranef_idata = az.InferenceData(
-            posterior=model.idata.posterior[ranef].isel(**isel_kwargs)
-        )
-        model.idata.posterior = model.idata.posterior.drop_vars(ranef)
-    else:
-        ranef_idata = None
-    return model, ranef_idata
 
 
 # XArray Accessor -------------------------------------------------------------------

@@ -8,7 +8,13 @@ from omegaconf import OmegaConf
 
 from project import config, paths
 from project.brms import brm, ro
-from project.inference import brms_inference
+from project.inference import (
+    brms_log_likelihood,
+    brms_observed_data,
+    brms_posterior,
+    brms_posterior_epred,
+    brms_posterior_predictive,
+)
 
 az.rcParams.update(config.arviz)
 
@@ -45,7 +51,8 @@ data = DataFrame.from_(paths.final).assign(
 
 # %% ---------------------------------------------------------------------------------
 
-if (n := opts.get("subsample")) and n > 0:
+if (n := opts.model.get("subsample")) and n > 0:
+    print(f"Subsampling to {n} data points for faster model fitting...")
     model_data = data.sample(n=n, random_state=rng)
 else:
     model_data = data
@@ -78,26 +85,56 @@ quantized = data[[*opts.predictors.fixed]].drop_duplicates(ignore_index=True)
 
 # %% ---------------------------------------------------------------------------------
 
-model, ranef = brms_inference(
-    model,
-    target,
-    data,
-    response_dtype=int,
-    epred_data=quantized,
-    epred_opts=opts.inference.epd,
-    ppd_transform=lambda x: (x - 2),
-    ppd_opts=opts.inference.ppd,
-    loglik_opts=opts.inference.loglik,
-    ranef_ndraws=opts.inference.ranef.ndraws,
-    verbose=True,
+print("Preparing observed data...")
+model = brms_observed_data(model, target, data, dtype=int)
+
+# %% ---------------------------------------------------------------------------------
+
+print("Preparing posterior samples...")
+model = brms_posterior(model)
+
+# %% ---------------------------------------------------------------------------------
+
+print("Preparing posterior expectations...")
+model = brms_posterior_epred(model, quantized, **opts.inference.epd)
+
+# %% ---------------------------------------------------------------------------------
+
+if (subsample := opts.inference.get("subsample")) is not None and subsample > 0:
+    print("Subsampling data for posterior predictive computations...")
+    data = data.sample(n=subsample, random_state=rng)
+
+# %% ---------------------------------------------------------------------------------
+
+print("Preparing posterior predictive samples...")
+model = brms_posterior_predictive(
+    model, data, transform=lambda x: (x - 2).astype(int), **opts.inference.ppd
 )
+
+# %% ---------------------------------------------------------------------------------
+
+print("Preparing log-likelihood...")
+model = brms_log_likelihood(model, data, **opts.inference.loglik)
+
+# %% ---------------------------------------------------------------------------------
+
+print("Downsampling and separating random effects...")
+ranef = [k for k in model.idata.posterior if k.startswith("r_")]
+if ranef:
+    isel_kwargs = {"draw": slice(-opts.inference.ranef.ndraws, None)}
+    ranef_idata = az.InferenceData(
+        posterior=model.idata.posterior[ranef].isel(**isel_kwargs)
+    )
+    model.idata.posterior = model.idata.posterior.drop_vars(ranef)
+else:
+    ranef_idata = None
 
 # %% ---------------------------------------------------------------------------------
 
 print("Saving inference data to NetCDF...")
 model.idata.to_netcdf(dirpath / f"{target}.nc")
-if ranef is not None:
+if ranef_idata is not None:
     print("Saving random effects inference data to NetCDF...")
-    ranef.to_netcdf(dirpath / f"{target}-ranef.nc")
+    ranef_idata.to_netcdf(dirpath / f"{target}-ranef.nc")
 
 # %% ---------------------------------------------------------------------------------
