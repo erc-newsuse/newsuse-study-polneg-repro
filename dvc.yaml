@@ -186,11 +186,11 @@ stages:
     - sentiment
     - valence
     do:
-      cmd: python stages/glmm/valence_${item}.py
+      cmd: NEWSUSE_POLNEG_GLMM_VALENCE_TARGET=${item} python stages/glmm/valence.py
       params:
       - glmm.valence.targets.${item}
       deps:
-      - stages/glmm/valence_${item}.py
+      - stages/glmm/valence.py
       - data/proc/final.parquet
       outs:
       - glmm/valence/${item}.rds:

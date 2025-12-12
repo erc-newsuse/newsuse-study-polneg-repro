@@ -23,8 +23,7 @@ dependencies = [
     "ipykernel",
     "matplotlib==3.10.7",
     "seaborn==0.13.2",
-    "newspaper3k>=0.2.8",
-    "openai>=2.3.0",
+    "openai==2.3.0",
     "lxml[html_clean]",
     "python-dotenv>=1.1.1",
     "transformers[torch]==4.45.2",
@@ -32,6 +31,7 @@ dependencies = [
     "scikit-learn==1.7.2",
     "brmspy==0.2.1",
     "arviz==0.22.0",
+    "newspaper3k>=0.2.8",
 ]
 dynamic = ["version"]
 classifiers = [

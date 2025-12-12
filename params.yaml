@@ -140,7 +140,7 @@ glmm:
         seed: 9534621
         model:
           <<: *glmm_valence_model
-          family: cumulative
+          family: categorical
           link: logit
         inference:
           <<: *glmm_valence_inference

@@ -621,21 +621,16 @@ stages:
       md5: dfaa52f42e1965ba8efd3ce54d90b1cf
       size: 3820
   glmm-valence@event:
-    cmd: Rscript stages/glmm/valence_event.R && python
-      stages/glmm/valence_event.py
+    cmd: NEWSUSE_POLNEG_GLMM_VALENCE_TARGET=event python stages/glmm/valence.py
     deps:
     - path: data/proc/final.parquet
       hash: md5
-      md5: 032a6742b7dc44777f8692f913edc70d
-      size: 104753616
-    - path: stages/glmm/valence_event.R
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/glmm/valence.py
       hash: md5
-      md5: b86c22768a87bb9750bc38cb6b31eea5
-      size: 2924
-    - path: stages/glmm/valence_event.py
-      hash: md5
-      md5: fcff71a1b95b640811503e0da9d63813
-      size: 3171
+      md5: 827df66196abefa92710a632a8d7b7f5
+      size: 2491
     params:
       params.yaml:
         glmm.valence.targets.event:
