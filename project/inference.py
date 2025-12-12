@@ -280,7 +280,7 @@ def brms_posterior_predictive(
         kwargs["re_formula"] = re_formula
 
     # Handle observed data when 'newdata' is not provided
-    if newdata is not None:
+    if newdata is None:
         observed = model.idata.observed_data
         response_name = list(observed.data_vars)[0]
         newdata = (

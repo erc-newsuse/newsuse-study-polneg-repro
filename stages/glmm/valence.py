@@ -15,7 +15,7 @@ az.rcParams.update(config.arviz)
 
 # %% ---------------------------------------------------------------------------------
 
-target = os.environ.get("NEWSUSE_POLNEG_GLMM_VALENCE_TARGET", "event")
+target = os.environ.get("TARGET", "event")
 opts = config.glmm.valence.targets[target]
 
 dirpath = paths.glmm / "valence"
@@ -69,6 +69,12 @@ model = brm(
     seed=int(rng.integers(0, 2**16 - 1)),
     **kwargs,
 )
+
+# %% ---------------------------------------------------------------------------------
+
+assert (nobs := ro.r("nobs")(model.r)[0]) == len(
+    data
+), f"Fitted has {nobs} observations while data has {len(data)}!"
 
 # %% ---------------------------------------------------------------------------------
 
