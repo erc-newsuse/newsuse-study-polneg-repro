@@ -629,8 +629,8 @@ stages:
       size: 382132909
     - path: stages/glmm/valence.py
       hash: md5
-      md5: 89b85e4dfa64fd943b08d30e1dd4e616
-      size: 2676
+      md5: 2668275b0bbfb905cf34fa6d41ef837c
+      size: 2487
     params:
       params.yaml:
         glmm.valence.targets.event:
@@ -696,8 +696,8 @@ stages:
       size: 382132909
     - path: stages/glmm/valence.py
       hash: md5
-      md5: 89b85e4dfa64fd943b08d30e1dd4e616
-      size: 2676
+      md5: 2668275b0bbfb905cf34fa6d41ef837c
+      size: 2487
     params:
       params.yaml:
         glmm.valence.targets.sentiment:

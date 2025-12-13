@@ -268,7 +268,6 @@ def brms_posterior_epred(
 
 def brms_posterior_predictive(
     model: brmspy.FitResult,
-    newdata: pd.DataFrame | None = None,
     *,
     re_formula: str | ro.Formula | None = None,
     transform: Callable[[np.ndarray], np.ndarray] | None = None,
@@ -279,16 +278,14 @@ def brms_posterior_predictive(
     if re_formula is not None:
         kwargs["re_formula"] = re_formula
 
-    # Handle observed data when 'newdata' is not provided
-    if newdata is None:
-        observed = model.idata.observed_data
-        response_name = list(observed.data_vars)[0]
-        newdata = (
-            model.idata.observed_data.to_pandas()
-            .reset_index(drop=True)
-            .drop(columns=response_name)
-            .pipe(pd.DataFrame)
-        )
+    observed = model.idata.observed_data
+    response_name = list(observed.data_vars)[0]
+    newdata = (
+        model.idata.observed_data.to_pandas()
+        .reset_index(drop=True)
+        .drop(columns=response_name)
+        .pipe(pd.DataFrame)
+    )
 
     # Compute
     kwargs["newdata"] = df_to_r(newdata)
@@ -316,9 +313,9 @@ def brms_posterior_predictive(
 
 def brms_log_likelihood(
     model: brmspy.FitResult,
-    newdata: pd.DataFrame | None = None,
     *,
     re_formula: str | ro.Formula | None = None,
+    transform: Callable[[np.ndarray], np.ndarray] | None = None,
     pointwise: bool = True,
     **kwargs: Any,
 ) -> brmspy.FitResult:
@@ -333,8 +330,9 @@ def brms_log_likelihood(
     # Handle observed data
     observed = model.idata.observed_data
     response_name = list(observed.data_vars)[0]
-    if newdata is None:
-        newdata = pd.DataFrame(model.idata.observed_data.to_pandas().reset_index(drop=True))
+    newdata = pd.DataFrame(model.idata.observed_data.to_pandas().reset_index(drop=True))
+    if transform is not None:
+        newdata[response_name] = transform(newdata[response_name].to_numpy())
 
     # Compute
     kwargs["newdata"] = df_to_r(newdata)

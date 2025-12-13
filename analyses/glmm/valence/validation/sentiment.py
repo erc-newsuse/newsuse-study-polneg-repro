@@ -19,7 +19,7 @@ mpl.rcParams.update(config.plotting.params)
 
 target = "sentiment"
 opts = config.glmm.valence.targets[target]
-support = opts.inference.epd.support
+support = config.categorical[target]
 
 figpath = paths.figures / "glmm" / "valence" / "validation"
 figpath.mkdir(parents=True, exist_ok=True)

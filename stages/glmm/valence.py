@@ -66,11 +66,11 @@ model = brm(
 
 assert (nobs := ro.r("nobs")(model.r)[0]) == len(
     data
-), f"Fitted has {nobs} observations while data has {len(data)}!"
+), f"Fitted 'model' has {nobs} observations while 'data' has {len(data)}."
 
 # %% ---------------------------------------------------------------------------------
 
 print("Saving fitted 'brms' model as RDS file...")
-ro.r["saveRDS"](model.r, str(dirpath / f"{target}-model.rds"))
+ro.r["saveRDS"](model.r, str(dirpath / f"{target}.rds"))
 
 # %% ---------------------------------------------------------------------------------

@@ -1,13 +1,12 @@
 # %% ---------------------------------------------------------------------------------
 
-
 import os
 
 import arviz as az
 import brmspy
 import numpy as np
 from newsuse.data import DataFrame
-from rpy2.robjects import r as R
+from rpy2 import robjects as ro
 
 from project import config, paths
 from project.inference import (
@@ -38,14 +37,15 @@ data = DataFrame.from_(
 )
 quantized = data[[*opts.predictors.fixed]].drop_duplicates(ignore_index=True)
 
-if subsample := opts.inference.get("subsample"):
-    print(f"Subsampling data to {subsample} rows for faster processing...")
-    data = data.sample(n=subsample, random_state=rng)
+if (n := opts.inference.get("subsample")) and n > 0:
+    print(f"Subsampling data to {n} rows for faster processing...")
+    data = data.sample(n=n, random_state=rng)
 
 # %% ---------------------------------------------------------------------------------
 
 model = brmspy.FitResult(
-    idata=az.InferenceData(), r=R(f"readRDS('{output_dir / f'{target}.rds'}')")
+    r=ro.r["readRDS"](str(output_dir / f"{target}.rds")),
+    idata=az.InferenceData(),
 )
 
 # %% ---------------------------------------------------------------------------------
@@ -68,7 +68,6 @@ model = brms_posterior_epred(model, quantized, **opts.inference.epd)
 print("Preparing posterior predictive samples...")
 model = brms_posterior_predictive(
     model,
-    data,
     transform=lambda x: (x - (len(support) + 1) // 2).astype(int),
     **opts.inference.ppd,
 )
@@ -76,7 +75,7 @@ model = brms_posterior_predictive(
 # %% ---------------------------------------------------------------------------------
 
 print("Preparing log-likelihood...")
-model = brms_log_likelihood(model, **opts.inference.loglik)
+model = brms_log_likelihood(model, transform=lambda x: x - x.min(), **opts.inference.loglik)
 
 # %% ---------------------------------------------------------------------------------
 
