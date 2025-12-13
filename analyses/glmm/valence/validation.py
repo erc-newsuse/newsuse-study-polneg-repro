@@ -1,5 +1,7 @@
 # %% ---------------------------------------------------------------------------------
 
+import os
+
 import arviz as az
 import matplotlib as mpl  # noqa
 import matplotlib.pyplot as plt  # noqa
@@ -17,7 +19,9 @@ xr.set_options(**config.xarray)
 az.rcParams.update(config.arviz)
 mpl.rcParams.update(config.plotting.params)
 
-target = "valence"
+target = os.environ.get("TARGET")
+if not target:
+    target = input("Enter target (event): ").strip() or "event"
 opts = config.glmm.valence.targets[target]
 support = config.categorical[target]
 

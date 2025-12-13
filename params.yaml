@@ -130,13 +130,13 @@ glmm:
     targets:
       event:
         <<: *glmm_valence_model_advi
-        seed: 1842380
+        seed: 1289064
       sentiment:
         <<: *glmm_valence_model_advi
-        seed: 4323917
+        seed: 1562896
       valence:
         <<: *glmm_valence_model_advi
-        seed: 9544621
+        seed: 4810391
         model:
           <<: *glmm_valence_model
           family: cumulative
