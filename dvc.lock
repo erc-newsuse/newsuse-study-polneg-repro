@@ -621,7 +621,9 @@ stages:
       md5: dfaa52f42e1965ba8efd3ce54d90b1cf
       size: 3820
   glmm-valence@event:
-    cmd: TARGET=event python stages/glmm/valence.py
+    cmd:
+    - TARGET=event python stages/glmm/valence.py
+    - TARGET=event python stages/glmm/valence_inference.py
     deps:
     - path: data/proc/final.parquet
       hash: md5
@@ -629,8 +631,8 @@ stages:
       size: 382132909
     - path: stages/glmm/valence.py
       hash: md5
-      md5: 2668275b0bbfb905cf34fa6d41ef837c
-      size: 2487
+      md5: feef47ca3232ef7ac671822a3dc9e30f
+      size: 2481
     params:
       params.yaml:
         glmm.valence.targets.event:
@@ -673,22 +675,24 @@ stages:
             ranef:
               ndraws: 50
               cores: 4
-          seed: 1742380
+          seed: 1842380
     outs:
     - path: glmm/valence/event-ranef.nc
       hash: md5
-      md5: b33b5be3a64a9821e6409711ae1dadcd
-      size: 39679298
+      md5: 7a79cfacf026879f5f8f448f883d5740
+      size: 40051243
     - path: glmm/valence/event.nc
       hash: md5
-      md5: 2d29da5e260e29ec64761009bc04ea33
-      size: 655335729
+      md5: 6bfde2a8d5211fc6f4b1472acee80a8f
+      size: 656127199
     - path: glmm/valence/event.rds
       hash: md5
-      md5: 1ceb1ca87f82e15b12e3eba5bf80e39c
-      size: 50681548
+      md5: 780e13c34a844b8be3120c295598dc2c
+      size: 69624472
   glmm-valence@sentiment:
-    cmd: TARGET=sentiment python stages/glmm/valence.py
+    cmd:
+    - TARGET=sentiment python stages/glmm/valence.py
+    - TARGET=sentiment python stages/glmm/valence_inference.py
     deps:
     - path: data/proc/final.parquet
       hash: md5
@@ -696,8 +700,8 @@ stages:
       size: 382132909
     - path: stages/glmm/valence.py
       hash: md5
-      md5: 2668275b0bbfb905cf34fa6d41ef837c
-      size: 2487
+      md5: feef47ca3232ef7ac671822a3dc9e30f
+      size: 2481
     params:
       params.yaml:
         glmm.valence.targets.sentiment:
@@ -740,36 +744,33 @@ stages:
             ranef:
               ndraws: 50
               cores: 4
-          seed: 4823917
+          seed: 4323917
     outs:
     - path: glmm/valence/sentiment-ranef.nc
       hash: md5
-      md5: 8485fc5ea0c62f398ef34f2c14d50b57
-      size: 39589668
+      md5: 44497c817642a516b911f689b1d3c87c
+      size: 38981608
     - path: glmm/valence/sentiment.nc
       hash: md5
-      md5: 2c4eadf4c8ad5fe934f92c95d9bff4c4
-      size: 657208729
+      md5: 6d7137cee224882868c1cbacfb858bf4
+      size: 657058366
     - path: glmm/valence/sentiment.rds
       hash: md5
-      md5: 72dff21168c04126f51ae40a1debfbbf
-      size: 53242594
+      md5: ae02c259934da31cb0d35fe34e266c6b
+      size: 67838721
   glmm-valence@valence:
-    cmd: Rscript stages/glmm/valence_valence.R && python
-      stages/glmm/valence_valence.py
+    cmd:
+    - TARGET=valence python stages/glmm/valence.py
+    - TARGET=valence python stages/glmm/valence_inference.py
     deps:
     - path: data/proc/final.parquet
       hash: md5
-      md5: 032a6742b7dc44777f8692f913edc70d
-      size: 104753616
-    - path: stages/glmm/valence_valence.R
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/glmm/valence.py
       hash: md5
-      md5: a710c2074501f5573139abe3f63f00c0
-      size: 2926
-    - path: stages/glmm/valence_valence.py
-      hash: md5
-      md5: 84312e61a6554b0b2ff2c064a21ed0de
-      size: 3173
+      md5: feef47ca3232ef7ac671822a3dc9e30f
+      size: 2481
     params:
       params.yaml:
         glmm.valence.targets.valence:
@@ -804,12 +805,6 @@ stages:
               re_formulas:
                 grand_mean: ~0
                 full:
-              support:
-              - -2
-              - -1
-              - 0
-              - 1
-              - 2
               allow_new_levels: true
               sample_new_levels: gaussian
             loglik:
@@ -818,20 +813,20 @@ stages:
             ranef:
               ndraws: 50
               cores: 4
-          seed: 9534621
+          seed: 9544621
     outs:
     - path: glmm/valence/valence-ranef.nc
       hash: md5
-      md5: cf9531b57113e1f1a9f778e1c0034d1c
+      md5: 20aa74a9444789c25f6dda55d62f9b38
       size: 19753871
     - path: glmm/valence/valence.nc
       hash: md5
-      md5: 1adb560d0e6cd6b5768946907d7c2569
-      size: 668387100
+      md5: 25b492a76769592195b3fd8307a83d7d
+      size: 669172108
     - path: glmm/valence/valence.rds
       hash: md5
-      md5: c2e759a5bccc21db59f7ce635869fe11
-      size: 35270902
+      md5: bd59e3b5b27a62e77af8af29209f8f83
+      size: 49092145
   descriptives@valence:
     cmd: python analyses/descriptives/valence.py
     deps:
