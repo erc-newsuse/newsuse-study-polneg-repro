@@ -624,6 +624,8 @@ stages:
     cmd:
     - TARGET=event python stages/glmm/valence.py
     - TARGET=event python stages/glmm/valence_inference.py
+    - TARGET=event python analyses/glmm/valence/validation.py
+    - TARGET=event python analyses/glmm/valence/event.py
     deps:
     - path: data/proc/final.parquet
       hash: md5
@@ -675,24 +677,26 @@ stages:
             ranef:
               ndraws: 50
               cores: 4
-          seed: 1842380
+          seed: 1289064
     outs:
     - path: glmm/valence/event-ranef.nc
       hash: md5
-      md5: 7a79cfacf026879f5f8f448f883d5740
+      md5: 09b8e2f3764f49152f98f825de6ba1b3
       size: 40051243
     - path: glmm/valence/event.nc
       hash: md5
-      md5: 6bfde2a8d5211fc6f4b1472acee80a8f
-      size: 656127199
+      md5: c3f75aeae56d9f895cf3aea78cc9fc7a
+      size: 656508845
     - path: glmm/valence/event.rds
       hash: md5
-      md5: 780e13c34a844b8be3120c295598dc2c
-      size: 69624472
+      md5: 6d73da7e5c6aa5ef365f157808e1c250
+      size: 67132564
   glmm-valence@sentiment:
     cmd:
     - TARGET=sentiment python stages/glmm/valence.py
     - TARGET=sentiment python stages/glmm/valence_inference.py
+    - TARGET=sentiment python analyses/glmm/valence/validation.py
+    - TARGET=sentiment python analyses/glmm/valence/sentiment.py
     deps:
     - path: data/proc/final.parquet
       hash: md5
@@ -744,24 +748,26 @@ stages:
             ranef:
               ndraws: 50
               cores: 4
-          seed: 4323917
+          seed: 1562896
     outs:
     - path: glmm/valence/sentiment-ranef.nc
       hash: md5
-      md5: 44497c817642a516b911f689b1d3c87c
-      size: 38981608
+      md5: 4b6f7dec8ead22fa463a604eee0d6f94
+      size: 40051243
     - path: glmm/valence/sentiment.nc
       hash: md5
-      md5: 6d7137cee224882868c1cbacfb858bf4
-      size: 657058366
+      md5: ce5c1dcff16a7663c003e20ce33508f6
+      size: 656983422
     - path: glmm/valence/sentiment.rds
       hash: md5
-      md5: ae02c259934da31cb0d35fe34e266c6b
-      size: 67838721
+      md5: 7ce3772088bacc06c506292e5cc08ccd
+      size: 67749601
   glmm-valence@valence:
     cmd:
     - TARGET=valence python stages/glmm/valence.py
     - TARGET=valence python stages/glmm/valence_inference.py
+    - TARGET=valence python analyses/glmm/valence/validation.py
+    - TARGET=valence python analyses/glmm/valence/valence.py
     deps:
     - path: data/proc/final.parquet
       hash: md5
@@ -813,20 +819,20 @@ stages:
             ranef:
               ndraws: 50
               cores: 4
-          seed: 9544621
+          seed: 4810391
     outs:
     - path: glmm/valence/valence-ranef.nc
       hash: md5
-      md5: 20aa74a9444789c25f6dda55d62f9b38
+      md5: cde006c35a66aa990b907d336143fa8b
       size: 19753871
     - path: glmm/valence/valence.nc
       hash: md5
-      md5: 25b492a76769592195b3fd8307a83d7d
-      size: 669172108
+      md5: 7e6aec73085631599108dc452903b75d
+      size: 668537764
     - path: glmm/valence/valence.rds
       hash: md5
-      md5: bd59e3b5b27a62e77af8af29209f8f83
-      size: 49092145
+      md5: 76145e0e5db6a0823b1d7ed8f3545e12
+      size: 48883322
   descriptives@valence:
     cmd: python analyses/descriptives/valence.py
     deps:

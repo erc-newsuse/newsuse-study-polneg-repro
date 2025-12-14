@@ -42,8 +42,10 @@ def df_to_r(data: pd.DataFrame) -> ro.DataFrame:
     return rdf
 
 
-def make_prior(spec: Mapping[str, Any]) -> PriorSpec:
+def make_prior(spec: str | Mapping[str, Any]) -> PriorSpec:
     """Create a prior specification for use in `brms` models."""
+    if isinstance(spec, str):
+        return ro.r(f"brms::prior({spec})")
     spec = dict(spec)
     if (field := "class") in spec:
         class_ = spec.pop(field)
@@ -51,8 +53,11 @@ def make_prior(spec: Mapping[str, Any]) -> PriorSpec:
     return prior(**spec)
 
 
-def build_priors(specs: Iterable[Mapping[str, Any]]) -> ro.DataFrame:
+def build_priors(specs: Iterable[str | Mapping[str, Any]]) -> ro.DataFrame:
     """Build a sequence of prior specifications for use in `brms` models."""
+    if all(isinstance(spec, str) for spec in specs):
+        priors = [make_prior(spec) for spec in specs]
+        return ro.r["c"](*priors)
     return _build_priors([make_prior(spec) for spec in specs])
 
 

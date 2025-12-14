@@ -144,6 +144,24 @@ glmm:
           # subsample: 500_000
         inference:
           <<: *glmm_valence_inference
+      event_latent:
+        <<: *glmm_valence_model_advi
+        seed: 1289326
+        model:
+          <<: *glmm_valence_model
+          family: mixture(gaussian, gaussian)
+          prior:
+          - "normal(-2, 2), class = Intercept, dpar = mu1"
+          - "normal(2, 2), class = Intercept, dpar = mu2"
+      sentiment_latent:
+        <<: *glmm_valence_model_advi
+        seed: 1563278
+        model:
+          <<: *glmm_valence_model
+          family: mixture(gaussian, gaussian)
+          prior:
+          - "normal(-2, 2), class = Intercept, dpar = mu1"
+          - "normal(2, 2), class = Intercept, dpar = mu2"
 
 classification:
   political:
