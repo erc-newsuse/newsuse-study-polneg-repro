@@ -53,6 +53,7 @@ def annotate_ci(
         "xycoords": "data",
         "textcoords": "offset points",
         "bbox": {"fc": "white", **(bbox or {})},
+        **kwargs,
     }
     ax.annotate(text, xy=(x, y + offset), xytext=(0, 5), **kwargs)
     return ax

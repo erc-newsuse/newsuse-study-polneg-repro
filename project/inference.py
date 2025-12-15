@@ -1,5 +1,6 @@
 import typing
 from collections.abc import Callable, Hashable, Mapping, Sequence
+from itertools import product
 from typing import Any, ClassVar
 
 import arviz as az
@@ -120,18 +121,23 @@ def brms_observed_data(
         with localconverter(ro.default_converter + pandas2ri.converter):
             data = pandas2ri.rpy2py(r_data)
 
+    response_cols = [
+        c for c in data.columns if c == response_name or c.startswith(f"{response_name}_")
+    ]
+
     data = pd.DataFrame(data)
     if not coords:
-        coords = [c for c in data if c != response_name]
+        coords = [c for c in data if c not in response_cols]
 
-    y = data.pop(response_name).to_numpy()
-    if dtype is not None:
-        y = y.astype(dtype)
+    data_y = {}
+    for col in response_cols:
+        y = data.pop(col).to_numpy()
+        if dtype is not None:
+            y = y.astype(dtype)
+        data_y[col] = (OBS_DIM, y)
 
     data_coords = make_data_coords(data, **kwargs)
-    observed_data = xr.Dataset({response_name: (OBS_DIM, y)}, coords=data_coords).sortby(
-        OBS_DIM
-    )
+    observed_data = xr.Dataset(data_y, coords=data_coords).sortby(OBS_DIM)
     model.idata.add_groups(observed_data=observed_data)
     return model
 
@@ -395,3 +401,31 @@ class StatsAccessor:
             ds1 = ds1.mean(marginalize)
             ds2 = ds2.mean(marginalize)
         return ds1 - ds2
+
+    def marginalize(self, *dims: str) -> xr.DataArray | xr.Dataset:
+        coords = {dim: np.unique(self._ds.coords[dim].values) for dim in dims}
+        n = 0
+        carry = None
+        for vals in product(*coords.values()):
+            sel = dict(zip(coords.keys(), vals, strict=True))
+            try:
+                ds = self._ds.sel(**sel).drop_vars(list(sel))
+                carry = ds if carry is None else carry + ds
+                n += 1
+            except KeyError:
+                continue
+        return carry / n  # type: ignore
+
+    def average_by(
+        self, *dims: str, obs_dim: str = OBS_DIM, group_dim: str = GROUP_DIM
+    ) -> xr.DataArray | xr.Dataset:
+        groups = []
+        coords = {dim: np.unique(self._ds.coords[dim].values) for dim in dims}
+        for vals in product(*coords.values()):
+            sel = dict(zip(coords.keys(), vals, strict=True))
+            try:
+                ds = self._ds.sel(**sel).mean(obs_dim)
+                groups.append(ds)
+            except KeyError:
+                continue
+        return xr.concat(groups, dim=group_dim)
