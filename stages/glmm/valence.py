@@ -19,7 +19,7 @@ ro.r("library(brms)")
 # %% ---------------------------------------------------------------------------------
 
 target = os.environ.get("TARGET", "event")
-opts = config.glmm.valence.targets[f"{target}_latent"]
+opts = config.glmm.valence.targets[f"{target}"]
 
 dirpath = paths.glmm / "valence"
 dirpath.mkdir(parents=True, exist_ok=True)
@@ -70,6 +70,6 @@ assert (nobs := ro.r("nobs")(model.r)[0]) == len(
 # %% ---------------------------------------------------------------------------------
 
 print("Saving fitted 'brms' model as RDS file...")
-ro.r["saveRDS"](model.r, str(dirpath / f"{target}-latent.rds"))
+ro.r["saveRDS"](model.r, str(dirpath / f"{target}.rds"))
 
 # %% ---------------------------------------------------------------------------------

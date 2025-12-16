@@ -10,6 +10,7 @@ dependencies:
   - dvc-gdrive
   - pip
   - libsqlite=3.48.0
+  - xz
   - r-base>=4.4
   - r-remotes
   - r-rhpcblasctl
