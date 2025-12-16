@@ -19,7 +19,7 @@ ro.r("library(brms)")
 # %% ---------------------------------------------------------------------------------
 
 target = os.environ.get("TARGET", "event")
-opts = config.glmm.valence.targets[f"{target}"]
+opts = config.glmm.valence.targets[target]
 
 dirpath = paths.glmm / "valence"
 dirpath.mkdir(parents=True, exist_ok=True)
