@@ -209,6 +209,10 @@ fig.savefig(figpath / f"{target}-latent-political-country.pdf")
 coords = ppd.coords.copy()
 coords[target] = config.categorical[target]
 
+weight_cols = [
+    "outlet",
+]
+
 probs = (
     xr.DataArray(
         np.swapaxes(ordinal_probs((ppd[target].values + biases[..., None, None]).T), 0, 1),
@@ -217,15 +221,7 @@ probs = (
     )
     .isel(sample=slice(0, None, 10))  # Subsample for memory reasons
     .to_dataframe(name="prob")["prob"]
-)
-
-# %% ---------------------------------------------------------------------------------
-
-weight_cols = [
-    "outlet",
-]
-prob_political_country = (
-    probs.groupby(["country", "political", "weekend", "outlet", "isotime", target, "draw"])
+    .groupby(["country", "political", "weekend", "outlet", "isotime", target, "draw"])
     .mean()
     .groupby(["country", "political", "outlet", "isotime", target, "draw"])
     .mean()
@@ -237,62 +233,86 @@ prob_political_country = (
         lambda df: df.assign(weight=lambda d: 1 / len(d[weight_cols].drop_duplicates())),
         include_groups=False,
     )
-    .set_index(["political", "outlet", *weight_cols, target, "draw"], append=True)
+    .reset_index("country", drop=False)
+    .set_index(["political", "country", *weight_cols, target, "draw"])
 )
 
-prob_country = (
-    prob_political_country.groupby(["country", target])
-    .apply(
-        lambda df: pd.Series(
-            np.quantile(
-                df["prob"],
-                [q0, 0.5, q1],
-                weights=df["weight"],
-                method="inverted_cdf",
-            ),
-            index=["lb", "median", "ub"],
-        )
-    )
-    .reset_index()
-)
+# %% ---------------------------------------------------------------------------------
 
-prob_political = (
-    prob_political_country.groupby(["political", target])
-    .apply(
-        lambda df: pd.Series(
-            np.quantile(
-                df["prob"],
-                [q0, 0.5, q1],
-                weights=df["weight"],
-                method="inverted_cdf",
-            ),
-            index=["lb", "median", "ub"],
-        )
-    )
-    .reset_index()
-)
+probs_political_country = probs.groupby(
+    ["political", "country", "outlet", "draw", target]
+).mean()
 
-prob_political_country = (
-    prob_political_country.groupby(["political", "country", target])
+probs_country = probs_political_country.groupby(
+    ["country", "outlet", "draw", target]
+).mean()
+
+# %% ---------------------------------------------------------------------------------
+
+# diffs_overall = (
+(
+    probs_political_country.groupby(["outlet", "draw", "event"])
     .apply(
         lambda df: pd.Series(
-            np.quantile(
-                df["prob"],
-                [q0, 0.5, q1],
-                weights=df["weight"],
-                method="inverted_cdf",
-            ),
-            index=["lb", "median", "ub"],
+            {"prob": df["prob"].diff().iloc[-1], "weight": df["weight"].mean()}
         )
     )
+    .groupby(["event", "draw"])
+    .apply(lambda df: np.average(df["prob"], weights=df["weight"]))
+    .groupby("event")
+    .quantile([q0, 0.5, q1])
+    .unstack(-1)
+    .rename(columns={q0: "lb", 0.5: "median", q1: "ub"})
     .reset_index()
+    # .groupby(target)
+    # .apply(
+    #     lambda df: pd.Series(
+    #         np.quantile(
+    #             df["prob"],
+    #             [q0, 0.5, q1],
+    #             weights=df["weight"],
+    #             method="inverted_cdf",
+    #         ),
+    #         index=["lb", "median", "ub"],
+    #     )
+    # )
+    # probs
+    # .apply(weighted_mean, "prob", "weight")
+    # .groupby(["draw", target])
+    # .diff()
+    # .dropna()
+    # .droplevel(0)
+    # .groupby([target])
+    # .quantile([q0, 0.5, q1])
+    # .unstack(-1)
+    # .rename(columns={q0: "lb", 0.5: "median", q1: "ub"})
+    # .reset_index()
 )
 
 # %% ---------------------------------------------------------------------------------
 
 fig, ax = plt.subplots(figsize=(7, 5))
-
-df = prob_political
+df = (
+    probs_political_country
+    # .groupby(["political", "draw", target])
+    # .apply(lambda df: np.average(df["prob"], weights=df["weight"]))
+    # .groupby(["political", target])
+    # .quantile([q0, 0.5, q1])
+    # .unstack(-1)
+    # .rename(columns={q0: "lb", 0.5: "median", q1: "ub"})
+    # .reset_index()
+    .groupby(["political", target]).apply(
+        lambda df: pd.Series(
+            np.quantile(
+                df["prob"],
+                [q0, 0.5, q1],
+                method="inverted_cdf",
+                weights=df["weight"],
+            ),
+            index=["lb", "median", "ub"],
+        )
+    )
+)
 (
     so.Plot(
         df,
