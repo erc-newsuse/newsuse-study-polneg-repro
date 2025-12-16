@@ -18,11 +18,12 @@ from project.inference import (
 )
 
 target = os.environ.get("TARGET", "event")
+support = [*config.categorical[target]]
 
 output_dir = paths.glmm / "valence"
 output_dir.mkdir(parents=True, exist_ok=True)
 
-opts = config.glmm.valence.targets[f"{target}_latent"]
+opts = config.glmm.valence.targets[target]
 
 rng = np.random.default_rng(opts.seed)
 
@@ -32,14 +33,7 @@ az.rcParams.update(config.arviz)
 
 data = DataFrame.from_(
     paths.final,
-    columns=[
-        opts.index_col,
-        f"{target}_latent",
-        *opts.predictors.fixed,
-        *opts.predictors.groups,
-    ],
-).assign(
-    **{target: lambda df: df[f"{target}_latent"]},
+    columns=[opts.index_col, target, *opts.predictors.fixed, *opts.predictors.groups],
 )
 quantized = data[[*opts.predictors.fixed]].drop_duplicates(ignore_index=True)
 
@@ -50,7 +44,7 @@ if (n := opts.inference.get("subsample")) and n > 0:
 # %% ---------------------------------------------------------------------------------
 
 model = brmspy.FitResult(
-    r=ro.r["readRDS"](str(output_dir / f"{target}-latent.rds")),
+    r=ro.r["readRDS"](str(output_dir / f"{target}.rds")),
     idata=az.InferenceData(),
 )
 
@@ -72,12 +66,16 @@ model = brms_posterior_epred(model, quantized, **opts.inference.epd)
 # %% ---------------------------------------------------------------------------------
 
 print("Preparing posterior predictive samples...")
-model = brms_posterior_predictive(model, **opts.inference.ppd)
+model = brms_posterior_predictive(
+    model,
+    transform=lambda x: (x - (len(support) + 1) // 2).astype(int),
+    **opts.inference.ppd,
+)
 
 # %% ---------------------------------------------------------------------------------
 
 print("Preparing log-likelihood...")
-model = brms_log_likelihood(model, **opts.inference.loglik)
+model = brms_log_likelihood(model, transform=lambda x: x - x.min(), **opts.inference.loglik)
 
 # %% ---------------------------------------------------------------------------------
 
@@ -93,11 +91,11 @@ model.idata.posterior = model.idata.posterior.drop_vars(ranef)
 # %% ---------------------------------------------------------------------------------
 
 print("Saving InferenceData to NetCDF...")
-model.idata.to_netcdf(output_dir / f"{target}-latent.nc")
+model.idata.to_netcdf(output_dir / f"{target}.nc")
 
 # %% ---------------------------------------------------------------------------------
 
 print("Saving random effects InferenceData to NetCDF...")
-ranef_idata.to_netcdf(output_dir / f"{target}-latent-ranef.nc")
+ranef_idata.to_netcdf(output_dir / f"{target}-ranef.nc")
 
 # %% ---------------------------------------------------------------------------------

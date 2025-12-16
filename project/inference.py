@@ -274,9 +274,11 @@ def brms_posterior_epred(
 
 def brms_posterior_predictive(
     model: brmspy.FitResult,
+    data: pd.DataFrame | None = None,
     *,
     re_formula: str | ro.Formula | None = None,
     transform: Callable[[np.ndarray], np.ndarray] | None = None,
+    group_name: str = "posterior_predictive",
     **kwargs: Any,
 ) -> brmspy.FitResult:
     if isinstance(re_formula, str):
@@ -286,15 +288,23 @@ def brms_posterior_predictive(
 
     observed = model.idata.observed_data
     response_name = list(observed.data_vars)[0]
-    newdata = (
-        model.idata.observed_data.to_pandas()
-        .reset_index(drop=True)
-        .drop(columns=response_name)
-        .pipe(pd.DataFrame)
-    )
+
+    if data is None:
+        data = pd.DataFrame(
+            model.idata.observed_data.to_pandas()
+            .reset_index(drop=True)
+            .drop(columns=response_name)
+        )
+    else:
+        observed = (
+            data.reset_index(names=GROUP_DIM)
+            .set_index(GROUP_DIM)
+            .pipe(xr.Dataset.from_dataframe)
+        )
+        observed = observed.assign_coords(observed.data_vars)
 
     # Compute
-    kwargs["newdata"] = df_to_r(newdata)
+    kwargs["newdata"] = df_to_r(data)
     posterior_predictive = ro.r("brms::posterior_predict")
     ppred = posterior_predictive(model.r, **kwargs)
     ppred = np.asarray(ppred)
@@ -313,7 +323,7 @@ def brms_posterior_predictive(
 
     # Build dataset
     ds = xr.Dataset({response_name: (dims, ppred)}, coords=coords).sortby(OBS_DIM)
-    model.idata.add_groups(posterior_predictive=ds)
+    model.idata.add_groups(**{group_name: ds})
     return model
 
 

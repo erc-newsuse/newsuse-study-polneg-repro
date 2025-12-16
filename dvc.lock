@@ -624,8 +624,6 @@ stages:
     cmd:
     - TARGET=event python stages/glmm/valence.py
     - TARGET=event python stages/glmm/valence_inference.py
-    - TARGET=event python analyses/glmm/valence/validation.py
-    - TARGET=event python analyses/glmm/valence/event.py
     deps:
     - path: data/proc/final.parquet
       hash: md5
@@ -633,8 +631,12 @@ stages:
       size: 382132909
     - path: stages/glmm/valence.py
       hash: md5
-      md5: feef47ca3232ef7ac671822a3dc9e30f
-      size: 2481
+      md5: 5369cbb8459ff33c3c90290800579cc9
+      size: 2376
+    - path: stages/glmm/valence_inference.py
+      hash: md5
+      md5: 6a553e05b5fcd17857dc502bc7e34133
+      size: 3633
     params:
       params.yaml:
         glmm.valence.targets.event:
@@ -650,8 +652,11 @@ stages:
           model:
             formula: "{target} ~ 1\n  + political * country + weekend\n  + (1 | outlet:political)\n\
               \  + (1 | country:isotime:political)\n"
-            family: categorical
+            family: mixture(gaussian, gaussian)
             link: logit
+            prior:
+            - normal(-2, 2), class = Intercept, dpar = mu1
+            - normal(2, 2), class = Intercept, dpar = mu2
           n_threads: 4
           solver:
             algorithm: meanfield
@@ -665,38 +670,41 @@ stages:
             ppd:
               ndraws: 250
               cores: 4
+            pop:
+              allow_new_levels: true
+              sample_new_levels: old_levels
+              group_name: population_posterior_predictive
+              re_formula: ~outlet
             epd:
               re_formulas:
                 grand_mean: ~0
-                full:
+                full: ~outlet
               allow_new_levels: true
-              sample_new_levels: gaussian
+              sample_new_levels: old_levels
             loglik:
               ndraws: 250
               cores: 4
             ranef:
               ndraws: 50
               cores: 4
-          seed: 1289064
+          seed: 1289326
     outs:
     - path: glmm/valence/event-ranef.nc
       hash: md5
-      md5: 09b8e2f3764f49152f98f825de6ba1b3
-      size: 40051243
+      md5: 5c874d06afc3955750ddaa7fb863e725
+      size: 39384749
     - path: glmm/valence/event.nc
       hash: md5
-      md5: c3f75aeae56d9f895cf3aea78cc9fc7a
-      size: 656508845
+      md5: 08dcaabf41711e427d9c4774308a87ae
+      size: 1111936508
     - path: glmm/valence/event.rds
       hash: md5
-      md5: 6d73da7e5c6aa5ef365f157808e1c250
-      size: 67132564
+      md5: 531f9b3622de7c3d378cd5f476fd5e70
+      size: 111804228
   glmm-valence@sentiment:
     cmd:
     - TARGET=sentiment python stages/glmm/valence.py
     - TARGET=sentiment python stages/glmm/valence_inference.py
-    - TARGET=sentiment python analyses/glmm/valence/validation.py
-    - TARGET=sentiment python analyses/glmm/valence/sentiment.py
     deps:
     - path: data/proc/final.parquet
       hash: md5
@@ -704,8 +712,12 @@ stages:
       size: 382132909
     - path: stages/glmm/valence.py
       hash: md5
-      md5: feef47ca3232ef7ac671822a3dc9e30f
-      size: 2481
+      md5: 5369cbb8459ff33c3c90290800579cc9
+      size: 2376
+    - path: stages/glmm/valence_inference.py
+      hash: md5
+      md5: 6a553e05b5fcd17857dc502bc7e34133
+      size: 3633
     params:
       params.yaml:
         glmm.valence.targets.sentiment:
@@ -721,8 +733,11 @@ stages:
           model:
             formula: "{target} ~ 1\n  + political * country + weekend\n  + (1 | outlet:political)\n\
               \  + (1 | country:isotime:political)\n"
-            family: categorical
+            family: mixture(gaussian, gaussian)
             link: logit
+            prior:
+            - normal(-2, 2), class = Intercept, dpar = mu1
+            - normal(2, 2), class = Intercept, dpar = mu2
           n_threads: 4
           solver:
             algorithm: meanfield
@@ -736,32 +751,37 @@ stages:
             ppd:
               ndraws: 250
               cores: 4
+            pop:
+              allow_new_levels: true
+              sample_new_levels: old_levels
+              group_name: population_posterior_predictive
+              re_formula: ~outlet
             epd:
               re_formulas:
                 grand_mean: ~0
-                full:
+                full: ~outlet
               allow_new_levels: true
-              sample_new_levels: gaussian
+              sample_new_levels: old_levels
             loglik:
               ndraws: 250
               cores: 4
             ranef:
               ndraws: 50
               cores: 4
-          seed: 1562896
+          seed: 1563278
     outs:
     - path: glmm/valence/sentiment-ranef.nc
       hash: md5
-      md5: 4b6f7dec8ead22fa463a604eee0d6f94
-      size: 40051243
+      md5: c90ec6b1434857d15885b3da3a761c34
+      size: 39336780
     - path: glmm/valence/sentiment.nc
       hash: md5
-      md5: ce5c1dcff16a7663c003e20ce33508f6
-      size: 656983422
+      md5: 47972839a23e0eabeceadde744926f81
+      size: 1113777535
     - path: glmm/valence/sentiment.rds
       hash: md5
-      md5: 7ce3772088bacc06c506292e5cc08ccd
-      size: 67749601
+      md5: cd9464ca29bce53b81ddd7be3e2240cf
+      size: 110470923
   glmm-valence@valence:
     cmd:
     - TARGET=valence python stages/glmm/valence.py

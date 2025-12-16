@@ -113,12 +113,18 @@ glmm:
         ppd:  &glmm_valence_ppd
           ndraws: 250
           cores: *glmm_valence_n_threads
+        pop:  &glmm_valence_pop
+          allow_new_levels: true
+          sample_new_levels: old_levels
+          group_name: "population_posterior_predictive"
+          re_formula: ~outlet
         epd:  &glmm_valence_epd
           re_formulas:
             grand_mean: ~0
-            full: null
+            # full: null
+            full: ~outlet
           allow_new_levels: true
-          sample_new_levels: gaussian
+          sample_new_levels: old_levels
         loglik:
           <<: *glmm_valence_ppd
         ranef:
@@ -130,22 +136,6 @@ glmm:
     targets:
       event:
         <<: *glmm_valence_model_advi
-        seed: 1289064
-      sentiment:
-        <<: *glmm_valence_model_advi
-        seed: 1562896
-      valence:
-        <<: *glmm_valence_model_advi
-        seed: 4810391
-        model:
-          <<: *glmm_valence_model
-          family: cumulative
-          link: logit
-          # subsample: 500_000
-        inference:
-          <<: *glmm_valence_inference
-      event_latent:
-        <<: *glmm_valence_model_advi
         seed: 1289326
         model:
           <<: *glmm_valence_model
@@ -153,7 +143,7 @@ glmm:
           prior:
           - "normal(-2, 2), class = Intercept, dpar = mu1"
           - "normal(2, 2), class = Intercept, dpar = mu2"
-      sentiment_latent:
+      sentiment:
         <<: *glmm_valence_model_advi
         seed: 1563278
         model:
@@ -162,6 +152,22 @@ glmm:
           prior:
           - "normal(-2, 2), class = Intercept, dpar = mu1"
           - "normal(2, 2), class = Intercept, dpar = mu2"
+      # event:
+      #   <<: *glmm_valence_model_advi
+      #   seed: 1289064
+      # sentiment:
+      #   <<: *glmm_valence_model_advi
+      #   seed: 1562896
+      # valence:
+      #   <<: *glmm_valence_model_advi
+      #   seed: 4810391
+      #   model:
+      #     <<: *glmm_valence_model
+      #     family: cumulative
+      #     link: logit
+      #     # subsample: 500_000
+      #   inference:
+      #     <<: *glmm_valence_inference
 
 classification:
   political:

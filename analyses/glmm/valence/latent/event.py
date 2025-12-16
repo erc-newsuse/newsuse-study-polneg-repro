@@ -61,13 +61,15 @@ class _DatasetAccessor(StatsAccessor):
 
 # %% ---------------------------------------------------------------------------------
 
-idata = az.from_netcdf(paths.glmm / "valence" / f"{target}-latent.nc")
+idata = az.from_netcdf(paths.glmm / "valence" / f"{target}.nc")
 idata = set_xindex(idata, [opts.index_col, *sum(opts.predictors.values(), start=[])])
 epred = az.extract(idata, group="posterior_epred")
 ppd = az.extract(idata, group="posterior_predictive")
+pop = az.extract(idata, group="population_posterior_predictive")
 # Average out week effects to focus on main effects
 if "weekend" in epred.coords:
     epred = epred.stats.marginalize("weekend")
+    pop = pop.stats.marginalize("weekend")
 
 # %% ---------------------------------------------------------------------------------
 
@@ -203,6 +205,34 @@ ax.set_xticks([*countries], [*countries.values()])
 
 fig.tight_layout()
 fig.savefig(figpath / f"{target}-latent-political-country.pdf")
+
+# %% Derive population posterior predictive class probabilities ----------------------
+
+base = ppd
+base_target = target
+coords = base.coords.copy()
+coords[target] = config.categorical[target]
+probs = xr.DataArray(
+    np.swapaxes(
+        ordinal_probs((base[base_target].values + biases[..., None, None]).T), 0, 1
+    ),
+    coords=coords,
+    dims=coords.dims,
+)
+if (field := "weekend") in probs.coords:
+    probs = probs.stats.marginalize(field)
+
+# %% ---------------------------------------------------------------------------------
+
+# probs_political_country = (
+(
+    probs.to_dataframe(name="prob")["prob"]
+    .groupby(["country", "political", target])
+    .quantile([q0, 0.5, q1])
+    .unstack(-1)
+    .rename(columns={q0: "lb", 0.5: "median", q1: "ub"})
+    .reset_index()
+)
 
 # %% Derive expected posterior class probabilities -----------------------------------
 

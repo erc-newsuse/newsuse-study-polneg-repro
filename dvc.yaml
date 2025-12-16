@@ -184,17 +184,17 @@ stages:
     foreach:
     - event
     - sentiment
-    - valence
     do:
       cmd:
       - TARGET=${item} python stages/glmm/valence.py
       - TARGET=${item} python stages/glmm/valence_inference.py
-      - TARGET=${item} python analyses/glmm/valence/validation.py
-      - TARGET=${item} python analyses/glmm/valence/${item}.py
+      # - TARGET=${item} python analyses/glmm/valence/validation.py
+      # - TARGET=${item} python analyses/glmm/valence/${item}.py
       params:
       - glmm.valence.targets.${item}
       deps:
       - stages/glmm/valence.py
+      - stages/glmm/valence_inference.py
       - data/proc/final.parquet
       outs:
       - glmm/valence/${item}.rds:
@@ -204,25 +204,26 @@ stages:
       - glmm/valence/${item}-ranef.nc:
           persist: true
 
-  glmm-valence-latent:
-    foreach:
-    - event
-    - sentiment
-    do:
-      cmd:
-      - TARGET=${item} python stages/glmm/valence_latent.py
-      - TARGET=${item} python stages/glmm/valence_latent_inference.py
-      # - TARGET=${item} python analyses/glmm/valence/validation.py
-      # - TARGET=${item} python analyses/glmm/valence/${item}.py
-      params:
-      - glmm.valence.targets.${item}_latent
-      deps:
-      - stages/glmm/valence_latent.py
-      - data/proc/final.parquet
-      outs:
-      - glmm/valence/${item}-latent.rds:
-          persist: true
-      # - glmm/valence_latent/${item}.nc:
-      #     persist: true
-      # - glmm/valence_latent/${item}-ranef.nc:
-      #     persist: true
+  # glmm-valence:
+  #   foreach:
+  #   - event
+  #   - sentiment
+  #   - valence
+  #   do:
+  #     cmd:
+  #     - TARGET=${item} python stages/glmm/valence.py
+  #     - TARGET=${item} python stages/glmm/valence_inference.py
+  #     - TARGET=${item} python analyses/glmm/valence/validation.py
+  #     - TARGET=${item} python analyses/glmm/valence/${item}.py
+  #     params:
+  #     - glmm.valence.targets.${item}
+  #     deps:
+  #     - stages/glmm/valence.py
+  #     - data/proc/final.parquet
+  #     outs:
+  #     - glmm/valence/${item}.rds:
+  #         persist: true
+  #     - glmm/valence/${item}.nc:
+  #         persist: true
+  #     - glmm/valence/${item}-ranef.nc:
+  #         persist: true

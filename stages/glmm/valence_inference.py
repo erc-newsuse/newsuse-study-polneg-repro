@@ -17,8 +17,9 @@ from project.inference import (
     brms_posterior_predictive,
 )
 
-target = os.environ.get("TARGET", "event")
-support = [*config.categorical[target]]
+target = os.environ.get("TARGET")
+if not target:
+    target = input("Enter target name (event): ").strip() or "event"
 
 output_dir = paths.glmm / "valence"
 output_dir.mkdir(parents=True, exist_ok=True)
@@ -33,7 +34,14 @@ az.rcParams.update(config.arviz)
 
 data = DataFrame.from_(
     paths.final,
-    columns=[opts.index_col, target, *opts.predictors.fixed, *opts.predictors.groups],
+    columns=[
+        opts.index_col,
+        f"{target}_latent",
+        *opts.predictors.fixed,
+        *opts.predictors.groups,
+    ],
+).assign(
+    **{target: lambda df: df[f"{target}_latent"]},
 )
 quantized = data[[*opts.predictors.fixed]].drop_duplicates(ignore_index=True)
 
@@ -46,6 +54,7 @@ if (n := opts.inference.get("subsample")) and n > 0:
 model = brmspy.FitResult(
     r=ro.r["readRDS"](str(output_dir / f"{target}.rds")),
     idata=az.InferenceData(),
+    # idata=az.from_netcdf(str(output_dir / f"{target}.nc")),
 )
 
 # %% ---------------------------------------------------------------------------------
@@ -66,16 +75,17 @@ model = brms_posterior_epred(model, quantized, **opts.inference.epd)
 # %% ---------------------------------------------------------------------------------
 
 print("Preparing posterior predictive samples...")
-model = brms_posterior_predictive(
-    model,
-    transform=lambda x: (x - (len(support) + 1) // 2).astype(int),
-    **opts.inference.ppd,
-)
+model = brms_posterior_predictive(model, **opts.inference.ppd)
+
+# %% ---------------------------------------------------------------------------------
+
+print("Preparing population posterior predictive samples...")
+model = brms_posterior_predictive(model, quantized, **opts.inference["pop"])
 
 # %% ---------------------------------------------------------------------------------
 
 print("Preparing log-likelihood...")
-model = brms_log_likelihood(model, transform=lambda x: x - x.min(), **opts.inference.loglik)
+model = brms_log_likelihood(model, **opts.inference.loglik)
 
 # %% ---------------------------------------------------------------------------------
 

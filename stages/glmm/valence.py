@@ -13,10 +13,13 @@ from project.brms import brm, ro
 
 az.rcParams.update(config.arviz)
 
+# Load 'brms' in the R process
+ro.r("library(brms)")
+
 # %% ---------------------------------------------------------------------------------
 
 target = os.environ.get("TARGET", "event")
-opts = config.glmm.valence.targets[target]
+opts = config.glmm.valence.targets[f"{target}_latent"]
 
 dirpath = paths.glmm / "valence"
 dirpath.mkdir(parents=True, exist_ok=True)
@@ -30,11 +33,7 @@ data = DataFrame.from_(paths.final).assign(
         df["country"], categories=[*config.categorical.country]
     ),
     **{
-        target: lambda df: pd.Categorical(
-            df[target] - df[target].min(),
-            categories=(cats := np.array([*config.categorical[target]])) - cats.min(),
-            ordered=True,
-        )
+        target: lambda df: df[f"{target}_latent"],
     },
 )[["key", target, *opts.predictors.fixed, *opts.predictors.groups]]
 
@@ -48,7 +47,7 @@ else:
 
 # %% ---------------------------------------------------------------------------------
 
-print(f"Fitting GLMM for '{target}' target with {model_data.shape[0]} observations")
+print(f"Fitting GLMM for latent '{target}' target with {model_data.shape[0]} observations")
 
 kwargs = dict(OmegaConf.to_object(opts.solver))
 kwargs["control"] = ro.ListVector(kwargs.get("control", {}))
@@ -57,7 +56,7 @@ model = brm(
     formula=opts.model.formula.format(target=target),
     data=model_data,
     prior=opts.model.get("prior"),
-    family=ro.StrVector([opts.model.family, opts.model.link]),
+    family=ro.r(opts.model.family),
     seed=int(rng.integers(0, 2**16 - 1)),
     **kwargs,
 )
@@ -71,6 +70,6 @@ assert (nobs := ro.r("nobs")(model.r)[0]) == len(
 # %% ---------------------------------------------------------------------------------
 
 print("Saving fitted 'brms' model as RDS file...")
-ro.r["saveRDS"](model.r, str(dirpath / f"{target}.rds"))
+ro.r["saveRDS"](model.r, str(dirpath / f"{target}-latent.rds"))
 
 # %% ---------------------------------------------------------------------------------

@@ -38,7 +38,7 @@ data = DataFrame.from_(paths.final)
 
 # %% ---------------------------------------------------------------------------------
 
-idata = az.from_netcdf(paths.glmm / "valence" / f"{target}-latent.nc")
+idata = az.from_netcdf(paths.glmm / "valence" / f"{target}.nc")
 idata = set_xindex(idata, [opts.index_col, *opts.predictors.fixed, *opts.predictors.groups])
 
 # %% ---------------------------------------------------------------------------------
