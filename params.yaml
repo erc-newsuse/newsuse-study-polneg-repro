@@ -109,9 +109,9 @@ glmm:
         backend: cmdstanr
         control: {}
       inference:  &glmm_valence_inference
-        subsample: 250_000
+        subsample: 500_000
         ppd:  &glmm_valence_ppd
-          ndraws: 250
+          ndraws: 10
           cores: *glmm_valence_n_threads
         pop:  &glmm_valence_pop
           allow_new_levels: true
