@@ -53,8 +53,8 @@ if (n := opts.inference.get("subsample")) and n > 0:
 
 model = brmspy.FitResult(
     r=ro.r["readRDS"](str(output_dir / f"{target}.rds")),
-    idata=az.InferenceData(),
-    # idata=az.from_netcdf(str(output_dir / f"{target}.nc")),
+    # idata=az.InferenceData(),
+    idata=az.from_netcdf(str(output_dir / f"{target}.nc")),
 )
 
 # %% ---------------------------------------------------------------------------------
@@ -72,6 +72,10 @@ model = brms_posterior(model)
 print("Preparing posterior expectations...")
 model = brms_posterior_epred(model, quantized, **opts.inference.epd)
 
+# %%
+# import seaborn as sns
+# sns.kdeplot(model.idata.posterior_epred.full.values.flatten())
+
 # %% ---------------------------------------------------------------------------------
 
 print("Preparing posterior predictive samples...")
@@ -80,6 +84,7 @@ model = brms_posterior_predictive(model, **opts.inference.ppd)
 # %% ---------------------------------------------------------------------------------
 
 print("Preparing population posterior predictive samples...")
+quantized = data[[*opts.predictors.fixed, "outlet"]].drop_duplicates(ignore_index=True)
 model = brms_posterior_predictive(model, quantized, **opts.inference["pop"])
 
 # %% ---------------------------------------------------------------------------------

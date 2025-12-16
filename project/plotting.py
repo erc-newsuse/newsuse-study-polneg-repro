@@ -13,6 +13,7 @@ def annotate_ci(
     xy: tuple[float, float],
     bounds: tuple[float, float],
     *,
+    show_box: bool = True,
     alpha: float = 0.05,
     digits: int = 3,
     template: str = r"{conf:.0f}\% CI: [{lb:.{digits}f}, {ub:.{digits}f}]",
@@ -55,7 +56,8 @@ def annotate_ci(
         "bbox": {"fc": "white", **(bbox or {})},
         **kwargs,
     }
-    ax.annotate(text, xy=(x, y + offset), xytext=(0, 5), **kwargs)
+    if show_box:
+        ax.annotate(text, xy=(x, y + offset), xytext=(0, 5), **kwargs)
     return ax
 
 

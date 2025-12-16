@@ -65,11 +65,11 @@ idata = az.from_netcdf(paths.glmm / "valence" / f"{target}.nc")
 idata = set_xindex(idata, [opts.index_col, *sum(opts.predictors.values(), start=[])])
 epred = az.extract(idata, group="posterior_epred")
 ppd = az.extract(idata, group="posterior_predictive")
-pop = az.extract(idata, group="population_posterior_predictive")
+# pop = az.extract(idata, group="population_posterior_predictive")
 # Average out week effects to focus on main effects
 if "weekend" in epred.coords:
     epred = epred.stats.marginalize("weekend")
-    pop = pop.stats.marginalize("weekend")
+    # pop = pop.stats.marginalize("weekend")
 
 # %% ---------------------------------------------------------------------------------
 
@@ -208,141 +208,84 @@ fig.savefig(figpath / f"{target}-latent-political-country.pdf")
 
 # %% Derive population posterior predictive class probabilities ----------------------
 
-base = ppd
+base = ppd.isel(sample=slice(None, None, 10))  # Subsample for memory reasons
 base_target = target
 coords = base.coords.copy()
 coords[target] = config.categorical[target]
-probs = xr.DataArray(
-    np.swapaxes(
-        ordinal_probs((base[base_target].values + biases[..., None, None]).T), 0, 1
-    ),
-    coords=coords,
-    dims=coords.dims,
-)
-if (field := "weekend") in probs.coords:
-    probs = probs.stats.marginalize(field)
-
-# %% ---------------------------------------------------------------------------------
-
-# probs_political_country = (
-(
-    probs.to_dataframe(name="prob")["prob"]
-    .groupby(["country", "political", target])
-    .quantile([q0, 0.5, q1])
-    .unstack(-1)
-    .rename(columns={q0: "lb", 0.5: "median", q1: "ub"})
-    .reset_index()
-)
-
-# %% Derive expected posterior class probabilities -----------------------------------
-
-coords = ppd.coords.copy()
-coords[target] = config.categorical[target]
-
-weight_cols = [
-    "outlet",
-]
-
 probs = (
     xr.DataArray(
-        np.swapaxes(ordinal_probs((ppd[target].values + biases[..., None, None]).T), 0, 1),
+        np.swapaxes(
+            ordinal_probs((base[base_target].values + biases[..., None, None]).T), 0, 1
+        ),
         coords=coords,
         dims=coords.dims,
     )
-    .isel(sample=slice(0, None, 10))  # Subsample for memory reasons
-    .to_dataframe(name="prob")["prob"]
-    .groupby(["country", "political", "weekend", "outlet", "isotime", target, "draw"])
-    .mean()
-    .groupby(["country", "political", "outlet", "isotime", target, "draw"])
-    .mean()
-    .groupby(["country", "political", *weight_cols, target, "draw"])
-    .mean()
+    .to_dataframe(name="prob")
     .reset_index()
-    .groupby(["country"])
-    .apply(
-        lambda df: df.assign(weight=lambda d: 1 / len(d[weight_cols].drop_duplicates())),
-        include_groups=False,
-    )
-    .reset_index("country", drop=False)
-    .set_index(["political", "country", *weight_cols, target, "draw"])
+    .groupby(["country", "political", "draw", target])
+    .sample(n=100, random_state=303)
+    .reset_index(drop=True)
+    .set_index(["country", "political", "draw", target])["prob"]
+    .groupby(["political", "country", "draw", target])
+    .mean()
 )
 
 # %% ---------------------------------------------------------------------------------
 
-probs_political_country = probs.groupby(
-    ["political", "country", "outlet", "draw", target]
-).mean()
-
-probs_country = probs_political_country.groupby(
-    ["country", "outlet", "draw", target]
-).mean()
-
-# %% ---------------------------------------------------------------------------------
-
-# diffs_overall = (
-(
-    probs_political_country.groupby(["outlet", "draw", "event"])
-    .apply(
-        lambda df: pd.Series(
-            {"prob": df["prob"].diff().iloc[-1], "weight": df["weight"].mean()}
-        )
-    )
-    .groupby(["event", "draw"])
-    .apply(lambda df: np.average(df["prob"], weights=df["weight"]))
-    .groupby("event")
+probs_overall = (
+    probs.groupby(["political", target])
     .quantile([q0, 0.5, q1])
     .unstack(-1)
     .rename(columns={q0: "lb", 0.5: "median", q1: "ub"})
     .reset_index()
-    # .groupby(target)
-    # .apply(
-    #     lambda df: pd.Series(
-    #         np.quantile(
-    #             df["prob"],
-    #             [q0, 0.5, q1],
-    #             weights=df["weight"],
-    #             method="inverted_cdf",
-    #         ),
-    #         index=["lb", "median", "ub"],
-    #     )
-    # )
-    # probs
-    # .apply(weighted_mean, "prob", "weight")
-    # .groupby(["draw", target])
-    # .diff()
-    # .dropna()
-    # .droplevel(0)
-    # .groupby([target])
-    # .quantile([q0, 0.5, q1])
-    # .unstack(-1)
-    # .rename(columns={q0: "lb", 0.5: "median", q1: "ub"})
-    # .reset_index()
+)
+probs_overall.insert(0, "country", "overall")
+
+# %% ---------------------------------------------------------------------------------
+
+probs_country = (
+    probs.groupby(["country", "political", target])
+    .quantile([q0, 0.5, q1])
+    .unstack(-1)
+    .rename(columns={q0: "lb", 0.5: "median", q1: "ub"})
+    .reset_index()
+    .set_index("country")
+    .loc[[*countries]]
+    .reset_index()
 )
 
 # %% ---------------------------------------------------------------------------------
 
-fig, ax = plt.subplots(figsize=(7, 5))
-df = (
-    probs_political_country
-    # .groupby(["political", "draw", target])
-    # .apply(lambda df: np.average(df["prob"], weights=df["weight"]))
-    # .groupby(["political", target])
-    # .quantile([q0, 0.5, q1])
-    # .unstack(-1)
-    # .rename(columns={q0: "lb", 0.5: "median", q1: "ub"})
-    # .reset_index()
-    .groupby(["political", target]).apply(
-        lambda df: pd.Series(
-            np.quantile(
-                df["prob"],
-                [q0, 0.5, q1],
-                method="inverted_cdf",
-                weights=df["weight"],
-            ),
-            index=["lb", "median", "ub"],
-        )
-    )
+probs_quantiles = pd.concat([probs_overall, probs_country], ignore_index=True)
+
+# %% ---------------------------------------------------------------------------------
+
+probs_diff = probs.groupby(["country", "draw", target]).diff().dropna().droplevel(0)
+
+# %% ---------------------------------------------------------------------------------
+
+eff_political = (
+    probs_diff.groupby(target)
+    .quantile([q0, 0.5, q1])
+    .unstack(-1)
+    .rename(columns={q0: "lb", 0.5: "median", q1: "ub"})
+    .reset_index()
 )
+
+# %% ---------------------------------------------------------------------------------
+
+eff_political_country = (
+    probs_diff.groupby(["country", target])
+    .quantile([q0, 0.5, q1])
+    .unstack(-1)
+    .rename(columns={q0: "lb", 0.5: "median", q1: "ub"})
+    .reset_index()
+)
+
+# %% ---------------------------------------------------------------------------------
+
+fig, ax = plt.subplots(figsize=(6, 6))
+df = probs_overall
 (
     so.Plot(
         df,
@@ -361,8 +304,79 @@ df = (
     .on(ax)
     .plot()
 )
+
+eff = eff_political.copy()
+eff["anchor"] = df[["lb", "ub"]].mean(axis=1)
+for value, row in eff.iterrows():
+    annotate_ci(
+        ax,
+        [value - 1, row["anchor"]],
+        row[["lb", "ub"]],
+        prefix=r"$\Delta$ ",
+        marker_offset=0.1,
+        fontsize=7,
+        zorder=100,
+        show_box=False,
+    )
+
 ax.set_xlabel(None)
 ax.set_ylabel(None)
+
+ax.set_xlabel(target.capitalize(), fontsize="x-large")
+ax.set_ylabel("Posterior class probability", fontsize="x-large")
+ax.xaxis.set_ticks(support)
+
+fig.legends.clear()
+
+# %% ---------------------------------------------------------------------------------
+
+fig, axes = plt.subplots(figsize=(9, 6), nrows=2, ncols=3)
+
+for ax, country in zip(axes.flat, countries, strict=True):
+    df = probs_country[probs_country.country == country]
+    (
+        so.Plot(
+            df,
+            x=target,
+            y="median",
+            color="political",
+        )
+        .add(so.Range(**config.plotting.objects.range), so.Dodge(), ymin="lb", ymax="ub")
+        .add(
+            so.Dot(**config.plotting.objects.dot),
+            so.Dodge(),
+        )
+        .scale(
+            color=[*config.plotting.color.political],
+        )
+        .on(ax)
+        .plot()
+    )
+    eff = eff_political_country.query("country == @country").reset_index(drop=True).copy()
+    eff["anchor"] = df.groupby(target)[["lb", "ub"]]
+    for value, row in eff.iterrows():
+        value -= 1
+        anchor = df.query(f"{target} == @value")["ub"].max()
+        annotate_ci(
+            ax,
+            [value, anchor],
+            row[["lb", "ub"]],
+            prefix=r"$\Delta$ ",
+            marker_offset=0.05,
+            fontsize=7,
+            zorder=100,
+            show_box=False,
+        )
+    ax.set_title(config.categorical.country[country])
+    ax.set_xlabel(None)
+    ax.set_ylabel(None)
+    ax.xaxis.set_ticks(support)
+
+fig.supylabel("Posterior class probability", fontsize="x-large")
+fig.supxlabel(target.capitalize(), y=0.02, fontsize="x-large")
+fig.legends.clear()
+
+fig.tight_layout()
 
 # %% TABLES --------------------------------------------------------------------------
 

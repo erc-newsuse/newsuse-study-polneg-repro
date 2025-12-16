@@ -117,14 +117,13 @@ glmm:
           allow_new_levels: true
           sample_new_levels: old_levels
           group_name: "population_posterior_predictive"
-          re_formula: ~outlet
+          re_formula: ~0
         epd:  &glmm_valence_epd
           re_formulas:
             grand_mean: ~0
-            # full: null
-            full: ~outlet
+            full: null
           allow_new_levels: true
-          sample_new_levels: old_levels
+          sample_new_levels: gaussian
         loglik:
           <<: *glmm_valence_ppd
         ranef:
