@@ -12,7 +12,7 @@ import xarray as xr
 from newsuse.data import DataFrame
 
 from project import config, paths
-from project.inference import set_xindex, waic_metrics
+from project.inference import set_xindex
 from project.plotting import ArvizLabeller
 
 xr.set_options(**config.xarray)
@@ -99,21 +99,71 @@ fig.savefig(figpath / f"{target}-autocorr.pdf")
 def plot_ppc(
     idata: az.InferenceData,
     ax: plt.Axes | None = None,
-    mean: bool = False,
-    support: list[int] = tuple(support),
+    target: str = f"{target}_latent",
+    legend: bool = True,
+    draw_every: int = 1,
+    observed_kwargs: dict | None = None,
+    posterior_kwargs: dict | None = None,
+    legend_kwargs: dict | None = None,
     **kwargs,
 ) -> plt.Axes:
     """Plot posterior predictive check with mean observed value."""
-    idata = idata.copy()
-    if kwargs:
-        idata.observed_data = idata.observed_data.sel(**kwargs)
-        idata.posterior_predictive = idata.posterior_predictive.sel(**kwargs)
+    kwargs = {
+        "bw_adjust": 2,
+        "fill": False,
+        "lw": 2,
+        **kwargs,
+    }
+    observed_kwargs = {
+        **kwargs,
+        "color": "black",
+        "ls": "--",
+        "lw": 1,
+        "zorder": 10,
+        "label": "observed",
+        **(observed_kwargs or {}),
+    }
+    posterior_kwargs = {
+        **kwargs,
+        "color": "C0",
+        "alpha": 0.25,
+        "label": "posterior",
+        "zorder": 5,
+        **(posterior_kwargs or {}),
+    }
     if ax is None:
         ax = plt.gca()
-    az.plot_ppc(idata, ax=ax, mean=mean, legend=False)
-    xticks = np.array(support) + 0.5
-    ax.set_xticks(xticks, labels=list(support))
+    for chain in range(idata.posterior_predictive.sizes["chain"]):
+        for k in range(0, idata.posterior_predictive.sizes["draw"], draw_every):
+            sns.kdeplot(
+                idata.posterior_predictive[target].values[chain, k].flatten(),
+                ax=ax,
+                **posterior_kwargs,
+            )
+    sns.kdeplot(
+        idata.observed_data[target].values.flatten(),
+        ax=ax,
+        **observed_kwargs,
+    )
     ax.set_xlabel(None)
+    ax.set_ylabel(None)
+    if legend and not ax.figure.legends:
+        # Define custom legend handles
+        from matplotlib.lines import Line2D
+
+        attrs = ["color", "ls", "lw", "label"]
+        handles = [
+            Line2D([0], [0], **{k: v for k, v in observed_kwargs.items() if k in attrs}),
+            Line2D([0], [0], **{k: v for k, v in posterior_kwargs.items() if k in attrs}),
+        ]
+        legend_kwargs = {
+            "loc": "lower right",
+            "frameon": False,
+            "ncols": 2,
+            "bbox_to_anchor": (0.95, -0.07),
+            **(legend_kwargs or {}),
+        }
+        ax.figure.legend(handles=handles, **legend_kwargs)
     return ax
 
 
@@ -121,16 +171,16 @@ def plot_ppc(
 
 fig, axes = plt.subplots(ncols=3, figsize=(7, 3))
 plot_ppc(idata, axes[0])
-plot_ppc(idata, axes[1], political=1)
-plot_ppc(idata, axes[2], political=0)
+plot_ppc(idata.sel(political=1), axes[1])
+plot_ppc(idata.sel(political=0), axes[2])
 
 axes[0].set_title("Overall")
 axes[1].set_title("Political")
 axes[2].set_title("Other")
 
-axes[0].legend()
-
 fig.tight_layout()
+fig.supxlabel(target.capitalize(), y=-0.03)
+fig.supylabel("Density", x=-0.02)
 fig.savefig(figpath / f"{target}-ppc.pdf")
 
 # %% ---------------------------------------------------------------------------------
@@ -138,12 +188,16 @@ fig.savefig(figpath / f"{target}-ppc.pdf")
 fig, axes = plt.subplots(ncols=3, nrows=2, figsize=(7, 4))
 
 for ax, country in zip(axes.flat, labels["countries"], strict=True):
-    plot_ppc(idata, ax=ax, country=country)
+    plot_ppc(
+        idata.sel(country=country),
+        ax=ax,
+        legend_kwargs={"bbox_to_anchor": (0.95, -0.06)},
+    )
     ax.set_title(country.upper())
 
-axes[0, 0].legend()
-
 fig.tight_layout()
+fig.supxlabel(target.capitalize(), y=-0.03)
+fig.supylabel("Density", x=-0.02)
 fig.savefig(figpath / f"{target}-ppc-by-country.pdf")
 
 # %% ---------------------------------------------------------------------------------
@@ -152,7 +206,11 @@ fig, axes = plt.subplots(ncols=6, nrows=2, figsize=(8, 3))
 
 for axrow, pol in zip(axes, labels["political"], strict=True):
     for ax, country in zip(axrow, labels["countries"], strict=True):
-        plot_ppc(idata, ax=ax, country=country, political=pol)
+        plot_ppc(
+            idata.sel(country=country, political=pol),
+            ax=ax,
+            legend_kwargs={"bbox_to_anchor": (0.95, 0.01)},
+        )
 
 for ax, country in zip(axes[0], labels["countries"], strict=True):
     ax.set_title(country.upper())
@@ -166,9 +224,15 @@ fig.savefig(figpath / f"{target}-ppc-by-country-political.pdf")
 
 # %% ---------------------------------------------------------------------------------
 
-obs_freqs = data[target].value_counts(normalize=True).sort_index()
+fig, ax = plt.subplots(figsize=(7, 3))
+az.plot_bpv(idata, ax=ax, var_names=[f"{target}_latent"], kind="u_value")
+ax.set_title(rf"{target.capitalize()}: $u$-values")
+fig.tight_layout()
+fig.savefig(figpath / f"{target}-bpv.pdf")
+
+# %% ---------------------------------------------------------------------------------
+
 waic = az.waic(idata)
-metrics = waic_metrics(waic, null_elpd=np.log(obs_freqs).mean())
-print(metrics)
+print(waic)
 
 # %% --------------------------------------------------------------------------------

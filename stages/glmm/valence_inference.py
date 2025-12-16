@@ -40,9 +40,7 @@ data = DataFrame.from_(
         *opts.predictors.fixed,
         *opts.predictors.groups,
     ],
-).assign(
-    **{target: lambda df: df[f"{target}_latent"]},
-)
+).rename(columns={f"{target}_latent": target})
 quantized = data[[*opts.predictors.fixed]].drop_duplicates(ignore_index=True)
 
 if (n := opts.inference.get("subsample")) and n > 0:
@@ -53,14 +51,14 @@ if (n := opts.inference.get("subsample")) and n > 0:
 
 model = brmspy.FitResult(
     r=ro.r["readRDS"](str(output_dir / f"{target}.rds")),
-    # idata=az.InferenceData(),
-    idata=az.from_netcdf(str(output_dir / f"{target}.nc")),
+    idata=az.InferenceData(),
+    # idata=az.from_netcdf(str(output_dir / f"{target}.nc")),
 )
 
 # %% ---------------------------------------------------------------------------------
 
 print("Preparing observed data...")
-model = brms_observed_data(model, target, data, dtype=int)
+model = brms_observed_data(model, target, data)
 
 # %% ---------------------------------------------------------------------------------
 
