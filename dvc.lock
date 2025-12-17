@@ -863,8 +863,8 @@ stages:
     deps:
     - path: analyses/descriptives/valence.py
       hash: md5
-      md5: 19279c38376fd7de79a3a07d0dca00c0
-      size: 13150
+      md5: 270fe4753b7bef2e204b4a7fd10a4d9f
+      size: 14123
     - path: data/proc/final.parquet
       hash: md5
       md5: 6ed9fc519405c1cf0e919c444c893842
@@ -872,16 +872,16 @@ stages:
     outs:
     - path: figures/descriptives/valence
       hash: md5
-      md5: 2de543ae148d58c0870987f4bb4b3e75.dir
-      size: 1484063
-      nfiles: 12
+      md5: 308ed528000b1cceb40a8e4289f9b707.dir
+      size: 1227458
+      nfiles: 13
   descriptives@engagement:
     cmd: python analyses/descriptives/engagement.py
     deps:
     - path: analyses/descriptives/engagement.py
       hash: md5
-      md5: 3044486ba65297f0e2c4c22eb23a0d25
-      size: 5416
+      md5: 19ad9fe16748833b2cd9017b4c2cb48c
+      size: 5414
     - path: data/proc/final.parquet
       hash: md5
       md5: 6ed9fc519405c1cf0e919c444c893842
@@ -889,7 +889,7 @@ stages:
     outs:
     - path: figures/descriptives/engagement
       hash: md5
-      md5: 016199f976513ad2efc782b1f316ed69.dir
+      md5: 8508ac3e680dc55e779f1363fdac049c.dir
       size: 58821261
       nfiles: 15
   glmm-valence-latent@event:
