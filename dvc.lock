@@ -1015,3 +1015,67 @@ stages:
       hash: md5
       md5: cd9464ca29bce53b81ddd7be3e2240cf
       size: 110470923
+  analysis-valence@event:
+    cmd:
+    - TARGET=event python analyses/glmm/valence/validation.py
+    - TARGET=event python analyses/glmm/valence/analysis.py
+    deps:
+    - path: analyses/glmm/valence/analysis.py
+      hash: md5
+      md5: b4d8fae956a155a5950bf9a95ce56c35
+      size: 10269
+    - path: analyses/glmm/valence/validation.py
+      hash: md5
+      md5: 016090a064a4bb5d5677594c76d3047d
+      size: 7084
+    - path: glmm/valence/event.nc
+      hash: md5
+      md5: ff2fc4285d7a9381f2f297227b5b5e9c
+      size: 391967892
+    - path: glmm/valence/event.rds
+      hash: md5
+      md5: ef430a793e38ad6eafd860df5cd6afef
+      size: 111804214
+    outs:
+    - path: figures/glmm/valence/event
+      hash: md5
+      md5: 676b9db6116fd2e7372f6db3ff15f406.dir
+      size: 166070
+      nfiles: 2
+    - path: figures/glmm/valence/validation/event
+      hash: md5
+      md5: 74ba9a097fe57f2c361af4c7c4415a1f.dir
+      size: 1007028
+      nfiles: 7
+  analysis-valence@sentiment:
+    cmd:
+    - TARGET=sentiment python analyses/glmm/valence/validation.py
+    - TARGET=sentiment python analyses/glmm/valence/analysis.py
+    deps:
+    - path: analyses/glmm/valence/analysis.py
+      hash: md5
+      md5: b4d8fae956a155a5950bf9a95ce56c35
+      size: 10269
+    - path: analyses/glmm/valence/validation.py
+      hash: md5
+      md5: 016090a064a4bb5d5677594c76d3047d
+      size: 7084
+    - path: glmm/valence/sentiment.nc
+      hash: md5
+      md5: 9803f0bcd0789f6dec18b74ede4a1e11
+      size: 392117461
+    - path: glmm/valence/sentiment.rds
+      hash: md5
+      md5: 6f44f141bf26bdef565624116ff14137
+      size: 110470916
+    outs:
+    - path: figures/glmm/valence/sentiment
+      hash: md5
+      md5: 2ab32f35aa86ee12a35379344e827ab5.dir
+      size: 166413
+      nfiles: 2
+    - path: figures/glmm/valence/validation/sentiment
+      hash: md5
+      md5: 97e8de38b3d518a8e235bd9d7ff12322.dir
+      size: 1012704
+      nfiles: 7

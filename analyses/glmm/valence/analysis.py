@@ -1,5 +1,7 @@
 # %% ---------------------------------------------------------------------------------
 
+import os
+
 import arviz as az
 import brmspy  # noqa
 import matplotlib as mpl  # noqa
@@ -16,7 +18,7 @@ import project.model  # noqa
 from project import config, paths
 from project.inference import StatsAccessor, set_xindex
 from project.model.ordinal import ordinal_probs
-from project.plotting import annotate_ci, make_legend
+from project.plotting import annotate_ci
 
 xr.set_options(**config.xarray)
 az.rcParams.update(config.arviz)
@@ -27,11 +29,13 @@ alpha = 1 - az.rcParams["stats.ci_prob"]
 conf = (1 - alpha) * 100
 q0, q1 = alpha / 2, 1 - alpha / 2
 
-target = "sentiment"
+target = os.environ.get("TARGET")
+if target is None:
+    target = input("Enter target (event): ").strip() or "event"
 support = [*config.categorical[target]]
 opts = config.glmm.valence.targets[target]
 
-figpath = paths.figures / "glmm" / "valence" / "latent"
+figpath = paths.figures / "glmm" / "valence" / target
 figpath.mkdir(parents=True, exist_ok=True)
 
 countries = config.categorical.country
@@ -65,158 +69,17 @@ idata = az.from_netcdf(paths.glmm / "valence" / f"{target}.nc")
 idata = set_xindex(idata, [opts.index_col, *sum(opts.predictors.values(), start=[])])
 epred = az.extract(idata, group="posterior_epred")
 ppd = az.extract(idata, group="posterior_predictive")
-# pop = az.extract(idata, group="population_posterior_predictive")
 # Average out week effects to focus on main effects
 if "weekend" in epred.coords:
     epred = epred.stats.marginalize("weekend")
-    # pop = pop.stats.marginalize("weekend")
 
-# %% ---------------------------------------------------------------------------------
+# %% Derive posterior expectation distributions for class probabilities --------------
 
-est_political = (
-    pd.concat(
-        {
-            label: epred.full.sel(political=pol).mean("country").stats.quantile()
-            for pol, label in political.items()
-        },
-        names=["political"],
-    )
-    .unstack("quantile")
-    .reset_index()
-)
-
-est_countries = (
-    pd.concat(
-        {
-            country: epred.full.sel(country=country).mean("political").stats.quantile()
-            for country in countries
-        },
-        names=["country"],
-    )
-    .unstack("quantile")
-    .loc[[*countries]]
-    .reset_index()
-)
-
-est_political_country = (
-    pd.concat(
-        {
-            (country, label): epred.full.sel(
-                country=country, political=pol
-            ).stats.quantile()
-            for pol, label in political.items()
-            for country in countries
-        },
-        names=["country", "political"],
-    )
-    .unstack("quantile")
-    .loc[[*countries]]
-    .reset_index()
-)
-
-# %% ---------------------------------------------------------------------------------
-
-fig, ax = plt.subplots(figsize=(5, 5))
-df = est_political
-(
-    so.Plot(df, x="political", y="median", color="political")
-    .add(so.Range(**config.plotting.objects.range), so.Dodge(), ymin="lb", ymax="ub")
-    .add(so.Dot(**config.plotting.objects.dot), so.Dodge())
-    .scale(
-        color=[*config.plotting.color.political],
-    )
-    .label(x=str.capitalize, y=str.capitalize)
-    .on(ax)
-    .plot()
-)
-ax.set_title(target.capitalize(), x=0.0, ha="left", fontsize="x-large")
-ax.set_xlabel(None)
-ax.set_ylabel("Posterior expected latent valence")
-
-ax.set_xticks(support)
-fig.legends.clear()
-# make_legend(fig, (0.95, 0.95))
-
-diffs = (
-    epred.full.stats.diff(political=[1, 0], marginalize="country")
-    .stats.quantile()
-    .to_frame()
-    .T.reset_index(drop=True)
-)
-diffs["anchor"] = df[["lb", "ub"]].mean(axis=1)
-
-for value, row in diffs.iterrows():
-    annotate_ci(
-        ax,
-        [value + 0.5, row["anchor"]],
-        row[["lb", "ub"]],
-        prefix=r"$\Delta$ ",
-        marker_offset=0.25,
-        fontsize=8,
-    )
-
-fig.tight_layout()
-fig.savefig(figpath / f"{target}-latent-political.pdf")
-
-# %% ---------------------------------------------------------------------------------
-
-fig, ax = plt.subplots(figsize=(7, 5))
-
-df = est_political_country
-(
-    so.Plot(
-        df,
-        x="country",
-        y="median",
-        color="political",
-    )
-    .add(so.Range(**config.plotting.objects.range), so.Dodge(), ymin="lb", ymax="ub")
-    .add(
-        so.Dot(**config.plotting.objects.dot),
-        so.Dodge(),
-    )
-    .scale(
-        color=[*config.plotting.color.political],
-    )
-    .on(ax)
-    .plot()
-)
-ax.set_xlabel(None)
-ax.set_ylabel(None)
-
-anchors = df.groupby("country")["ub"].max() + 0.05
-for country in countries:
-    diffs = epred.full.sel(country=country).stats.diff(political=[1, 0]).stats.quantile()
-    annotate_ci(
-        ax,
-        [country, anchors[country]],
-        diffs[["lb", "ub"]],
-        prefix=r"$\Delta$ ",
-        marker_offset=0.35,
-        digits=2,
-        fontsize=6,
-    )
-
-legend = make_legend(fig, (0.06, 0.95), loc="upper left")
-fig.legends = [legend]
-
-ax.set_xticklabels([])
-ax.set_xticks([*countries], [*countries.values()])
-
-fig.tight_layout()
-fig.savefig(figpath / f"{target}-latent-political-country.pdf")
-
-# %% Derive population posterior predictive class probabilities ----------------------
-
-base = ppd.isel(sample=slice(None, None, 10))  # Subsample for memory reasons
-base_target = target
-coords = base.coords.copy()
+coords = ppd.coords.copy()
 coords[target] = config.categorical[target]
 probs = (
     xr.DataArray(
-        np.swapaxes(
-            ordinal_probs((base[base_target].values + biases[..., None, None]).T), 0, 1
-        ),
+        np.swapaxes(ordinal_probs((ppd[target].values + biases[..., None, None]).T), 0, 1),
         coords=coords,
         dims=coords.dims,
     )
@@ -308,9 +171,10 @@ df = probs_overall
 eff = eff_political.copy()
 eff["anchor"] = df[["lb", "ub"]].mean(axis=1)
 for value, row in eff.iterrows():
+    value = int(value) - 1
     annotate_ci(
         ax,
-        [value - 1, row["anchor"]],
+        [value, row["anchor"]],
         row[["lb", "ub"]],
         prefix=r"$\Delta$ ",
         marker_offset=0.1,
@@ -327,6 +191,8 @@ ax.set_ylabel("Posterior class probability", fontsize="x-large")
 ax.xaxis.set_ticks(support)
 
 fig.legends.clear()
+fig.tight_layout()
+fig.savefig(figpath / f"{target}-effects-overall.pdf")
 
 # %% ---------------------------------------------------------------------------------
 
@@ -355,7 +221,7 @@ for ax, country in zip(axes.flat, countries, strict=True):
     eff = eff_political_country.query("country == @country").reset_index(drop=True).copy()
     eff["anchor"] = df.groupby(target)[["lb", "ub"]]
     for value, row in eff.iterrows():
-        value -= 1
+        value = int(value) - 1
         anchor = df.query(f"{target} == @value")["ub"].max()
         annotate_ci(
             ax,
@@ -377,9 +243,94 @@ fig.supxlabel(target.capitalize(), y=0.02, fontsize="x-large")
 fig.legends.clear()
 
 fig.tight_layout()
+fig.savefig(figpath / f"{target}-effects-by-country.pdf")
 
 # %% TABLES --------------------------------------------------------------------------
 
-az.summary(idata)
+# %% Effects
+
+tab = (
+    pd.concat(
+        [
+            eff_political.assign(country="overall"),
+            eff_political_country,
+        ],
+        ignore_index=True,
+    )
+    .set_index(["country", target])
+    .loc[["overall", *countries]]
+)
+# Print 'tab' nicely as latex table
+print(tab.to_latex(float_format="%.3f"))
+
+# %% Model
+
+
+def sanitize_param_name(name: str) -> dict[str, str]:
+    import re
+
+    name = re.sub(r"country(\w+)", r"\1", name)
+    name = re.sub(r"mu(\d+)", r"$\\mu_{\1} \\mid$", name)
+    name = name.replace("b_", r"$b$ ")
+    name = re.sub(r"_+(Intercept|political)", r" \1", name)
+    name = re.sub(r"(Intercept|political)_+", r"\1 ", name)
+    name = re.sub(r"\s*\\mid\$\s*$", r"$", name)
+    name = name.replace("$_", "$ ")
+    name = name.replace("$b$", "[b]")
+    name = name.replace("sd_", "[sd] ")
+    name = name.removeprefix("Intercept ")
+    if name.startswith("[sd]"):
+        name = re.sub(r"\s*\\mid\$\s*Intercept", r"$", name)
+    if not name.startswith("["):
+        name = "[dist] " + name
+    name = name.replace("[", "")
+    name = name.replace("]", "")
+    name = name.replace("Intercept", "us")
+    name = re.sub(r"political$", "political:us", name)
+    name = re.sub(r"sigma(\d+)", r"$\\sigma_{\1}$", name)
+    name = re.sub(r"theta(\d+)", r"$\\theta_{\1}$", name)
+    name = re.sub(r"\s*\\mid\s*", r"", name)
+    group, param = name.split(" ", 1)
+    comp = re.search(r"\s*\$\\(mu|sigma|theta)_(\{\d+\})\$\s*", param)
+    comp = f"{comp.group(0).strip()}" if comp else None
+    if comp:
+        param = param.replace(comp, "").strip()
+    return {"group": group, "comp": comp, "param": param}
+
+
+model_tab = (
+    az.summary(idata)
+    .reset_index(names=["param"])[:-2]
+    .assign(param=lambda df: df["param"].apply(sanitize_param_name))
+    .assign(
+        group=lambda df: df["param"].apply(lambda x: x["group"]),
+        component=lambda df: df["param"].apply(lambda x: x["comp"]),
+        term=lambda df: df["param"].apply(lambda x: x["param"]),
+    )
+    .drop(columns=["r_hat", "param"])
+    .set_index(["group", "component", "term"])
+    .groupby(level=["group", "component"])
+    .apply(
+        lambda df: df.sort_index(
+            level="term", kind="stable", key=lambda x: x.str.count(":")
+        ),
+        include_groups=False,
+    )
+    .droplevel([0, 1])
+    .loc[["b", "sd", "dist"]]
+    .rename(
+        columns={
+            f"hdi_{alpha/2:.1%}": f"{alpha/2:.1%} HDI",
+            f"hdi_{1 - alpha/2:.1%}": f"{1-alpha/2:.1%} HDI",
+            "mcse_mean": "MCSE (mean)",
+            "mcse_sd": "MCSE (sd)",
+            "ess_bulk": "ESS (bulk)",
+            "ess_tail": "ESS (tail)",
+        }
+    )
+)
+
+# Print nicely as latex table
+print(model_tab.to_latex(float_format="%.3f"))
 
 # %% ---------------------------------------------------------------------------------

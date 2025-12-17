@@ -25,7 +25,7 @@ if not target:
 opts = config.glmm.valence.targets[target]
 support = config.categorical[target]
 
-figpath = paths.figures / "glmm" / "valence" / "validation"
+figpath = paths.figures / "glmm" / "valence" / "validation" / target
 figpath.mkdir(parents=True, exist_ok=True)
 
 labels = {
