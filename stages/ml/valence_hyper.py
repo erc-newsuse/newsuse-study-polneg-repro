@@ -94,6 +94,10 @@ def objective(trial: optuna.Trial) -> float:
         trainer.save_model(path)
         for checkpoint in path.glob("checkpoint-*"):
             rmtree(checkpoint)
+        symlink = path.parent / "best"
+        if symlink.exists() or symlink.is_symlink():
+            symlink.unlink()
+        symlink.symlink_to(path.name)
     # Return out-of-sample F1 score
     return f1
 

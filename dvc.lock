@@ -412,8 +412,8 @@ stages:
       nfiles: 16
     - path: stages/ml/valence_hyper.py
       hash: md5
-      md5: 744ffb840088b5c969a857d883613401
-      size: 4207
+      md5: 469c7ff8bfc400aabff3409ce266ede5
+      size: 4366
     params:
       params.yaml:
         ml.hyper.valence:
@@ -536,6 +536,11 @@ stages:
       hash: md5
       md5: c47f65142dc4521c7f2917dfbd6862f2
       size: 13911
+    - path: ml/models/valence/best
+      hash: md5
+      md5: 3ed3f680added9b2cf6ad92f36cbfdeb.dir
+      size: 2265106371
+      nfiles: 6
   valence-classify:
     cmd: python stages/ml/valence_classify.py
     deps:

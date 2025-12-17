@@ -133,6 +133,8 @@ stages:
     outs:
     - data/proc/valence-hyper.parquet:
         persist: true
+    - ml/models/valence/best:
+        persist: true
 
   valence-classify:
     cmd: python stages/ml/valence_classify.py
