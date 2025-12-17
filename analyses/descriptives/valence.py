@@ -113,7 +113,13 @@ fig, axes = plt.subplots(ncols=7, figsize=(21, 3))
 
 target = "event"
 ax = axes[0]
-dist = data[[target, "political"]].value_counts(normalize=True).sort_index().reset_index()
+dist = pd.concat(
+    {
+        pol: data.query(f"political == {pol}")[[target]].value_counts(normalize=True)
+        for pol in [0, 1]
+    },
+    names=["political"],
+).reset_index()
 plot_frequencies(ax, dist, target, hue="political")
 ax.set_title(None)
 ax.set_ylabel(None)
@@ -123,7 +129,13 @@ for ax, (_, df) in zip(
     data.groupby("country", observed=True),
     strict=True,
 ):
-    dist = df[[target, "political"]].value_counts(normalize=True).sort_index().reset_index()
+    dist = pd.concat(
+        {
+            pol: df.query(f"political == {pol}")[[target]].value_counts(normalize=True)
+            for pol in [0, 1]
+        },
+        names=["political"],
+    ).reset_index()
     plot_frequencies(ax, dist, target, hue="political", legend=False)
     ax.set_title(None)
 
@@ -160,9 +172,15 @@ fig, axes = plt.subplots(ncols=7, figsize=(21, 3))
 
 target = "sentiment"
 ax = axes[0]
-dist = data[[target, "political"]].value_counts(normalize=True).sort_index().reset_index()
+dist = pd.concat(
+    {
+        pol: data.query(f"political == {pol}")[[target]].value_counts(normalize=True)
+        for pol in [0, 1]
+    },
+    names=["political"],
+).reset_index()
 plot_frequencies(ax, dist, target, hue="political")
-ax.set_title("Overall")
+ax.set_title(None)
 ax.set_ylabel(None)
 
 for ax, (_, df) in zip(
@@ -170,7 +188,13 @@ for ax, (_, df) in zip(
     data.groupby("country", observed=True),
     strict=True,
 ):
-    dist = df[[target, "political"]].value_counts(normalize=True).sort_index().reset_index()
+    dist = pd.concat(
+        {
+            pol: df.query(f"political == {pol}")[[target]].value_counts(normalize=True)
+            for pol in [0, 1]
+        },
+        names=["political"],
+    ).reset_index()
     plot_frequencies(ax, dist, target, hue="political", legend=False)
     ax.set_title(None)
 
