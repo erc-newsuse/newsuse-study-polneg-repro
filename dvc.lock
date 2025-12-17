@@ -631,12 +631,12 @@ stages:
       size: 382132909
     - path: stages/glmm/valence.py
       hash: md5
-      md5: 5369cbb8459ff33c3c90290800579cc9
-      size: 2376
+      md5: 571b2f3d160e971c8589e4c8e5ebb740
+      size: 2357
     - path: stages/glmm/valence_inference.py
       hash: md5
-      md5: 6a553e05b5fcd17857dc502bc7e34133
-      size: 3633
+      md5: 59d0b4bcc077340605cc690e1548c65f
+      size: 3789
     params:
       params.yaml:
         glmm.valence.targets.event:
@@ -666,23 +666,23 @@ stages:
             backend: cmdstanr
             control: {}
           inference:
-            subsample: 250000
+            subsample: 500000
             ppd:
-              ndraws: 250
+              ndraws: 10
               cores: 4
             pop:
               allow_new_levels: true
               sample_new_levels: old_levels
               group_name: population_posterior_predictive
-              re_formula: ~outlet
+              re_formula: ~0
             epd:
               re_formulas:
                 grand_mean: ~0
-                full: ~outlet
+                full:
               allow_new_levels: true
-              sample_new_levels: old_levels
+              sample_new_levels: gaussian
             loglik:
-              ndraws: 250
+              ndraws: 10
               cores: 4
             ranef:
               ndraws: 50
@@ -691,16 +691,16 @@ stages:
     outs:
     - path: glmm/valence/event-ranef.nc
       hash: md5
-      md5: 5c874d06afc3955750ddaa7fb863e725
+      md5: 645d6b63520c2ede5ee4c20f3c006b70
       size: 39384749
     - path: glmm/valence/event.nc
       hash: md5
-      md5: 08dcaabf41711e427d9c4774308a87ae
-      size: 1111936508
+      md5: ff2fc4285d7a9381f2f297227b5b5e9c
+      size: 391967892
     - path: glmm/valence/event.rds
       hash: md5
-      md5: 531f9b3622de7c3d378cd5f476fd5e70
-      size: 111804228
+      md5: ef430a793e38ad6eafd860df5cd6afef
+      size: 111804214
   glmm-valence@sentiment:
     cmd:
     - TARGET=sentiment python stages/glmm/valence.py
@@ -712,12 +712,12 @@ stages:
       size: 382132909
     - path: stages/glmm/valence.py
       hash: md5
-      md5: 5369cbb8459ff33c3c90290800579cc9
-      size: 2376
+      md5: 571b2f3d160e971c8589e4c8e5ebb740
+      size: 2357
     - path: stages/glmm/valence_inference.py
       hash: md5
-      md5: 6a553e05b5fcd17857dc502bc7e34133
-      size: 3633
+      md5: 59d0b4bcc077340605cc690e1548c65f
+      size: 3789
     params:
       params.yaml:
         glmm.valence.targets.sentiment:
@@ -747,23 +747,23 @@ stages:
             backend: cmdstanr
             control: {}
           inference:
-            subsample: 250000
+            subsample: 500000
             ppd:
-              ndraws: 250
+              ndraws: 10
               cores: 4
             pop:
               allow_new_levels: true
               sample_new_levels: old_levels
               group_name: population_posterior_predictive
-              re_formula: ~outlet
+              re_formula: ~0
             epd:
               re_formulas:
                 grand_mean: ~0
-                full: ~outlet
+                full:
               allow_new_levels: true
-              sample_new_levels: old_levels
+              sample_new_levels: gaussian
             loglik:
-              ndraws: 250
+              ndraws: 10
               cores: 4
             ranef:
               ndraws: 50
@@ -772,16 +772,16 @@ stages:
     outs:
     - path: glmm/valence/sentiment-ranef.nc
       hash: md5
-      md5: c90ec6b1434857d15885b3da3a761c34
+      md5: 9bff4aed6a56c319ce273c37c336cd5a
       size: 39336780
     - path: glmm/valence/sentiment.nc
       hash: md5
-      md5: 47972839a23e0eabeceadde744926f81
-      size: 1113777535
+      md5: 9803f0bcd0789f6dec18b74ede4a1e11
+      size: 392117461
     - path: glmm/valence/sentiment.rds
       hash: md5
-      md5: cd9464ca29bce53b81ddd7be3e2240cf
-      size: 110470923
+      md5: 6f44f141bf26bdef565624116ff14137
+      size: 110470916
   glmm-valence@valence:
     cmd:
     - TARGET=valence python stages/glmm/valence.py

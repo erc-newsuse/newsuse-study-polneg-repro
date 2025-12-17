@@ -99,7 +99,7 @@ fig.savefig(figpath / f"{target}-autocorr.pdf")
 def plot_ppc(
     idata: az.InferenceData,
     ax: plt.Axes | None = None,
-    target: str = f"{target}_latent",
+    target: str = target,
     legend: bool = True,
     draw_every: int = 1,
     observed_kwargs: dict | None = None,
@@ -225,7 +225,7 @@ fig.savefig(figpath / f"{target}-ppc-by-country-political.pdf")
 # %% ---------------------------------------------------------------------------------
 
 fig, ax = plt.subplots(figsize=(7, 3))
-az.plot_bpv(idata, ax=ax, var_names=[f"{target}_latent"], kind="u_value")
+az.plot_bpv(idata, ax=ax, var_names=[target], kind="u_value")
 ax.set_title(rf"{target.capitalize()}: $u$-values")
 fig.tight_layout()
 fig.savefig(figpath / f"{target}-bpv.pdf")
