@@ -233,9 +233,9 @@ stages:
       - stages/valence/analysis.py
       - glmm/valence/${item}.nc
       outs:
-      - figures/glmm/valence/${item}:
+      - figures/valence/${item}:
           persist: true
-      - figures/glmm/valence/validation/${item}:
+      - figures/valence/validation/${item}:
           persist: true
 
   engagement-model:

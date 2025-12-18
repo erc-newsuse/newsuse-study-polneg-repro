@@ -35,7 +35,7 @@ if target is None:
 support = [*config.categorical[target]]
 opts = config.glmm.valence.targets[target]
 
-figpath = paths.figures / "glmm" / "valence" / target
+figpath = paths.figures / "valence" / target
 figpath.mkdir(parents=True, exist_ok=True)
 
 countries = config.categorical.country

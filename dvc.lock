@@ -1645,19 +1645,19 @@ stages:
       size: 391967892
     - path: stages/valence/analysis.py
       hash: md5
-      md5: 31cb687862543c1d856e52c00654ac04
-      size: 10792
+      md5: 3513aff1286cc5946f97fd71ce35a8fb
+      size: 10840
     - path: stages/valence/validation.py
       hash: md5
-      md5: 016090a064a4bb5d5677594c76d3047d
-      size: 7084
+      md5: 5328a80ff44788a38c2b0f131dc87fb1
+      size: 7075
     outs:
-    - path: figures/glmm/valence/event
+    - path: figures/valence/event
       hash: md5
       md5: 9b44cc2a398a0c401dba4b56d318cd5c.dir
       size: 150924
       nfiles: 1
-    - path: figures/glmm/valence/validation/event
+    - path: figures/valence/validation/event
       hash: md5
       md5: 74ba9a097fe57f2c361af4c7c4415a1f.dir
       size: 1007028
@@ -1673,19 +1673,19 @@ stages:
       size: 392117461
     - path: stages/valence/analysis.py
       hash: md5
-      md5: 31cb687862543c1d856e52c00654ac04
-      size: 10792
+      md5: 3513aff1286cc5946f97fd71ce35a8fb
+      size: 10840
     - path: stages/valence/validation.py
       hash: md5
-      md5: 016090a064a4bb5d5677594c76d3047d
-      size: 7084
+      md5: 5328a80ff44788a38c2b0f131dc87fb1
+      size: 7075
     outs:
-    - path: figures/glmm/valence/sentiment
+    - path: figures/valence/sentiment
       hash: md5
       md5: 11e95744cc0c844365a1674753040263.dir
       size: 151181
       nfiles: 1
-    - path: figures/glmm/valence/validation/sentiment
+    - path: figures/valence/validation/sentiment
       hash: md5
       md5: 97e8de38b3d518a8e235bd9d7ff12322.dir
       size: 1012704
