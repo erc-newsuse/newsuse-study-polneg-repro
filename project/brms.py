@@ -1,4 +1,5 @@
 """Routines for handling Python-level access to `brms` package for R."""
+import json
 import re
 import tempfile
 from collections.abc import Iterable, Mapping
@@ -6,6 +7,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import arviz as az
+import numpy as np
 import pandas as pd
 from brmspy import prior
 from brmspy.helpers import conversion
@@ -61,6 +63,46 @@ def build_priors(specs: Iterable[str | Mapping[str, Any]]) -> ro.DataFrame:
         priors = [make_prior(spec) for spec in specs]
         return ro.r["c"](*priors)
     return _build_priors([make_prior(spec) for spec in specs])
+
+
+def write_stan_json(standata: ro.ListVector, filepath: str | Path) -> None:
+    """Write Stan data to JSON file using Python's json module.
+
+    This function bypasses R's 2GB string limit by converting the R list
+    to Python objects and writing with Python's json module.
+
+    Parameters
+    ----------
+    standata
+        R list containing Stan data (from brms::standata).
+    filepath
+        Path to write the JSON file.
+    """
+    stan_dict: dict[str, Any] = {}
+    for name in standata.names:
+        elem = standata.rx2(name)
+        # Convert R objects to Python/numpy
+        if hasattr(elem, "__len__") and len(elem) == 1:
+            # Scalar - check if it's integer-valued
+            val = elem[0]
+            if isinstance(val, int | np.integer):
+                stan_dict[name] = int(val)
+            elif isinstance(val, float) and val.is_integer():
+                # R often returns integers as floats
+                stan_dict[name] = int(val)
+            else:
+                stan_dict[name] = float(val)
+        elif hasattr(elem, "dim") and elem.dim:
+            # Matrix - R uses column-major order
+            dims = tuple(elem.dim)
+            arr = np.array(elem).reshape(dims, order="F")
+            stan_dict[name] = arr.tolist()
+        else:
+            # Vector
+            stan_dict[name] = np.array(elem).tolist()
+
+    with Path(filepath).open("w") as f:
+        json.dump(stan_dict, f)
 
 
 def brm(
@@ -219,9 +261,9 @@ def brm_large(
         # 3. Write Stan code to file
         ro.r("writeLines")(stancode, stan_file)
 
-        # 4. Write data to JSON file (bypasses R string limit)
+        # 4. Write data to JSON file using Python (bypasses R's 2GB string limit)
         print(f"Writing Stan data to {data_file}...")
-        ro.r("cmdstanr::write_stan_json")(standata, data_file)
+        write_stan_json(standata, data_file)
 
         # 5. Compile and fit using R code directly (R6 objects don't work well with rpy2)
         print("Compiling Stan model...")

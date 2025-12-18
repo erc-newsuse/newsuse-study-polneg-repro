@@ -151,14 +151,15 @@ glmm:
           - political
           - country
           - weekend
-          - valence
+          - event
+          - sentiment
         groups:
           - outlet
           - isotime
       model: &glmm_engagement_model
         formula: >
           {target} ~ 1
-            + political * country * valence + weekend
+            + political * event * sentiment + political * country + weekend
             + (1 | outlet:political)
             + (1 | country:isotime:political)
         family: negbinomial

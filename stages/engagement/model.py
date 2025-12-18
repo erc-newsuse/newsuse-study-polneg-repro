@@ -34,6 +34,17 @@ data = DataFrame.from_(paths.final).assign(
     country=lambda df: pd.Categorical(
         df["country"], categories=[*config.categorical.country]
     ),
+    # Use unordered factors with 0 first for dummy coding with neutral as reference
+    event=lambda df: pd.Categorical(
+        df["event"],
+        categories=[0, -1, 1],
+        ordered=False,
+    ),
+    sentiment=lambda df: pd.Categorical(
+        df["sentiment"],
+        categories=[0, -1, 1],
+        ordered=False,
+    ),
     valence=lambda df: pd.Categorical(
         df["valence"], categories=[*config.categorical.valence], ordered=True
     ),
