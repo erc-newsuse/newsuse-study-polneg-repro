@@ -174,48 +174,63 @@ stages:
     - valence
     - engagement
     do:
-      cmd: python analyses/descriptives/${item}.py
+      cmd: python stages/descriptives/${item}.py
       deps:
-      - analyses/descriptives/${item}.py
+      - stages/descriptives/${item}.py
       - data/proc/final.parquet
       outs:
       - figures/descriptives/${item}:
           persist: true
 
-  glmm-valence:
+  valence-model:
     foreach:
     - event
     - sentiment
     do:
       cmd:
-      - TARGET=${item} python stages/glmm/valence.py
-      - TARGET=${item} python stages/glmm/valence_inference.py
+      - TARGET=${item} python stages/valence/model.py
       params:
-      - glmm.valence.targets.${item}
+      - glmm.valence.targets.${item}.predictors
+      - glmm.valence.targets.${item}.model
+      - glmm.valence.targets.${item}.solver
       deps:
-      - stages/glmm/valence.py
-      - stages/glmm/valence_inference.py
+      - stages/valence/model.py
       - data/proc/final.parquet
       outs:
       - glmm/valence/${item}.rds:
           persist: true
+
+  valence-inference:
+    foreach:
+    - event
+    - sentiment
+    do:
+      cmd:
+      - TARGET=${item} python stages/valence/inference.py
+      params:
+      - glmm.valence.targets.${item}.predictors
+      - glmm.valence.targets.${item}.inference
+      deps:
+      - stages/valence/inference.py
+      - data/proc/final.parquet
+      - glmm/valence/${item}.rds
+      outs:
       - glmm/valence/${item}.nc:
           persist: true
       - glmm/valence/${item}-ranef.nc:
           persist: true
 
-  analysis-valence:
+  valence-analysis:
     foreach:
     - event
     - sentiment
     do:
       cmd:
-      - TARGET=${item} python analyses/glmm/valence/validation.py
-      - TARGET=${item} python analyses/glmm/valence/analysis.py
+      - TARGET=${item} python stages/valence/validation.py
+      - TARGET=${item} python stages/valence/analysis.py
       deps:
-      - analyses/glmm/valence/validation.py
-      - analyses/glmm/valence/analysis.py
-      - glmm/valence/${item}.rds
+      - stages/valence/validation.py
+      - stages/valence/analysis.py
       - glmm/valence/${item}.nc
       outs:
       - figures/glmm/valence/${item}:

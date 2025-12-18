@@ -11,7 +11,7 @@ import pandas as pd  # noqa
 import seaborn as sns  # noqa
 import seaborn.objects as so  # noqa
 import xarray as xr  # noqa
-from newsuse.data import DataFrame
+from scipy.special import logit
 from transformers import AutoModel
 
 import project.model  # noqa
@@ -41,13 +41,11 @@ figpath.mkdir(parents=True, exist_ok=True)
 countries = config.categorical.country
 political = dict(enumerate(config.categorical.political))
 
+rng = np.random.default_rng(opts.seed + 303)
+
 # %% Load the valence transformer ----------------------------------------------------
 
-domain = "valence"
-hyper = DataFrame.from_(paths.proc / f"{domain}-hyper.parquet")
-best_model = hyper.loc[hyper.value.idxmax()].params_base
-model = AutoModel.from_pretrained(paths.ml / "models" / domain / best_model)
-
+model = AutoModel.from_pretrained(paths.ml / "models" / "valence" / "best")
 biases = {t: head.ordinal.bias.detach().cpu().numpy() for t, head in model.heads.items()}[
     target
 ]
@@ -66,7 +64,7 @@ class _DatasetAccessor(StatsAccessor):
 # %% ---------------------------------------------------------------------------------
 
 idata = az.from_netcdf(paths.glmm / "valence" / f"{target}.nc")
-idata = set_xindex(idata, [opts.index_col, *sum(opts.predictors.values(), start=[])])
+idata = set_xindex(idata, ["key", *sum(opts.predictors.values(), start=[])])
 epred = az.extract(idata, group="posterior_epred")
 ppd = az.extract(idata, group="posterior_predictive")
 # Average out week effects to focus on main effects
@@ -86,7 +84,7 @@ probs = (
     .to_dataframe(name="prob")
     .reset_index()
     .groupby(["country", "political", "draw", target])
-    .sample(n=100, random_state=303)
+    .sample(n=opts.analysis.n_samples, random_state=rng)
     .reset_index(drop=True)
     .set_index(["country", "political", "draw", target])["prob"]
     .groupby(["political", "country", "draw", target])
@@ -124,11 +122,13 @@ probs_quantiles = pd.concat([probs_overall, probs_country], ignore_index=True)
 # %% ---------------------------------------------------------------------------------
 
 probs_diff = probs.groupby(["country", "draw", target]).diff().dropna().droplevel(0)
+logits_diff = logit(probs).groupby(["country", "draw", target]).diff().dropna().droplevel(0)
 
 # %% ---------------------------------------------------------------------------------
 
 eff_political = (
-    probs_diff.groupby(target)
+    # probs_diff
+    logits_diff.groupby(target)
     .quantile([q0, 0.5, q1])
     .unstack(-1)
     .rename(columns={q0: "lb", 0.5: "median", q1: "ub"})
@@ -138,7 +138,8 @@ eff_political = (
 # %% ---------------------------------------------------------------------------------
 
 eff_political_country = (
-    probs_diff.groupby(["country", target])
+    # probs_diff
+    logits_diff.groupby(["country", target])
     .quantile([q0, 0.5, q1])
     .unstack(-1)
     .rename(columns={q0: "lb", 0.5: "median", q1: "ub"})
@@ -147,59 +148,16 @@ eff_political_country = (
 
 # %% ---------------------------------------------------------------------------------
 
-fig, ax = plt.subplots(figsize=(6, 6))
-df = probs_overall
-(
-    so.Plot(
-        df,
-        x=target,
-        y="median",
-        color="political",
+groups = ["overall", *countries]
+fig, axes = plt.subplots(figsize=(24, 7), nrows=2, ncols=len(groups))
+
+## Probabilities plot
+for ax, country in zip(axes[0].flat, groups, strict=True):
+    df = (
+        probs_overall
+        if country == "overall"
+        else probs_country[probs_country.country == country]
     )
-    .add(so.Range(**config.plotting.objects.range), so.Dodge(), ymin="lb", ymax="ub")
-    .add(
-        so.Dot(**config.plotting.objects.dot),
-        so.Dodge(),
-    )
-    .scale(
-        color=[*config.plotting.color.political],
-    )
-    .on(ax)
-    .plot()
-)
-
-eff = eff_political.copy()
-eff["anchor"] = df[["lb", "ub"]].mean(axis=1)
-for value, row in eff.iterrows():
-    value = int(value) - 1
-    annotate_ci(
-        ax,
-        [value, row["anchor"]],
-        row[["lb", "ub"]],
-        prefix=r"$\Delta$ ",
-        marker_offset=0.1,
-        fontsize=7,
-        zorder=100,
-        show_box=False,
-    )
-
-ax.set_xlabel(None)
-ax.set_ylabel(None)
-
-ax.set_xlabel(target.capitalize(), fontsize="x-large")
-ax.set_ylabel("Posterior class probability", fontsize="x-large")
-ax.xaxis.set_ticks(support)
-
-fig.legends.clear()
-fig.tight_layout()
-fig.savefig(figpath / f"{target}-effects-overall.pdf")
-
-# %% ---------------------------------------------------------------------------------
-
-fig, axes = plt.subplots(figsize=(9, 6), nrows=2, ncols=3)
-
-for ax, country in zip(axes.flat, countries, strict=True):
-    df = probs_country[probs_country.country == country]
     (
         so.Plot(
             df,
@@ -212,13 +170,14 @@ for ax, country in zip(axes.flat, countries, strict=True):
             so.Dot(**config.plotting.objects.dot),
             so.Dodge(),
         )
-        .scale(
-            color=[*config.plotting.color.political],
-        )
+        .scale(color=[*config.plotting.color.political])
         .on(ax)
         .plot()
     )
-    eff = eff_political_country.query("country == @country").reset_index(drop=True).copy()
+    if country == "overall":
+        eff = eff_political.copy()
+    else:
+        eff = eff_political_country.query(f"country == '{country}'").reset_index(drop=True)
     eff["anchor"] = df.groupby(target)[["lb", "ub"]]
     for value, row in eff.iterrows():
         value = int(value) - 1
@@ -233,17 +192,71 @@ for ax, country in zip(axes.flat, countries, strict=True):
             zorder=100,
             show_box=False,
         )
-    ax.set_title(config.categorical.country[country])
+    title = "Overall" if country == "overall" else config.categorical.country[country]
+    ax.set_title(title)
     ax.set_xlabel(None)
     ax.set_ylabel(None)
     ax.xaxis.set_ticks(support)
 
-fig.supylabel("Posterior class probability", fontsize="x-large")
-fig.supxlabel(target.capitalize(), y=0.02, fontsize="x-large")
+ax = axes[0, 0]
+ax.set_ylabel("Posterior class probability", x=-0.05)
+# Add custom legend
+handles = [
+    mpl.lines.Line2D(
+        [],
+        [],
+        color=color,
+        marker="o",
+        linestyle="",
+    )
+    for color in config.plotting.color.political
+]
+labels = list(config.categorical.political)
+ax.legend(handles, labels, loc="lower left")
+
+## Odds ratios plot
+for ax, country in zip(axes[1].flat, groups, strict=True):
+    if country == "overall":
+        df = eff_political
+    else:
+        df = eff_political_country.query("country == @country").drop(columns="country")
+    df = df.set_index(target).pipe(np.exp).reset_index()
+    (
+        so.Plot(df, x=target, y="median", color=target)
+        .add(so.Range(**config.plotting.objects.range), ymin="lb", ymax="ub")
+        .add(so.Dot(**config.plotting.objects.dot))
+        .scale(color=[*config.plotting.color.valence])
+        .on(ax)
+        .plot()
+    )
+    ax.set_yscale("log")
+    ax.set_ylim(10**-1, 10**1)
+    ax.set_ylabel(None)
+    ax.set_xlabel(None)
+    ax.axhline(1, color="gray", linestyle="--", linewidth=1, zorder=-99)
+    ax.xaxis.set_ticks(support)
+
+ax = axes[1, 0]
+ax.set_ylabel("Odds ratio (political/non-political)", x=-0.05)
+# Add custom legend
+handles = [
+    mpl.lines.Line2D(
+        [],
+        [],
+        color=color,
+        marker="o",
+        linestyle="",
+    )
+    for color in config.plotting.color.valence
+]
+labels = ["negative", "neutral", "positive"]
+ax.legend(handles, labels, loc="lower left")
+
+fig.supxlabel(target.capitalize(), y=0.02, fontsize="large")
 fig.legends.clear()
 
 fig.tight_layout()
-fig.savefig(figpath / f"{target}-effects-by-country.pdf")
+fig.savefig(figpath / f"{target}-effects.pdf")
 
 # %% TABLES --------------------------------------------------------------------------
 

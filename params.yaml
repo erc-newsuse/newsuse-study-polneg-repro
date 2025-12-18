@@ -36,7 +36,7 @@ categorical:
     fr:  France
     esp: Spain
   quality: ["low", "medium", "high"]
-  political: ["other", "political"]
+  political: ["non-political", "political"]
   event: [-1, 0, 1]
   sentiment: [-1, 0, 1]
   valence: [-2, -1, 0, 1, 2]
@@ -72,10 +72,39 @@ dataset:
   min_posts_per_day: 2
 
 glmm:
+  defaults: &glmm_defaults
+    n_threads: &glmm_n_threads
+      4
+    solver:
+      algorithm: meanfield
+      chains: *glmm_n_threads
+      cores: *glmm_n_threads
+      iter: 2000
+      backend: cmdstanr
+      control: {}
+    inference:
+      subsample: 500_000
+      ppd:
+        ndraws: 50
+        cores: *glmm_n_threads
+      epd:
+        re_formula: null
+        allow_new_levels: true
+        sample_new_levels: gaussian
+      loglik:
+        ndraws: 50
+        cores: *glmm_n_threads
+      ranef:
+        ndraws: 50
+        cores: *glmm_n_threads
+    analysis:
+      sample:
+        n: 100
+        replace: true
   valence:
     defaults: &glmm_valence_defaults
-      index_col: key
-      predictors: &glmm_valence_predictors
+      <<: *glmm_defaults
+      predictors:
         fixed:
           - political
           - country
@@ -91,44 +120,7 @@ glmm:
             + (1 | country:isotime:political)
         family: categorical
         link: logit
-        # prior:
-        #   - prior: student_t(3, 0, 2)
-        #     class: b
-        #   - prior: student_t(3, 0, 2)
-        #     class: Intercept
-        #   - prior: normal(0, 1.253314)
-        #     lb: 0
-        #     class: sd
-      n_threads: &glmm_valence_n_threads
-        4
-      solver: &glmm_valence_solver
-        algorithm: meanfield
-        chains: *glmm_valence_n_threads
-        cores: *glmm_valence_n_threads
-        iter: 2000
-        backend: cmdstanr
-        control: {}
-      inference:  &glmm_valence_inference
-        subsample: 500_000
-        ppd:  &glmm_valence_ppd
-          ndraws: 10
-          cores: *glmm_valence_n_threads
-        pop:  &glmm_valence_pop
-          allow_new_levels: true
-          sample_new_levels: old_levels
-          group_name: "population_posterior_predictive"
-          re_formula: ~0
-        epd:  &glmm_valence_epd
-          re_formulas:
-            grand_mean: ~0
-            full: null
-          allow_new_levels: true
-          sample_new_levels: gaussian
-        loglik:
-          <<: *glmm_valence_ppd
-        ranef:
-          <<: *glmm_valence_ppd
-          ndraws: 50
+        prior: null
     models:
       advi: &glmm_valence_model_advi
         <<: *glmm_valence_defaults
@@ -151,22 +143,6 @@ glmm:
           prior:
           - "normal(-2, 2), class = Intercept, dpar = mu1"
           - "normal(2, 2), class = Intercept, dpar = mu2"
-      # event:
-      #   <<: *glmm_valence_model_advi
-      #   seed: 1289064
-      # sentiment:
-      #   <<: *glmm_valence_model_advi
-      #   seed: 1562896
-      # valence:
-      #   <<: *glmm_valence_model_advi
-      #   seed: 4810391
-      #   model:
-      #     <<: *glmm_valence_model
-      #     family: cumulative
-      #     link: logit
-      #     # subsample: 500_000
-      #   inference:
-      #     <<: *glmm_valence_inference
 
 classification:
   political:
@@ -397,8 +373,8 @@ plotting:
       other:      ${..palette.gray}
       overall:    ${..palette.black}
       political:  ${..palette.gold}
-      negative:   ${..palette.red}
-      positive:   ${..palette.green}
+      negative:   ${..palette.black}
+      positive:   ${..palette.blue}
       countries:
         us:        ${...palette.blue}
         uk:        ${...palette.red}

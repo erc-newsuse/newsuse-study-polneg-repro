@@ -183,7 +183,7 @@ def brms_posterior_epred(
     model: brmspy.FitResult,
     data: pd.DataFrame | None = None,
     *,
-    re_formulas: Mapping[str, FormulaT] | FormulaT | None = None,
+    re_formula: FormulaT | None = None,
     support: np.ndarray | None = None,
     **kwargs: Any,
 ) -> brmspy.FitResult:
@@ -196,10 +196,9 @@ def brms_posterior_epred(
     data
         A pandas DataFrame containing the new data for which to compute epred.
         If `None`, uses the observed data from the model.
-    re_formulas
-        A mapping of names to random effects formulas to specify which random effects
-        to include in the epred computation. If a single formula is provided,
-        it is used for all computations under the name 'epred'.
+    re_formula
+        A random effects formula to specify which random effects
+        to include in the epred computation. If `None`, includes all random effects.
     support
         An array of possible response values (for categorical outcomes).
         If `None`, uses the unique values from the observed data.
@@ -235,36 +234,28 @@ def brms_posterior_epred(
     posterior_dims = ["chain", "draw"]
     dims = [*posterior_dims, GROUP_DIM]
 
-    # Handle formulas
-    if not isinstance(re_formulas, Mapping):
-        if re_formulas is None:
-            re_formulas = ro.NULL  # type: ignore
-        re_formulas = {"epred": re_formulas}  # type: ignore
+    # Handle formula
+    if re_formula is None:
+        re_formula = ro.NULL  # type: ignore
+    elif isinstance(re_formula, str):
+        re_formula = ro.Formula(re_formula)
 
     # Prepare shared kwargs
-    kwargs.update(newdata=df_to_r(data), draws=ndraws)
+    kwargs.update(newdata=df_to_r(data), draws=ndraws, re_formula=re_formula)
 
     # Compute
     epreds = {}
     posterior_epred = ro.r("brms::posterior_epred")
-    for name, formula in re_formulas.items():
-        opts = kwargs.copy()
-        if isinstance(formula, str):
-            formula = ro.Formula(formula)
-        elif formula is None:
-            formula = ro.NULL  # type: ignore
-        opts["re_formula"] = formula
-        epred = np.asarray(posterior_epred(model.r, **opts))
-
-        # Build dims and coordinates
-        if model.idata.posterior.sizes["chain"] == 1:
-            epred = np.expand_dims(epred, axis=0)
-        # Handle categorical support
-        if epred.ndim > len(dims):
-            support = np.asarray(support)
-            dims.append(response_name)
-            coords[response_name] = (response_name, np.asarray(support))
-        epreds[name] = (dims, epred)
+    epred = np.asarray(posterior_epred(model.r, **kwargs))
+    # Build dims and coordinates
+    if model.idata.posterior.sizes["chain"] == 1:
+        epred = np.expand_dims(epred, axis=0)
+    # Handle categorical support
+    if epred.ndim > len(dims):
+        support = np.asarray(support)
+        dims.append(response_name)
+        coords[response_name] = (response_name, np.asarray(support))
+    epreds[response_name] = (dims, epred)
 
     # Build dataset
     ds = xr.Dataset(epreds, coords=coords).sortby(GROUP_DIM)

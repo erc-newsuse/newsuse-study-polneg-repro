@@ -18,7 +18,9 @@ ro.r("library(brms)")
 
 # %% ---------------------------------------------------------------------------------
 
-target = os.environ.get("TARGET", "event")
+target = os.environ.get("TARGET")
+if target is None:
+    target = input("Enter target name (event): ").strip() or "event"
 opts = config.glmm.valence.targets[target]
 
 dirpath = paths.glmm / "valence"

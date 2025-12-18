@@ -859,33 +859,33 @@ stages:
       md5: 76145e0e5db6a0823b1d7ed8f3545e12
       size: 48883322
   descriptives@valence:
-    cmd: python analyses/descriptives/valence.py
+    cmd: python stages/descriptives/valence.py
     deps:
-    - path: analyses/descriptives/valence.py
-      hash: md5
-      md5: 270fe4753b7bef2e204b4a7fd10a4d9f
-      size: 14123
     - path: data/proc/final.parquet
       hash: md5
       md5: 6ed9fc519405c1cf0e919c444c893842
       size: 382132909
+    - path: stages/descriptives/valence.py
+      hash: md5
+      md5: 1be79ddd9c1148e0ffaf4c282290eb7f
+      size: 14538
     outs:
     - path: figures/descriptives/valence
       hash: md5
-      md5: 308ed528000b1cceb40a8e4289f9b707.dir
-      size: 1227458
+      md5: 4be1db4952d131f16bc146f31050d084.dir
+      size: 1212646
       nfiles: 13
   descriptives@engagement:
-    cmd: python analyses/descriptives/engagement.py
+    cmd: python stages/descriptives/engagement.py
     deps:
-    - path: analyses/descriptives/engagement.py
-      hash: md5
-      md5: 19ad9fe16748833b2cd9017b4c2cb48c
-      size: 5414
     - path: data/proc/final.parquet
       hash: md5
       md5: 6ed9fc519405c1cf0e919c444c893842
       size: 382132909
+    - path: stages/descriptives/engagement.py
+      hash: md5
+      md5: 19ad9fe16748833b2cd9017b4c2cb48c
+      size: 5414
     outs:
     - path: figures/descriptives/engagement
       hash: md5
@@ -1079,6 +1079,638 @@ stages:
       md5: 2ab32f35aa86ee12a35379344e827ab5.dir
       size: 166413
       nfiles: 2
+    - path: figures/glmm/valence/validation/sentiment
+      hash: md5
+      md5: 97e8de38b3d518a8e235bd9d7ff12322.dir
+      size: 1012704
+      nfiles: 7
+  glmm-valence-model@event:
+    cmd:
+    - TARGET=event python stages/glmm/valence.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/glmm/valence.py
+      hash: md5
+      md5: 571b2f3d160e971c8589e4c8e5ebb740
+      size: 2357
+    params:
+      params.yaml:
+        glmm.valence.targets.event:
+          index_col: key
+          predictors:
+            fixed:
+            - political
+            - country
+            - weekend
+            groups:
+            - outlet
+            - isotime
+          model:
+            formula: "{target} ~ 1\n  + political * country + weekend\n  + (1 | outlet:political)\n\
+              \  + (1 | country:isotime:political)\n"
+            family: mixture(gaussian, gaussian)
+            link: logit
+            prior:
+            - normal(-2, 2), class = Intercept, dpar = mu1
+            - normal(2, 2), class = Intercept, dpar = mu2
+          n_threads: 4
+          solver:
+            algorithm: meanfield
+            chains: 4
+            cores: 4
+            iter: 2000
+            backend: cmdstanr
+            control: {}
+          inference:
+            subsample: 500000
+            ppd:
+              ndraws: 10
+              cores: 4
+            pop:
+              allow_new_levels: true
+              sample_new_levels: old_levels
+              group_name: population_posterior_predictive
+              re_formula: ~0
+            epd:
+              re_formulas:
+                grand_mean: ~0
+                full:
+              allow_new_levels: true
+              sample_new_levels: gaussian
+            loglik:
+              ndraws: 10
+              cores: 4
+            ranef:
+              ndraws: 50
+              cores: 4
+          seed: 1289326
+    outs:
+    - path: glmm/valence/event.rds
+      hash: md5
+      md5: ef430a793e38ad6eafd860df5cd6afef
+      size: 111804214
+  glmm-valence-model@sentiment:
+    cmd:
+    - TARGET=sentiment python stages/glmm/valence.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/glmm/valence.py
+      hash: md5
+      md5: 571b2f3d160e971c8589e4c8e5ebb740
+      size: 2357
+    params:
+      params.yaml:
+        glmm.valence.targets.sentiment:
+          index_col: key
+          predictors:
+            fixed:
+            - political
+            - country
+            - weekend
+            groups:
+            - outlet
+            - isotime
+          model:
+            formula: "{target} ~ 1\n  + political * country + weekend\n  + (1 | outlet:political)\n\
+              \  + (1 | country:isotime:political)\n"
+            family: mixture(gaussian, gaussian)
+            link: logit
+            prior:
+            - normal(-2, 2), class = Intercept, dpar = mu1
+            - normal(2, 2), class = Intercept, dpar = mu2
+          n_threads: 4
+          solver:
+            algorithm: meanfield
+            chains: 4
+            cores: 4
+            iter: 2000
+            backend: cmdstanr
+            control: {}
+          inference:
+            subsample: 500000
+            ppd:
+              ndraws: 10
+              cores: 4
+            pop:
+              allow_new_levels: true
+              sample_new_levels: old_levels
+              group_name: population_posterior_predictive
+              re_formula: ~0
+            epd:
+              re_formulas:
+                grand_mean: ~0
+                full:
+              allow_new_levels: true
+              sample_new_levels: gaussian
+            loglik:
+              ndraws: 10
+              cores: 4
+            ranef:
+              ndraws: 50
+              cores: 4
+          seed: 1563278
+    outs:
+    - path: glmm/valence/sentiment.rds
+      hash: md5
+      md5: 6f44f141bf26bdef565624116ff14137
+      size: 110470916
+  glmm-valence-inference@event:
+    cmd:
+    - TARGET=event python stages/glmm/valence_inference.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: glmm/valence/event.rds
+      hash: md5
+      md5: ef430a793e38ad6eafd860df5cd6afef
+      size: 111804214
+    - path: stages/glmm/valence_inference.py
+      hash: md5
+      md5: 59d0b4bcc077340605cc690e1548c65f
+      size: 3789
+    params:
+      params.yaml:
+        glmm.valence.targets.event:
+          index_col: key
+          predictors:
+            fixed:
+            - political
+            - country
+            - weekend
+            groups:
+            - outlet
+            - isotime
+          model:
+            formula: "{target} ~ 1\n  + political * country + weekend\n  + (1 | outlet:political)\n\
+              \  + (1 | country:isotime:political)\n"
+            family: mixture(gaussian, gaussian)
+            link: logit
+            prior:
+            - normal(-2, 2), class = Intercept, dpar = mu1
+            - normal(2, 2), class = Intercept, dpar = mu2
+          n_threads: 4
+          solver:
+            algorithm: meanfield
+            chains: 4
+            cores: 4
+            iter: 2000
+            backend: cmdstanr
+            control: {}
+          inference:
+            subsample: 500000
+            ppd:
+              ndraws: 10
+              cores: 4
+            pop:
+              allow_new_levels: true
+              sample_new_levels: old_levels
+              group_name: population_posterior_predictive
+              re_formula: ~0
+            epd:
+              re_formulas:
+                grand_mean: ~0
+                full:
+              allow_new_levels: true
+              sample_new_levels: gaussian
+            loglik:
+              ndraws: 10
+              cores: 4
+            ranef:
+              ndraws: 50
+              cores: 4
+          seed: 1289326
+    outs:
+    - path: glmm/valence/event-ranef.nc
+      hash: md5
+      md5: 645d6b63520c2ede5ee4c20f3c006b70
+      size: 39384749
+    - path: glmm/valence/event.nc
+      hash: md5
+      md5: ff2fc4285d7a9381f2f297227b5b5e9c
+      size: 391967892
+  glmm-valence-inference@sentiment:
+    cmd:
+    - TARGET=sentiment python stages/glmm/valence_inference.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: glmm/valence/sentiment.rds
+      hash: md5
+      md5: 6f44f141bf26bdef565624116ff14137
+      size: 110470916
+    - path: stages/glmm/valence_inference.py
+      hash: md5
+      md5: 59d0b4bcc077340605cc690e1548c65f
+      size: 3789
+    params:
+      params.yaml:
+        glmm.valence.targets.sentiment:
+          index_col: key
+          predictors:
+            fixed:
+            - political
+            - country
+            - weekend
+            groups:
+            - outlet
+            - isotime
+          model:
+            formula: "{target} ~ 1\n  + political * country + weekend\n  + (1 | outlet:political)\n\
+              \  + (1 | country:isotime:political)\n"
+            family: mixture(gaussian, gaussian)
+            link: logit
+            prior:
+            - normal(-2, 2), class = Intercept, dpar = mu1
+            - normal(2, 2), class = Intercept, dpar = mu2
+          n_threads: 4
+          solver:
+            algorithm: meanfield
+            chains: 4
+            cores: 4
+            iter: 2000
+            backend: cmdstanr
+            control: {}
+          inference:
+            subsample: 500000
+            ppd:
+              ndraws: 10
+              cores: 4
+            pop:
+              allow_new_levels: true
+              sample_new_levels: old_levels
+              group_name: population_posterior_predictive
+              re_formula: ~0
+            epd:
+              re_formulas:
+                grand_mean: ~0
+                full:
+              allow_new_levels: true
+              sample_new_levels: gaussian
+            loglik:
+              ndraws: 10
+              cores: 4
+            ranef:
+              ndraws: 50
+              cores: 4
+          seed: 1563278
+    outs:
+    - path: glmm/valence/sentiment-ranef.nc
+      hash: md5
+      md5: 9bff4aed6a56c319ce273c37c336cd5a
+      size: 39336780
+    - path: glmm/valence/sentiment.nc
+      hash: md5
+      md5: 9803f0bcd0789f6dec18b74ede4a1e11
+      size: 392117461
+  valence-model@event:
+    cmd:
+    - TARGET=event python stages/valence/model.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/valence/model.py
+      hash: md5
+      md5: 571b2f3d160e971c8589e4c8e5ebb740
+      size: 2357
+    params:
+      params.yaml:
+        glmm.valence.targets.event:
+          index_col: key
+          predictors:
+            fixed:
+            - political
+            - country
+            - weekend
+            groups:
+            - outlet
+            - isotime
+          model:
+            formula: "{target} ~ 1\n  + political * country + weekend\n  + (1 | outlet:political)\n\
+              \  + (1 | country:isotime:political)\n"
+            family: mixture(gaussian, gaussian)
+            link: logit
+            prior:
+            - normal(-2, 2), class = Intercept, dpar = mu1
+            - normal(2, 2), class = Intercept, dpar = mu2
+          n_threads: 4
+          solver:
+            algorithm: meanfield
+            chains: 4
+            cores: 4
+            iter: 2000
+            backend: cmdstanr
+            control: {}
+          inference:
+            subsample: 500000
+            ppd:
+              ndraws: 10
+              cores: 4
+            pop:
+              allow_new_levels: true
+              sample_new_levels: old_levels
+              group_name: population_posterior_predictive
+              re_formula: ~0
+            epd:
+              re_formulas:
+                grand_mean: ~0
+                full:
+              allow_new_levels: true
+              sample_new_levels: gaussian
+            loglik:
+              ndraws: 10
+              cores: 4
+            ranef:
+              ndraws: 50
+              cores: 4
+          seed: 1289326
+    outs:
+    - path: glmm/valence/event.rds
+      hash: md5
+      md5: ef430a793e38ad6eafd860df5cd6afef
+      size: 111804214
+  valence-model@sentiment:
+    cmd:
+    - TARGET=sentiment python stages/valence/model.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/valence/model.py
+      hash: md5
+      md5: 571b2f3d160e971c8589e4c8e5ebb740
+      size: 2357
+    params:
+      params.yaml:
+        glmm.valence.targets.sentiment:
+          index_col: key
+          predictors:
+            fixed:
+            - political
+            - country
+            - weekend
+            groups:
+            - outlet
+            - isotime
+          model:
+            formula: "{target} ~ 1\n  + political * country + weekend\n  + (1 | outlet:political)\n\
+              \  + (1 | country:isotime:political)\n"
+            family: mixture(gaussian, gaussian)
+            link: logit
+            prior:
+            - normal(-2, 2), class = Intercept, dpar = mu1
+            - normal(2, 2), class = Intercept, dpar = mu2
+          n_threads: 4
+          solver:
+            algorithm: meanfield
+            chains: 4
+            cores: 4
+            iter: 2000
+            backend: cmdstanr
+            control: {}
+          inference:
+            subsample: 500000
+            ppd:
+              ndraws: 10
+              cores: 4
+            pop:
+              allow_new_levels: true
+              sample_new_levels: old_levels
+              group_name: population_posterior_predictive
+              re_formula: ~0
+            epd:
+              re_formulas:
+                grand_mean: ~0
+                full:
+              allow_new_levels: true
+              sample_new_levels: gaussian
+            loglik:
+              ndraws: 10
+              cores: 4
+            ranef:
+              ndraws: 50
+              cores: 4
+          seed: 1563278
+    outs:
+    - path: glmm/valence/sentiment.rds
+      hash: md5
+      md5: 6f44f141bf26bdef565624116ff14137
+      size: 110470916
+  valence-inference@event:
+    cmd:
+    - TARGET=event python stages/valence/inference.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: glmm/valence/event.rds
+      hash: md5
+      md5: ef430a793e38ad6eafd860df5cd6afef
+      size: 111804214
+    - path: stages/valence/inference.py
+      hash: md5
+      md5: 59d0b4bcc077340605cc690e1548c65f
+      size: 3789
+    params:
+      params.yaml:
+        glmm.valence.targets.event:
+          index_col: key
+          predictors:
+            fixed:
+            - political
+            - country
+            - weekend
+            groups:
+            - outlet
+            - isotime
+          model:
+            formula: "{target} ~ 1\n  + political * country + weekend\n  + (1 | outlet:political)\n\
+              \  + (1 | country:isotime:political)\n"
+            family: mixture(gaussian, gaussian)
+            link: logit
+            prior:
+            - normal(-2, 2), class = Intercept, dpar = mu1
+            - normal(2, 2), class = Intercept, dpar = mu2
+          n_threads: 4
+          solver:
+            algorithm: meanfield
+            chains: 4
+            cores: 4
+            iter: 2000
+            backend: cmdstanr
+            control: {}
+          inference:
+            subsample: 500000
+            ppd:
+              ndraws: 10
+              cores: 4
+            pop:
+              allow_new_levels: true
+              sample_new_levels: old_levels
+              group_name: population_posterior_predictive
+              re_formula: ~0
+            epd:
+              re_formulas:
+                grand_mean: ~0
+                full:
+              allow_new_levels: true
+              sample_new_levels: gaussian
+            loglik:
+              ndraws: 10
+              cores: 4
+            ranef:
+              ndraws: 50
+              cores: 4
+          seed: 1289326
+    outs:
+    - path: glmm/valence/event-ranef.nc
+      hash: md5
+      md5: 645d6b63520c2ede5ee4c20f3c006b70
+      size: 39384749
+    - path: glmm/valence/event.nc
+      hash: md5
+      md5: ff2fc4285d7a9381f2f297227b5b5e9c
+      size: 391967892
+  valence-inference@sentiment:
+    cmd:
+    - TARGET=sentiment python stages/valence/inference.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: glmm/valence/sentiment.rds
+      hash: md5
+      md5: 6f44f141bf26bdef565624116ff14137
+      size: 110470916
+    - path: stages/valence/inference.py
+      hash: md5
+      md5: 59d0b4bcc077340605cc690e1548c65f
+      size: 3789
+    params:
+      params.yaml:
+        glmm.valence.targets.sentiment:
+          index_col: key
+          predictors:
+            fixed:
+            - political
+            - country
+            - weekend
+            groups:
+            - outlet
+            - isotime
+          model:
+            formula: "{target} ~ 1\n  + political * country + weekend\n  + (1 | outlet:political)\n\
+              \  + (1 | country:isotime:political)\n"
+            family: mixture(gaussian, gaussian)
+            link: logit
+            prior:
+            - normal(-2, 2), class = Intercept, dpar = mu1
+            - normal(2, 2), class = Intercept, dpar = mu2
+          n_threads: 4
+          solver:
+            algorithm: meanfield
+            chains: 4
+            cores: 4
+            iter: 2000
+            backend: cmdstanr
+            control: {}
+          inference:
+            subsample: 500000
+            ppd:
+              ndraws: 10
+              cores: 4
+            pop:
+              allow_new_levels: true
+              sample_new_levels: old_levels
+              group_name: population_posterior_predictive
+              re_formula: ~0
+            epd:
+              re_formulas:
+                grand_mean: ~0
+                full:
+              allow_new_levels: true
+              sample_new_levels: gaussian
+            loglik:
+              ndraws: 10
+              cores: 4
+            ranef:
+              ndraws: 50
+              cores: 4
+          seed: 1563278
+    outs:
+    - path: glmm/valence/sentiment-ranef.nc
+      hash: md5
+      md5: 9bff4aed6a56c319ce273c37c336cd5a
+      size: 39336780
+    - path: glmm/valence/sentiment.nc
+      hash: md5
+      md5: 9803f0bcd0789f6dec18b74ede4a1e11
+      size: 392117461
+  valence-analysis@event:
+    cmd:
+    - TARGET=event python stages/valence/validation.py
+    - TARGET=event python stages/valence/analysis.py
+    deps:
+    - path: glmm/valence/event.nc
+      hash: md5
+      md5: ff2fc4285d7a9381f2f297227b5b5e9c
+      size: 391967892
+    - path: stages/valence/analysis.py
+      hash: md5
+      md5: 31cb687862543c1d856e52c00654ac04
+      size: 10792
+    - path: stages/valence/validation.py
+      hash: md5
+      md5: 016090a064a4bb5d5677594c76d3047d
+      size: 7084
+    outs:
+    - path: figures/glmm/valence/event
+      hash: md5
+      md5: 9b44cc2a398a0c401dba4b56d318cd5c.dir
+      size: 150924
+      nfiles: 1
+    - path: figures/glmm/valence/validation/event
+      hash: md5
+      md5: 74ba9a097fe57f2c361af4c7c4415a1f.dir
+      size: 1007028
+      nfiles: 7
+  valence-analysis@sentiment:
+    cmd:
+    - TARGET=sentiment python stages/valence/validation.py
+    - TARGET=sentiment python stages/valence/analysis.py
+    deps:
+    - path: glmm/valence/sentiment.nc
+      hash: md5
+      md5: 9803f0bcd0789f6dec18b74ede4a1e11
+      size: 392117461
+    - path: stages/valence/analysis.py
+      hash: md5
+      md5: 31cb687862543c1d856e52c00654ac04
+      size: 10792
+    - path: stages/valence/validation.py
+      hash: md5
+      md5: 016090a064a4bb5d5677594c76d3047d
+      size: 7084
+    outs:
+    - path: figures/glmm/valence/sentiment
+      hash: md5
+      md5: 11e95744cc0c844365a1674753040263.dir
+      size: 151181
+      nfiles: 1
     - path: figures/glmm/valence/validation/sentiment
       hash: md5
       md5: 97e8de38b3d518a8e235bd9d7ff12322.dir
