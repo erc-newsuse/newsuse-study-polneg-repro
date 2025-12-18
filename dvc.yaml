@@ -182,19 +182,19 @@ stages:
       - figures/descriptives/${item}:
           persist: true
 
-  valence-model:
+  valence-glmm:
     foreach:
     - event
     - sentiment
     do:
       cmd:
-      - TARGET=${item} python stages/valence/model.py
+      - TARGET=${item} python stages/valence/glmm.py
       params:
       - glmm.valence.targets.${item}.predictors
       - glmm.valence.targets.${item}.model
       - glmm.valence.targets.${item}.solver
       deps:
-      - stages/valence/model.py
+      - stages/valence/glmm.py
       - data/proc/final.parquet
       outs:
       - glmm/valence/${item}.rds:

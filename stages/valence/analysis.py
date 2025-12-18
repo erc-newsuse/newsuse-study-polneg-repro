@@ -73,23 +73,38 @@ if "weekend" in epred.coords:
 
 # %% Derive posterior expectation distributions for class probabilities --------------
 
-coords = ppd.coords.copy()
+# base = epred.full
+base = ppd[target]
+coords = base.coords.copy()
 coords[target] = config.categorical[target]
 probs = (
     xr.DataArray(
-        np.swapaxes(ordinal_probs((ppd[target].values + biases[..., None, None]).T), 0, 1),
+        np.swapaxes(ordinal_probs((base.values + biases[..., None, None]).T), 0, 1),
         coords=coords,
         dims=coords.dims,
     )
     .to_dataframe(name="prob")
     .reset_index()
-    .groupby(["country", "political", "draw", target])
-    .sample(random_state=rng, **opts.analysis.sample)
+    # .groupby(["country", "political", "outlet", "isotime", "draw", target])
+    # .sample(n=100, replace=True, random_state=rng)
+    # .groupby(["country", "political", "draw", target])
+    # .sample(n=100, replace=True, random_state=rng)
+    # .sample(n=100, replace=True, random_state=rng)
+    # .sample(random_state=rng, **opts.analysis.sample)
     # .sample(n=1000, replace=True, random_state=rng)
-    .reset_index(drop=True)
-    .set_index(["country", "political", "draw", target])["prob"]
-    .groupby(["political", "country", "draw", target])
-    .mean()
+    # .reset_index(drop=True)
+    # .set_index(["country", "political", "draw", target])["prob"]
+    # .groupby(["political", "country", "draw", target])
+    # .mean()
+)
+
+# %%
+
+(
+    probs.groupby(["country", "political", "outlet", "isotime", "draw", target])
+    .sample(n=100, replace=True, random_state=rng)
+    .groupby(["country", "political", "draw", target])
+    .sample(n=100, replace=True, random_state=rng)
 )
 
 # %% ---------------------------------------------------------------------------------

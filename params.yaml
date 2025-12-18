@@ -76,14 +76,15 @@ glmm:
     n_threads: &glmm_n_threads
       4
     solver:
-      algorithm: meanfield
+      algorithm: fullrank
       chains: *glmm_n_threads
       cores: *glmm_n_threads
       iter: 2000
       backend: cmdstanr
       control: {}
+      threads: 4
     inference:
-      subsample: 500_000
+      subsample: 100_000
       ppd: &glmm_ppd
         ndraws: 50
         cores: *glmm_n_threads
@@ -94,11 +95,11 @@ glmm:
       loglik:
         <<: *glmm_ppd
       ranef:
-        ndraws: 50
+        ndraws: 20
         cores: *glmm_n_threads
     analysis:
       sample:
-        n: 5000
+        n: 1000
         replace: true
   valence:
     defaults: &glmm_valence_defaults
@@ -110,16 +111,23 @@ glmm:
           - weekend
         groups:
           - outlet
-          - isotime
+          - year
+          - month
+          # - isotime
       model:  &glmm_valence_model
         formula: >
           {target} ~ 1
             + political * country + weekend
-            + (1 | outlet:political)
-            + (1 | country:isotime:political)
-        family: categorical
-        link: logit
-        prior: null
+            + (1 + political | outlet)
+            + (1 + political | outlet:year:month)
+        family: mixture(gaussian, gaussian)
+        prior:
+          - "normal(0, 5), class = b, dpar = mu1"
+          - "normal(0, 5), class = b, dpar = mu2"
+          - "normal(0, 5), class = sd, dpar = mu1"
+          - "normal(0, 5), class = sd, dpar = mu2"
+          - "normal(-2, 2), class = Intercept, dpar = mu1"
+          - "normal(2, 2), class = Intercept, dpar = mu2"
     models:
       advi: &glmm_valence_model_advi
         <<: *glmm_valence_defaults
@@ -129,19 +137,11 @@ glmm:
         seed: 1289326
         model:
           <<: *glmm_valence_model
-          family: mixture(gaussian, gaussian)
-          prior:
-          - "normal(-2, 2), class = Intercept, dpar = mu1"
-          - "normal(2, 2), class = Intercept, dpar = mu2"
       sentiment:
         <<: *glmm_valence_model_advi
         seed: 1563278
         model:
           <<: *glmm_valence_model
-          family: mixture(gaussian, gaussian)
-          prior:
-          - "normal(-2, 2), class = Intercept, dpar = mu1"
-          - "normal(2, 2), class = Intercept, dpar = mu2"
   engagement:
     defaults: &glmm_engagement_defaults
       <<: *glmm_defaults

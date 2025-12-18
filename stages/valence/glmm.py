@@ -53,6 +53,7 @@ print(f"Fitting GLMM for latent '{target}' target with {model_data.shape[0]} obs
 
 kwargs = dict(OmegaConf.to_object(opts.solver))
 kwargs["control"] = ro.ListVector(kwargs.get("control", {}))
+kwargs["threads"] = ro.r(f"threading({opts.solver.threads})")
 
 model = brm(
     formula=opts.model.formula.format(target=target),
