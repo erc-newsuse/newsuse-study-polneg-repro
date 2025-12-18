@@ -99,7 +99,7 @@ glmm:
         cores: *glmm_n_threads
     analysis:
       sample:
-        n: 100
+        n: 5000
         replace: true
   valence:
     defaults: &glmm_valence_defaults

@@ -228,6 +228,8 @@ stages:
       cmd:
       - TARGET=${item} python stages/valence/validation.py
       - TARGET=${item} python stages/valence/analysis.py
+      params:
+      - glmm.valence.targets.${item}.analysis
       deps:
       - stages/valence/validation.py
       - stages/valence/analysis.py

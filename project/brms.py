@@ -315,8 +315,9 @@ def brm_large(
 
         # 6. Convert cmdstanr output to stanfit and reconstruct brmsfit
         print("Reconstructing brmsfit object...")
+        # Pass algorithm to read_csv_as_stanfit so it handles VI fits correctly
         ro.r(
-            "stanfit <- brms::read_csv_as_stanfit(cmdstan_fit$output_files(), model = mod)"
+            f'stanfit <- brms::read_csv_as_stanfit(cmdstan_fit$output_files(), model = mod, algorithm = "{algorithm}")'
         )
 
         # Insert stanfit into brmsfit and rename parameters

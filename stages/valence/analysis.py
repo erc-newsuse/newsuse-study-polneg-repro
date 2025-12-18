@@ -84,7 +84,8 @@ probs = (
     .to_dataframe(name="prob")
     .reset_index()
     .groupby(["country", "political", "draw", target])
-    .sample(n=opts.analysis.n_samples, random_state=rng)
+    .sample(random_state=rng, **opts.analysis.sample)
+    # .sample(n=1000, replace=True, random_state=rng)
     .reset_index(drop=True)
     .set_index(["country", "political", "draw", target])["prob"]
     .groupby(["political", "country", "draw", target])
@@ -94,7 +95,9 @@ probs = (
 # %% ---------------------------------------------------------------------------------
 
 probs_overall = (
-    probs.groupby(["political", target])
+    probs.groupby(["political", "draw", target])
+    .mean()
+    .groupby(["political", target])
     .quantile([q0, 0.5, q1])
     .unstack(-1)
     .rename(columns={q0: "lb", 0.5: "median", q1: "ub"})
@@ -114,10 +117,6 @@ probs_country = (
     .loc[[*countries]]
     .reset_index()
 )
-
-# %% ---------------------------------------------------------------------------------
-
-probs_quantiles = pd.concat([probs_overall, probs_country], ignore_index=True)
 
 # %% ---------------------------------------------------------------------------------
 
@@ -193,13 +192,13 @@ for ax, country in zip(axes[0].flat, groups, strict=True):
             show_box=False,
         )
     title = "Overall" if country == "overall" else config.categorical.country[country]
-    ax.set_title(title)
+    ax.set_title(title, fontsize="xx-large")
     ax.set_xlabel(None)
     ax.set_ylabel(None)
     ax.xaxis.set_ticks(support)
 
 ax = axes[0, 0]
-ax.set_ylabel("Posterior class probability", x=-0.05)
+ax.set_ylabel("Posterior class probability", x=-0.05, fontsize="x-large")
 # Add custom legend
 handles = [
     mpl.lines.Line2D(
@@ -237,7 +236,7 @@ for ax, country in zip(axes[1].flat, groups, strict=True):
     ax.xaxis.set_ticks(support)
 
 ax = axes[1, 0]
-ax.set_ylabel("Odds ratio (political/non-political)", x=-0.05)
+ax.set_ylabel("Odds ratio (political/non-political)", x=-0.05, fontsize="x-large")
 # Add custom legend
 handles = [
     mpl.lines.Line2D(
