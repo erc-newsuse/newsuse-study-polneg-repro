@@ -1424,64 +1424,38 @@ stages:
       size: 382132909
     - path: stages/valence/model.py
       hash: md5
-      md5: 571b2f3d160e971c8589e4c8e5ebb740
-      size: 2357
+      md5: 44d2201dcb5a3c9346130007e17ef049
+      size: 2436
     params:
       params.yaml:
-        glmm.valence.targets.sentiment:
-          index_col: key
-          predictors:
-            fixed:
-            - political
-            - country
-            - weekend
-            groups:
-            - outlet
-            - isotime
-          model:
-            formula: "{target} ~ 1\n  + political * country + weekend\n  + (1 | outlet:political)\n\
-              \  + (1 | country:isotime:political)\n"
-            family: mixture(gaussian, gaussian)
-            link: logit
-            prior:
-            - normal(-2, 2), class = Intercept, dpar = mu1
-            - normal(2, 2), class = Intercept, dpar = mu2
-          n_threads: 4
-          solver:
-            algorithm: meanfield
-            chains: 4
-            cores: 4
-            iter: 2000
-            backend: cmdstanr
-            control: {}
-          inference:
-            subsample: 500000
-            ppd:
-              ndraws: 10
-              cores: 4
-            pop:
-              allow_new_levels: true
-              sample_new_levels: old_levels
-              group_name: population_posterior_predictive
-              re_formula: ~0
-            epd:
-              re_formulas:
-                grand_mean: ~0
-                full:
-              allow_new_levels: true
-              sample_new_levels: gaussian
-            loglik:
-              ndraws: 10
-              cores: 4
-            ranef:
-              ndraws: 50
-              cores: 4
-          seed: 1563278
+        glmm.valence.targets.sentiment.model:
+          formula: "{target} ~ 1\n  + political * country + weekend\n  + (1 | outlet:political)\n\
+            \  + (1 | country:isotime:political)\n"
+          family: mixture(gaussian, gaussian)
+          link: logit
+          prior:
+          - normal(-2, 2), class = Intercept, dpar = mu1
+          - normal(2, 2), class = Intercept, dpar = mu2
+        glmm.valence.targets.sentiment.predictors:
+          fixed:
+          - political
+          - country
+          - weekend
+          groups:
+          - outlet
+          - isotime
+        glmm.valence.targets.sentiment.solver:
+          algorithm: meanfield
+          chains: 4
+          cores: 4
+          iter: 2000
+          backend: cmdstanr
+          control: {}
     outs:
     - path: glmm/valence/sentiment.rds
       hash: md5
-      md5: 6f44f141bf26bdef565624116ff14137
-      size: 110470916
+      md5: 592f5ba6ca79fc95e29be4c40dd03ceb
+      size: 110470909
   valence-inference@event:
     cmd:
     - TARGET=event python stages/valence/inference.py
