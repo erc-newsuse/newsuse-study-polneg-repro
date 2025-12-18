@@ -143,6 +143,46 @@ glmm:
           prior:
           - "normal(-2, 2), class = Intercept, dpar = mu1"
           - "normal(2, 2), class = Intercept, dpar = mu2"
+  engagement:
+    defaults: &glmm_engagement_defaults
+      <<: *glmm_defaults
+      predictors:
+        fixed:
+          - political
+          - country
+          - weekend
+          - valence
+        groups:
+          - outlet
+          - isotime
+      model: &glmm_engagement_model
+        formula: >
+          {target} ~ 1
+            + political * country * valence + weekend
+            + (1 | outlet:political)
+            + (1 | country:isotime:political)
+        family: negbinomial
+        link: log
+        prior: null
+    models:
+      advi: &glmm_engagement_model_advi
+        <<: *glmm_engagement_defaults
+    targets:
+      reactions:
+        <<: *glmm_engagement_model_advi
+        seed: 2039487
+        model:
+          <<: *glmm_engagement_model
+      comments:
+        <<: *glmm_engagement_model_advi
+        seed: 3094875
+        model:
+          <<: *glmm_engagement_model
+      shares:
+        <<: *glmm_engagement_model_advi
+        seed: 4093857
+        model:
+          <<: *glmm_engagement_model
 
 classification:
   political:
