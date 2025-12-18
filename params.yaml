@@ -84,7 +84,7 @@ glmm:
       control: {}
     inference:
       subsample: 500_000
-      ppd:
+      ppd: &glmm_ppd
         ndraws: 50
         cores: *glmm_n_threads
       epd:
@@ -92,8 +92,7 @@ glmm:
         allow_new_levels: true
         sample_new_levels: gaussian
       loglik:
-        ndraws: 50
-        cores: *glmm_n_threads
+        <<: *glmm_ppd
       ranef:
         ndraws: 50
         cores: *glmm_n_threads

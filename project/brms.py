@@ -323,6 +323,8 @@ def brm_large(
         # Insert stanfit into brmsfit and rename parameters
         ro.globalenv["empty_fit"] = empty_fit
         ro.r("empty_fit$fit <- stanfit")
+        # Set the algorithm on the brmsfit object (empty brmsfit defaults to "sampling")
+        ro.r(f'empty_fit$algorithm <- "{algorithm}"')
         fit = ro.r("brms::rename_pars(empty_fit)")
 
     idata = az.InferenceData()
