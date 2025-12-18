@@ -76,13 +76,21 @@ glmm:
     n_threads: &glmm_n_threads
       4
     solver:
-      algorithm: fullrank
+      algorithm: sampling
       chains: *glmm_n_threads
       cores: *glmm_n_threads
-      iter: 2000
+      iter: 1500
+      warmup: 500
+      thin: 1
+      init: 0  # Start from prior mean (more stable for mixtures)
       backend: cmdstanr
-      control: {}
+      control:
+        adapt_delta: 0.9
+        max_treedepth: 10
       threads: 4
+      # opencl: [0, 0]  # GPU device IDs [platform, device], set to null to disable
+      silent: 1  # Reduce output verbosity
+      refresh: 100  # Progress update frequency
     inference:
       subsample: 100_000
       ppd: &glmm_ppd
@@ -112,36 +120,49 @@ glmm:
         groups:
           - outlet
           - year
-          - month
+          # - month
           # - isotime
       model:  &glmm_valence_model
+        subsample: 100_000  # Set to null or 0 to use all data
         formula: >
           {target} ~ 1
             + political * country + weekend
-            + (1 + political | outlet)
-            + (1 + political | outlet:year:month)
-        family: mixture(gaussian, gaussian)
+            + (1 | outlet)
+            + (1 | outlet:year)
+        family: mixture(gaussian, gaussian, order = "mu")
         prior:
-          - "normal(0, 5), class = b, dpar = mu1"
-          - "normal(0, 5), class = b, dpar = mu2"
-          - "normal(0, 5), class = sd, dpar = mu1"
-          - "normal(0, 5), class = sd, dpar = mu2"
-          - "normal(-2, 2), class = Intercept, dpar = mu1"
-          - "normal(2, 2), class = Intercept, dpar = mu2"
+          # Coefficients: effects should be small relative to [-8,8] range
+          # 95% prior mass within ±3 effect size
+          - "normal(0, 1.5), class = b, dpar = mu1"
+          - "normal(0, 1.5), class = b, dpar = mu2"
+          # Random effects SDs: outlet/time variation modest
+          # Half-normal with 95% mass below ~2
+          - "normal(0, 1), class = sd, dpar = mu1"
+          - "normal(0, 1), class = sd, dpar = mu2"
+          # Intercepts: modes expected around -3 and +3 for bimodal response
+          # Tighter than before to aid identification
+          - "normal(-3, 1.5), class = Intercept, dpar = mu1"
+          - "normal(3, 1.5), class = Intercept, dpar = mu2"
+          # Residual SDs: each component spread ~1-3
+          # exponential(0.5) has mean=2, reasonable for within-mode variation
+          - "exponential(0.5), class = sigma1"
+          - "exponential(0.5), class = sigma2"
+          # Mixing proportion: weakly informative, expect ~50/50 split
+          - "dirichlet(2, 2), class = theta"
     models:
       advi: &glmm_valence_model_advi
         <<: *glmm_valence_defaults
+        solver:
+          algorithm: meanfield
+      nuts: &glmm_valence_model_nuts
+        <<: *glmm_valence_defaults
     targets:
       event:
-        <<: *glmm_valence_model_advi
+        <<: *glmm_valence_model_nuts
         seed: 1289326
-        model:
-          <<: *glmm_valence_model
       sentiment:
-        <<: *glmm_valence_model_advi
+        <<: *glmm_valence_model_nuts
         seed: 1563278
-        model:
-          <<: *glmm_valence_model
   engagement:
     defaults: &glmm_engagement_defaults
       <<: *glmm_defaults

@@ -54,6 +54,12 @@ print(f"Fitting GLMM for latent '{target}' target with {model_data.shape[0]} obs
 kwargs = dict(OmegaConf.to_object(opts.solver))
 kwargs["control"] = ro.ListVector(kwargs.get("control", {}))
 kwargs["threads"] = ro.r(f"threading({opts.solver.threads})")
+if opencl := opts.solver.get("opencl"):
+    kwargs["opencl"] = ro.IntVector(opencl)
+
+# Handle OpenCL GPU acceleration
+if (opencl_ids := kwargs.pop("opencl_ids", None)) is not None:
+    kwargs["opencl"] = ro.r(f"opencl({opencl_ids[0]}, {opencl_ids[1]})")
 
 model = brm(
     formula=opts.model.formula.format(target=target),
@@ -67,8 +73,8 @@ model = brm(
 # %% ---------------------------------------------------------------------------------
 
 assert (nobs := ro.r("nobs")(model.r)[0]) == len(
-    data
-), f"Fitted 'model' has {nobs} observations while 'data' has {len(data)}."
+    model_data
+), f"Fitted 'model' has {nobs} observations while 'model_data' has {len(model_data)}."
 
 # %% ---------------------------------------------------------------------------------
 
