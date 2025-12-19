@@ -16,7 +16,7 @@ from brmspy.types import FitResult, PriorSpec
 from rpy2 import robjects as ro
 from rpy2.rinterface_lib import openrlib
 
-from project.rutils import df_to_r
+from project.rutils import df_to_r, make_formula
 
 __all__ = ("make_prior", "build_priors", "brm", "brm_large")
 
@@ -104,7 +104,7 @@ def brm(
 
     # Handle model fit arguments
     formulas = [formula] if isinstance(formula, str) else formula
-    formulas = [ro.Formula(re.sub(r"\s+", " ", f, flags=re.MULTILINE)) for f in formulas]
+    formulas = [make_formula(f) for f in formulas]
     formula_r = ro.r["bf"](*formulas)
     prior_r = build_priors(prior) if prior is not None else ro.NULL
     data_r = df_to_r(data)

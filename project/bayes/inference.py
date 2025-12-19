@@ -259,7 +259,10 @@ def brms_posterior_epred(
         support = np.asarray(support)
         dims.append(response_name)
         coords[response_name] = (response_name, np.asarray(support))
-    epreds[response_name] = (dims, epred)
+    if response_name not in coords:
+        epreds[response_name] = (dims, epred)
+    else:
+        epreds["epred"] = (dims, epred)
 
     # Build dataset
     ds = xr.Dataset(epreds, coords=coords).sortby(GROUP_DIM)

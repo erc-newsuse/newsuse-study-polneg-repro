@@ -1,8 +1,10 @@
+import re
+
 import pandas as pd
 from brmspy.helpers import conversion
 from rpy2 import robjects as ro
 
-__all__ = ("df_to_r", "ro")
+__all__ = ("df_to_r", "ro", "make_formula")
 
 
 def df_to_r(data: pd.DataFrame) -> ro.DataFrame:
@@ -29,3 +31,8 @@ def df_to_r(data: pd.DataFrame) -> ro.DataFrame:
         rfac = ro.FactorVector(rcol, levels=info["levels"], ordered=info["ordered"])
         rdf[idx] = rfac  # type: ignore
     return rdf
+
+
+def make_formula(formula: str) -> ro.Formula:
+    """Create an R formula from a string."""
+    return ro.Formula(re.sub(r"\s+", " ", formula, flags=re.MULTILINE).strip())

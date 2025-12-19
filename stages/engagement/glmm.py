@@ -5,10 +5,9 @@ import os
 import numpy as np
 import pandas as pd
 from newsuse.data import DataFrame
-from omegaconf import OmegaConf
 
 from project import config, paths
-from project.rutils import df_to_r, ro
+from project.rutils import df_to_r, make_formula, ro
 
 ro.r("library(glmmTMB)")
 
@@ -50,11 +49,13 @@ data = DataFrame.from_(paths.final).assign(
 
 kwargs = {
     "data": df_to_r(data),
-    "formula": ro.Formula(opts.model.formula.format(target=target)),
-    "ziformula": ro.Formula(opts.model.ziformula),
-    "dispformula": ro.Formula(opts.model.dispformula),
+    "formula": make_formula(opts.model.formula.format(target=target)),
+    "ziformula": make_formula(opts.model.ziformula),
+    "dispformula": make_formula(opts.model.dispformula),
     "family": ro.r(opts.model.family),
-    "control": OmegaConf.to_object(opts.model.control),
+    "control": ro.ListVector(
+        profile=opts.control.profile, parallel=ro.ListVector(dict(opts.control.parallel))
+    ),
 }
 
 # %% ---------------------------------------------------------------------------------

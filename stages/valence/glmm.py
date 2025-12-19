@@ -9,7 +9,7 @@ from newsuse.data import DataFrame
 from omegaconf import OmegaConf
 
 from project import config, paths
-from project.bayes import brm, brms_posterior
+from project.bayes import brm
 from project.rutils import ro
 
 az.rcParams.update(config.arviz)
@@ -35,9 +35,9 @@ data = DataFrame.from_(paths.final).assign(
     country=lambda df: pd.Categorical(
         df["country"], categories=[*config.categorical.country]
     ),
-    **{
-        target: lambda df: df[f"{target}_latent"],
-    },
+    # **{
+    #     target: lambda df: df[f"{target}_latent"],
+    # },
 )[["key", target, *opts.predictors.fixed, *opts.predictors.groups]]
 
 # %% ---------------------------------------------------------------------------------
@@ -53,9 +53,10 @@ else:
 
 def make_kwargs(opts):
     formula_loc = opts.model.formula.location.format(target=target)
-    scale_formula = opts.model.formula.scale.strip().replace("\n", " ")
+    # scale_formula = opts.model.formula.scale
     kwargs = dict(OmegaConf.to_object(opts.solver))
-    kwargs["formula"] = [formula_loc, scale_formula]
+    # kwargs["formula"] = [formula_loc, scale_formula]
+    kwargs["formula"] = [formula_loc]
     kwargs["data"] = model_data
     kwargs["prior"] = opts.model.get("prior")
     kwargs["family"] = ro.r(opts.model.family)
@@ -70,43 +71,47 @@ def make_kwargs(opts):
 
 # %% ---------------------------------------------------------------------------------
 
-opts_advi = opts.copy()
-opts_advi.update(solver=config.glmm.brms.advi.solver.copy())
-
-# %%
-
-print(
-    f"Initializing GLMM fit for '{target}' "
-    f"using ADVI with {model_data.shape[0]} observations"
-)
-model = brm(**make_kwargs(opts_advi), seed=int(rng.integers(0, 2**16 - 1)))
-
-# %% ---------------------------------------------------------------------------------
-
-model = brms_posterior(model)
-posterior = model.idata.posterior.stack(sample=["chain", "draw"])
-
-# %% ---------------------------------------------------------------------------------
-
-print(f"Fitting GLMM for '{target}' using NUTS...")
+print(f"Fitting GLMM for '{target}' using '{opts.solver.algorithm}' algorithm...")
 kwargs = make_kwargs(opts)
-n_chains = kwargs.get("chains", 4)
-n_samples = posterior.sizes["sample"]
-sample_idx = rng.choice(n_samples, size=n_chains, replace=False)
-init = ro.ListVector(
-    {
-        f"chain{i}": ro.ListVector(
-            {
-                k: v
-                for k, v in posterior.isel(sample=idx).to_pandas().to_dict().items()
-                if "[" not in k and "]" not in k and not k.startswith("lp")  # type: ignore
-            }
-        )
-        for i, idx in enumerate(sample_idx)
-    }
-)
-kwargs.update(init=init)
 model = brm(**kwargs, seed=int(rng.integers(0, 2**16 - 1)))
+
+# %% ---------------------------------------------------------------------------------
+
+# opts_advi = opts.copy()
+# opts_advi.update(solver=config.glmm.brms.advi.solver.copy())
+
+# print(
+#     f"Initializing GLMM fit for '{target}' "
+#     f"using ADVI with {model_data.shape[0]} observations"
+# )
+# model = brm(**make_kwargs(opts_advi), seed=int(rng.integers(0, 2**16 - 1)))
+
+# # %% ---------------------------------------------------------------------------------
+
+# model = brms_posterior(model)
+# posterior = model.idata.posterior.stack(sample=["chain", "draw"])
+
+# # %% ---------------------------------------------------------------------------------
+
+# print(f"Fitting GLMM for '{target}' using '{opts.solver.algorithm}' algorithm...")
+# kwargs = make_kwargs(opts)
+# n_chains = kwargs.get("chains", 4)
+# n_samples = posterior.sizes["sample"]
+# sample_idx = rng.choice(n_samples, size=n_chains, replace=False)
+# init = ro.ListVector(
+#     {
+#         f"chain{i}": ro.ListVector(
+#             {
+#                 k: v
+#                 for k, v in posterior.isel(sample=idx).to_pandas().to_dict().items()
+#                 if "[" not in k and "]" not in k and not k.startswith("lp") # type: ignore
+#             }
+#         )
+#         for i, idx in enumerate(sample_idx)
+#     }
+# )
+# kwargs.update(init=init)
+# model = brm(**kwargs, seed=int(rng.integers(0, 2**16 - 1)))
 
 # %% ---------------------------------------------------------------------------------
 

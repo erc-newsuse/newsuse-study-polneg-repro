@@ -91,7 +91,7 @@ glmm:
         silent: 1  # Reduce output verbosity
         refresh: 10  # Progress update frequency
       inference: &glmm_inference
-        subsample: 100_000
+        subsample: 10_000
         ppd: &glmm_ppd
           ndraws: 50
           cores: *glmm_n_threads
@@ -130,7 +130,7 @@ glmm:
       solver:
         <<: *glmm_solver
         algorithm: sampling
-        refresh: 1
+        refresh: 10
         control:
           adapt_delta: 0.9
           max_treedepth: 10
@@ -148,27 +148,23 @@ glmm:
           # - month
           # - isotime
       model:  &glmm_valence_model
-        subsample: 100_000  # Set to null or 0 to use all data
+        subsample: 10_000  # Set to null or 0 to use all data
         formula:
           location: >
             {target} ~ 1
               + political * country + weekend
               + (1 + political | outlet)
-          scale: >
-            sigma ~ 1 + political
-        family: gaussian
+          # scale: >
+          #   sigma ~ 1 + political
+        family: categorical
+        link: logit
         prior:
-          # Intercept: expected mean around 0 on [-8,8] scale
-          - "normal(0, 3), class = Intercept"
-          # Coefficients: effects should be small relative to [-8,8] range
-          # 95% prior mass within ±3 effect size
-          - "normal(0, 3), class = b"
-          # Random effects SDs: outlet/time variation modest
-          # Half-normal with 95% mass below ~2
-          - "normal(0, 1), class = sd"
-          # Residual SDs: when using distributional model for sigma,
-          # the intercept of the sigma submodel is on log scale
-          - "normal(0, 1), class = Intercept, dpar = sigma"
+          # Intercept for each category (on logit scale)
+          - "normal(0, 2), class = Intercept, dpar = mu0"
+          - "normal(0, 2), class = Intercept, dpar = mu1"
+          # Coefficients: effects on logit scale
+          - "normal(0, 2), class = b, dpar = mu0"
+          - "normal(0, 2), class = b, dpar = mu1"
     targets:
       event:
         <<: *glmm_valence_default
@@ -199,7 +195,7 @@ glmm:
           ~ (1 | outlet) + (1 | outlet:year:month)
         dispformula: >
           ~ (1 | outlet) + (1 | outlet:year:month)
-        family: truncated_negbinom2
+        family: truncated_nbinom2
       control:
         profile: true
         parallel:

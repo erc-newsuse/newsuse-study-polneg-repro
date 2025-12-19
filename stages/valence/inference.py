@@ -36,20 +36,19 @@ data = DataFrame.from_(
     paths.final,
     columns=[
         "key",
-        f"{target}_latent",
+        # f"{target}_latent",
+        target,
         *opts.predictors.fixed,
         *opts.predictors.groups,
     ],
-).rename(columns={f"{target}_latent": target})
+)  # .rename(columns={f"{target}_latent": target})
 quantized = data[[*opts.predictors.fixed]].drop_duplicates(ignore_index=True)
 
 # %% ---------------------------------------------------------------------------------
 
-n = 1000
-grouped = data.groupby("outlet")
-
-print(f"Subsampling data to ~{len(grouped) * n} rows for faster processing...")
-data = grouped.sample(n=1000, random_state=rng).reset_index(drop=True)
+if (n := opts.inference.get("subsample")) and n > 0:
+    print(f"Subsampling data to {n} rows for faster processing...")
+    data = data.sample(n=n, random_state=rng)
 
 # %% ---------------------------------------------------------------------------------
 
@@ -76,12 +75,17 @@ model = brms_posterior_epred(model, quantized, **opts.inference.epd)
 # %% ---------------------------------------------------------------------------------
 
 print("Preparing posterior predictive samples...")
-model = brms_posterior_predictive(model, **opts.inference.ppd)
+model = brms_posterior_predictive(
+    model, **opts.inference.ppd, transform=lambda x: (x - 2).astype(int)
+)
 
 # %% ---------------------------------------------------------------------------------
 
 print("Preparing log-likelihood...")
-model = brms_log_likelihood(model, **opts.inference.loglik)
+model = brms_log_likelihood(
+    model,
+    **opts.inference.loglik,
+)
 
 # %% ---------------------------------------------------------------------------------
 
