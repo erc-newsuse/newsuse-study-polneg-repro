@@ -1466,72 +1466,50 @@ stages:
       size: 382132909
     - path: glmm/valence/event.rds
       hash: md5
-      md5: ef430a793e38ad6eafd860df5cd6afef
-      size: 111804214
+      md5: cf29a621a3cbc68ad2a855be9c380b9f
+      size: 1989006
     - path: stages/valence/inference.py
       hash: md5
-      md5: 59d0b4bcc077340605cc690e1548c65f
-      size: 3789
+      md5: 4ef58f7d656e4444067fe50eec66e86f
+      size: 3312
     params:
       params.yaml:
-        glmm.valence.targets.event:
-          index_col: key
-          predictors:
-            fixed:
-            - political
-            - country
-            - weekend
-            groups:
-            - outlet
-            - isotime
-          model:
-            formula: "{target} ~ 1\n  + political * country + weekend\n  + (1 | outlet:political)\n\
-              \  + (1 | country:isotime:political)\n"
-            family: mixture(gaussian, gaussian)
-            link: logit
-            prior:
-            - normal(-2, 2), class = Intercept, dpar = mu1
-            - normal(2, 2), class = Intercept, dpar = mu2
-          n_threads: 4
-          solver:
-            algorithm: meanfield
-            chains: 4
+        glmm.valence.targets.event.inference:
+          subsample: 100000
+          ppd:
+            ndraws: 50
             cores: 4
-            iter: 2000
-            backend: cmdstanr
-            control: {}
-          inference:
-            subsample: 500000
-            ppd:
-              ndraws: 10
-              cores: 4
-            pop:
-              allow_new_levels: true
-              sample_new_levels: old_levels
-              group_name: population_posterior_predictive
-              re_formula: ~0
-            epd:
-              re_formulas:
-                grand_mean: ~0
-                full:
-              allow_new_levels: true
-              sample_new_levels: gaussian
-            loglik:
-              ndraws: 10
-              cores: 4
-            ranef:
-              ndraws: 50
-              cores: 4
-          seed: 1289326
+            allow_new_levels: true
+            sample_new_levels: gaussian
+          epd:
+            re_formula:
+            allow_new_levels: true
+            sample_new_levels: gaussian
+          loglik:
+            ndraws: 50
+            cores: 4
+            allow_new_levels: true
+            sample_new_levels: gaussian
+          ranef:
+            ndraws: 20
+            cores: 4
+        glmm.valence.targets.event.predictors:
+          fixed:
+          - political
+          - country
+          - weekend
+          groups:
+          - outlet
+          - year
     outs:
     - path: glmm/valence/event-ranef.nc
       hash: md5
-      md5: 645d6b63520c2ede5ee4c20f3c006b70
-      size: 39384749
+      md5: 781283f8e0ac43fa73a05d8bcd8db645
+      size: 3877902
     - path: glmm/valence/event.nc
       hash: md5
-      md5: ff2fc4285d7a9381f2f297227b5b5e9c
-      size: 391967892
+      md5: 7dedb036ce7c7e02d62f76d3c01e2efb
+      size: 111066523
   valence-inference@sentiment:
     cmd:
     - TARGET=sentiment python stages/valence/inference.py
@@ -1664,3 +1642,91 @@ stages:
       md5: 97e8de38b3d518a8e235bd9d7ff12322.dir
       size: 1012704
       nfiles: 7
+  valence-glmm@event:
+    cmd:
+    - TARGET=event python stages/valence/glmm.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/valence/glmm.py
+      hash: md5
+      md5: 783b31912a75b23853a4e7c6a9ec7543
+      size: 2770
+    params:
+      params.yaml:
+        glmm.valence.targets.event.model:
+          n_threads: 4
+          solver:
+            algorithm: fullrank
+            chains: 4
+            cores: 4
+            iter: 1500
+            warmup: 500
+            thin: 1
+            init: 0
+            backend: cmdstanr
+            control: &id009 {}
+            threads: 4
+            silent: 1
+            refresh: 100
+          inference:
+            subsample: 100000
+            ppd:
+              ndraws: 50
+              cores: 4
+            epd:
+              re_formula:
+              allow_new_levels: true
+              sample_new_levels: gaussian
+            loglik:
+              ndraws: 50
+              cores: 4
+            ranef:
+              ndraws: 20
+              cores: 4
+          analysis:
+            sample:
+              n: 1000
+              replace: true
+          subsample: 100000
+          formula: "{target} ~ 1\n  + political * country + weekend\n  + (1 | outlet)\n\
+            \  + (1 | outlet:year)\n"
+          family: mixture(gaussian, gaussian, order = "mu")
+          prior:
+          - normal(0, 1.5), class = b, dpar = mu1
+          - normal(0, 1.5), class = b, dpar = mu2
+          - normal(0, 1), class = sd, dpar = mu1
+          - normal(0, 1), class = sd, dpar = mu2
+          - normal(-3, 1.5), class = Intercept, dpar = mu1
+          - normal(3, 1.5), class = Intercept, dpar = mu2
+          - exponential(0.5), class = sigma1
+          - exponential(0.5), class = sigma2
+          - dirichlet(2, 2), class = theta
+        glmm.valence.targets.event.predictors:
+          fixed:
+          - political
+          - country
+          - weekend
+          groups:
+          - outlet
+          - year
+        glmm.valence.targets.event.solver:
+          algorithm: pathfinder
+          chains: 4
+          cores: 4
+          iter: 1500
+          warmup: 500
+          thin: 1
+          init: 0
+          backend: cmdstanr
+          control: *id009
+          threads: 4
+          silent: 1
+          refresh: 100
+    outs:
+    - path: glmm/valence/event.rds
+      hash: md5
+      md5: cf29a621a3cbc68ad2a855be9c380b9f
+      size: 1989006
