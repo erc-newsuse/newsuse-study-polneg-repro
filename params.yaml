@@ -114,6 +114,11 @@ glmm:
       <<: *glmm_default
       solver:
         <<: *glmm_solver
+        algorithm: meanfield
+    fullrank: &glmm_fullrank
+      <<: *glmm_default
+      solver:
+        <<: *glmm_solver
         algorithm: fullrank
     pathfinder: &glmm_pathfinder
       <<: *glmm_default

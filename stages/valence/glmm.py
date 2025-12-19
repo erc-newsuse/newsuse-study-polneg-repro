@@ -10,6 +10,7 @@ from omegaconf import OmegaConf
 
 from project import config, paths
 from project.brms import brm, ro
+from project.inference import brms_posterior
 
 az.rcParams.update(config.arviz)
 
@@ -49,26 +50,61 @@ else:
 
 # %% ---------------------------------------------------------------------------------
 
-print(f"Fitting GLMM for latent '{target}' target with {model_data.shape[0]} observations")
 
-kwargs = dict(OmegaConf.to_object(opts.solver))
-kwargs["control"] = ro.ListVector(kwargs.get("control", {}))
-kwargs["threads"] = ro.r(f"threading({opts.solver.threads})")
-if opencl := opts.solver.get("opencl"):
-    kwargs["opencl"] = ro.IntVector(opencl)
+def make_kwargs(opts):
+    kwargs = dict(OmegaConf.to_object(opts.solver))
+    kwargs["formula"] = opts.model.formula.format(target=target)
+    kwargs["data"] = model_data
+    kwargs["prior"] = opts.model.get("prior")
+    kwargs["family"] = ro.r(opts.model.family)
+    kwargs["control"] = ro.ListVector(kwargs.get("control", {}))
+    kwargs["threads"] = ro.r(f"threading({opts.solver.threads})")
+    if opencl := opts.solver.get("opencl"):
+        kwargs["opencl"] = ro.IntVector(opencl)
+    if (opencl_ids := kwargs.pop("opencl_ids", None)) is not None:
+        kwargs["opencl"] = ro.r(f"opencl({opencl_ids[0]}, {opencl_ids[1]})")
+    return kwargs
 
-# Handle OpenCL GPU acceleration
-if (opencl_ids := kwargs.pop("opencl_ids", None)) is not None:
-    kwargs["opencl"] = ro.r(f"opencl({opencl_ids[0]}, {opencl_ids[1]})")
 
-model = brm(
-    formula=opts.model.formula.format(target=target),
-    data=model_data,
-    prior=opts.model.get("prior"),
-    family=ro.r(opts.model.family),
-    seed=int(rng.integers(0, 2**16 - 1)),
-    **kwargs,
+# %% ---------------------------------------------------------------------------------
+
+opts_advi = opts.copy()
+opts_advi.update(solver=config.glmm.profiles.advi.solver.copy())
+
+# %%
+
+print(
+    f"Initializing GLMM fit for '{target}' "
+    f"using ADVI with {model_data.shape[0]} observations"
 )
+model = brm(**make_kwargs(opts_advi), seed=int(rng.integers(0, 2**16 - 1)))
+
+# %% ---------------------------------------------------------------------------------
+
+model = brms_posterior(model)
+posterior = model.idata.posterior.stack(sample=["chain", "draw"])
+
+# %% ---------------------------------------------------------------------------------
+
+print(f"Fitting GLMM for '{target}' using NUTS...")
+kwargs = make_kwargs(opts)
+n_chains = kwargs.get("chains", 4)
+n_samples = posterior.sizes["sample"]
+sample_idx = rng.choice(n_samples, size=n_chains, replace=False)
+init = ro.ListVector(
+    {
+        f"chain{i}": ro.ListVector(
+            {
+                k: v
+                for k, v in posterior.isel(sample=idx).to_pandas().to_dict().items()
+                if "[" not in k and "]" not in k and not k.startswith("lp")  # type: ignore
+            }
+        )
+        for i, idx in enumerate(sample_idx)
+    }
+)
+kwargs.update(init=init)
+model = brm(**kwargs, seed=int(rng.integers(0, 2**16 - 1)))
 
 # %% ---------------------------------------------------------------------------------
 
