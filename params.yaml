@@ -77,7 +77,7 @@ glmm:
       n_threads: &glmm_n_threads
         4
       solver: &glmm_solver
-        algorithm: fullrank
+        algorithm: meanfield
         chains: *glmm_n_threads
         cores: *glmm_n_threads
         iter: 1500
@@ -125,6 +125,7 @@ glmm:
       solver:
         <<: *glmm_solver
         algorithm: sampling
+        refresh: 1
         control:
           adapt_delta: 0.9
           max_treedepth: 10
@@ -176,7 +177,7 @@ glmm:
         seed: 34271
   engagement:
     default: &glmm_engagement_default
-      <<: *glmm_default
+      <<: *glmm_pathfinder
       predictors:
         fixed:
           - political
@@ -195,7 +196,18 @@ glmm:
             + (1 | outlet:year:month)
         family: negbinomial
         link: log
-        prior: null
+        prior:
+          # Fixed effects (log scale): expect effects within ±2 log-units
+          # 95% prior mass for effect sizes ~[-4, 4] on log scale
+          - "normal(0, 2), class = b"
+          # Intercept: log(median engagement), typically log(10-1000) ~ 2-7
+          - "normal(4, 2.5), class = Intercept"
+          # Random effect SDs: constrain to prevent explosion
+          # Half-normal(0,1) keeps 95% mass below ~2 on log scale
+          - "normal(0, 1), class = sd"
+          # NB shape (inverse overdispersion): smaller = more overdispersion
+          # gamma(1, 0.1) is weakly informative, allows wide range
+          - "gamma(1, 0.1), class = shape"
     targets:
       reactions:
         <<: *glmm_engagement_default
