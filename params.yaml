@@ -91,7 +91,7 @@ glmm:
         silent: 1  # Reduce output verbosity
         refresh: 10  # Progress update frequency
       inference: &glmm_inference
-        subsample: 10_000
+        subsample: 100_000
         ppd: &glmm_ppd
           ndraws: 50
           cores: *glmm_n_threads
@@ -145,17 +145,15 @@ glmm:
         groups:
           - outlet
           - year
-          # - month
-          # - isotime
+          - month
       model:  &glmm_valence_model
-        subsample: 10_000  # Set to null or 0 to use all data
+        subsample: 100_000  # Set to null or 0 to use all data
         formula:
           location: >
             {target} ~ 1
               + political * country + weekend
               + (1 + political | outlet)
-          # scale: >
-          #   sigma ~ 1 + political
+              + (1 + political | country:year:month)
         family: categorical
         link: logit
         prior:
@@ -168,7 +166,7 @@ glmm:
     targets:
       event:
         <<: *glmm_valence_default
-        seed: 1200326
+        seed: 34271  # use the same seed to force equal subsamples
       sentiment:
         <<: *glmm_valence_default
         seed: 34271

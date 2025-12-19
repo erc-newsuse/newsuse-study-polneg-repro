@@ -1,5 +1,6 @@
 from .fitting import brm, build_priors
 from .inference import (
+    StatsAccessor,
     brms_log_likelihood,
     brms_observed_data,
     brms_posterior,

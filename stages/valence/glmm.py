@@ -35,9 +35,6 @@ data = DataFrame.from_(paths.final).assign(
     country=lambda df: pd.Categorical(
         df["country"], categories=[*config.categorical.country]
     ),
-    # **{
-    #     target: lambda df: df[f"{target}_latent"],
-    # },
 )[["key", target, *opts.predictors.fixed, *opts.predictors.groups]]
 
 # %% ---------------------------------------------------------------------------------

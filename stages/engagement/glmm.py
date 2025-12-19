@@ -54,7 +54,10 @@ kwargs = {
     "dispformula": make_formula(opts.model.dispformula),
     "family": ro.r(opts.model.family),
     "control": ro.ListVector(
-        profile=opts.control.profile, parallel=ro.ListVector(dict(opts.control.parallel))
+        {
+            "profile": opts.control.profile,
+            "parallel": ro.ListVector(dict(opts.control.parallel)),
+        }
     ),
 }
 
