@@ -1652,47 +1652,14 @@ stages:
       size: 382132909
     - path: stages/valence/glmm.py
       hash: md5
-      md5: 783b31912a75b23853a4e7c6a9ec7543
-      size: 2770
+      md5: a9a540d9a9093960e8203845f3de841b
+      size: 4004
     params:
       params.yaml:
         glmm.valence.targets.event.model:
-          n_threads: 4
-          solver:
-            algorithm: fullrank
-            chains: 4
-            cores: 4
-            iter: 1500
-            warmup: 500
-            thin: 1
-            init: 0
-            backend: cmdstanr
-            control: &id009 {}
-            threads: 4
-            silent: 1
-            refresh: 100
-          inference:
-            subsample: 100000
-            ppd:
-              ndraws: 50
-              cores: 4
-            epd:
-              re_formula:
-              allow_new_levels: true
-              sample_new_levels: gaussian
-            loglik:
-              ndraws: 50
-              cores: 4
-            ranef:
-              ndraws: 20
-              cores: 4
-          analysis:
-            sample:
-              n: 1000
-              replace: true
           subsample: 100000
-          formula: "{target} ~ 1\n  + political * country + weekend\n  + (1 | outlet)\n\
-            \  + (1 | outlet:year)\n"
+          formula: "{target} ~ 1\n  + political * country + weekend\n  + (1 + political
+            | outlet)\n"
           family: mixture(gaussian, gaussian, order = "mu")
           prior:
           - normal(0, 1.5), class = b, dpar = mu1
@@ -1713,7 +1680,7 @@ stages:
           - outlet
           - year
         glmm.valence.targets.event.solver:
-          algorithm: pathfinder
+          algorithm: sampling
           chains: 4
           cores: 4
           iter: 1500
@@ -1721,12 +1688,14 @@ stages:
           thin: 1
           init: 0
           backend: cmdstanr
-          control: *id009
+          control:
+            adapt_delta: 0.9
+            max_treedepth: 10
           threads: 4
           silent: 1
-          refresh: 100
+          refresh: 1
     outs:
     - path: glmm/valence/event.rds
       hash: md5
-      md5: cf29a621a3cbc68ad2a855be9c380b9f
-      size: 1989006
+      md5: d697553aa4d679c32b85c23d6a447dcb
+      size: 12100293

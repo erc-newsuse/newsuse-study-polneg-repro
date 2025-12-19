@@ -12,7 +12,7 @@ from rpy2 import robjects as ro
 from rpy2.robjects import pandas2ri
 from rpy2.robjects.conversion import localconverter
 
-from .brms import df_to_r
+from project.rutils import df_to_r
 
 __all__ = (
     "make_data_coords",
@@ -226,6 +226,7 @@ def brms_posterior_epred(
 
     # Build dims and coordinates
     ndraws = model.idata.posterior.sizes["draw"]
+    nchains = model.idata.posterior.sizes["chain"]
     coords = {
         "chain": ("chain", model.idata.posterior.coords["chain"].values),
         "draw": ("draw", model.idata.posterior.coords["draw"][:ndraws].values),
@@ -247,9 +248,12 @@ def brms_posterior_epred(
     epreds = {}
     posterior_epred = ro.r("brms::posterior_epred")
     epred = np.asarray(posterior_epred(model.r, **kwargs))
-    # Build dims and coordinates
-    if model.idata.posterior.sizes["chain"] == 1:
-        epred = np.expand_dims(epred, axis=0)
+
+    # Reshape from (nchains*ndraws, nobs, ...) to (nchains, ndraws, nobs, ...)
+    nobs = epred.shape[1]
+    extra_dims = epred.shape[2:] if epred.ndim > 2 else ()
+    epred = epred.reshape(nchains, ndraws, nobs, *extra_dims)
+
     # Handle categorical support
     if epred.ndim > len(dims):
         support = np.asarray(support)
@@ -302,12 +306,15 @@ def brms_posterior_predictive(
     if transform is not None:
         ppred = transform(ppred)
 
+    # Reshape from (nchains*ndraws, nobs) to (nchains, ndraws, nobs)
+    nchains = 1  # brms returns combined chains in posterior_predict
+    ndraws, nobs = ppred.shape
+    ppred = ppred.reshape(nchains, ndraws, nobs)
+
     # Build dims and coordinates
-    if model.idata.posterior.sizes["chain"] == 1:
-        ppred = np.expand_dims(ppred, axis=0)
     coords = {
-        "chain": ("chain", model.idata.posterior.coords["chain"].values),
-        "draw": ("draw", model.idata.posterior.coords["draw"][: ppred.shape[1]].values),
+        "chain": ("chain", np.arange(nchains)),
+        "draw": ("draw", np.arange(ndraws)),
         **{k: (OBS_DIM, v.values) for k, v in observed.coords.items()},
     }
     dims = ["chain", "draw", OBS_DIM]
@@ -347,12 +354,15 @@ def brms_log_likelihood(
     log_lik = log_lik_func(model.r, **kwargs)
     log_lik = np.asarray(log_lik)
 
+    # Reshape from (nchains*ndraws, nobs) to (nchains, ndraws, nobs)
+    nchains = 1
+    ndraws, nobs = log_lik.shape
+    log_lik = log_lik.reshape(nchains, ndraws, nobs)
+
     # Build dims and coordinates
-    if model.idata.posterior.sizes["chain"] == 1:
-        log_lik = np.expand_dims(log_lik, axis=0)
     coords = {
-        "chain": ("chain", model.idata.posterior.coords["chain"].values),
-        "draw": ("draw", model.idata.posterior.coords["draw"][: log_lik.shape[1]].values),
+        "chain": ("chain", np.arange(nchains)),
+        "draw": ("draw", np.arange(ndraws)),
         **{k: (OBS_DIM, v.values) for k, v in observed.coords.items()},
     }
     dims = ["chain", "draw", OBS_DIM]

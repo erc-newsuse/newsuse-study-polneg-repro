@@ -9,8 +9,8 @@ from newsuse.data import DataFrame
 from omegaconf import OmegaConf
 
 from project import config, paths
-from project.brms import brm, ro
-from project.inference import brms_posterior
+from project.bayes import brm, brms_posterior
+from project.rutils import ro
 
 az.rcParams.update(config.arviz)
 

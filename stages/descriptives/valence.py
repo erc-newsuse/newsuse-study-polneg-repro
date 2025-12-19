@@ -92,7 +92,7 @@ target = "event"
 ax = axes[0]
 dist = data[target].value_counts(normalize=True).sort_index().reset_index()
 plot_frequencies(ax, dist, target)
-ax.set_title("Overall")
+ax.set_title("Overall", fontsize="xx-large")
 ax.set_ylabel(None)
 
 for ax, (country, df) in zip(
@@ -102,7 +102,7 @@ for ax, (country, df) in zip(
 ):
     dist = df[target].value_counts(normalize=True).sort_index().reset_index()
     plot_frequencies(ax, dist, target, legend=False)
-    ax.set_title(config.categorical.country[country])
+    ax.set_title(config.categorical.country[country], fontsize="xx-large")
 
 fig.tight_layout()
 fig.savefig(figpath / f"{target}-frequencies.pdf")
@@ -151,7 +151,7 @@ target = "sentiment"
 ax = axes[0]
 dist = data[target].value_counts(normalize=True).sort_index().reset_index()
 plot_frequencies(ax, dist, target)
-ax.set_title("Overall")
+ax.set_title("Overall", fontsize="xx-large")
 ax.set_ylabel(None)
 
 for ax, (country, df) in zip(
@@ -161,7 +161,7 @@ for ax, (country, df) in zip(
 ):
     dist = df[target].value_counts(normalize=True).sort_index().reset_index()
     plot_frequencies(ax, dist, target, legend=False)
-    ax.set_title(config.categorical.country[country])
+    ax.set_title(config.categorical.country[country], fontsize="xx-large")
 
 fig.tight_layout()
 fig.savefig(figpath / f"{target}-frequencies.pdf")

@@ -10,40 +10,15 @@ import arviz as az
 import numpy as np
 import pandas as pd
 from brmspy import prior
-from brmspy.helpers import conversion
 from brmspy.helpers.priors import _build_priors
 from brmspy.runtime._state import get_brms, get_cmdstanr, get_rstan
 from brmspy.types import FitResult, PriorSpec
 from rpy2 import robjects as ro
 from rpy2.rinterface_lib import openrlib
 
-__all__ = ("make_prior", "build_priors", "df_to_r", "brm", "brm_large")
+from project.rutils import df_to_r
 
-
-def df_to_r(data: pd.DataFrame) -> ro.DataFrame:
-    """Convert a pandas DataFrame to an R DataFrame."""
-    data = data.copy().convert_dtypes(dtype_backend="numpy_nullable")
-    cat = {}
-    for col in data.select_dtypes(["category"]):
-        if pd.api.types.is_string_dtype(data[col].cat.categories):
-            rtype = ro.StrVector
-        elif pd.api.types.is_integer_dtype(data[col].cat.categories):
-            rtype = ro.IntVector
-        else:
-            rtype = ro.FloatVector
-        cat[col] = {
-            "levels": rtype(data[col].cat.categories.tolist()),
-            "ordered": data[col].cat.ordered,
-        }
-        data[col] = data[col].astype(data[col].cat.categories.dtype)
-
-    rdf = conversion.py_to_r(data)
-    for col, info in cat.items():
-        idx = data.columns.tolist().index(col)
-        rcol = ro.r["[["](rdf, col)
-        rfac = ro.FactorVector(rcol, levels=info["levels"], ordered=info["ordered"])
-        rdf[idx] = rfac  # type: ignore
-    return rdf
+__all__ = ("make_prior", "build_priors", "brm", "brm_large")
 
 
 def make_prior(spec: str | Mapping[str, Any]) -> PriorSpec:

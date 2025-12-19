@@ -9,7 +9,7 @@ from newsuse.data import DataFrame
 from rpy2 import robjects as ro
 
 from project import config, paths
-from project.inference import (
+from project.bayes import (
     brms_log_likelihood,
     brms_observed_data,
     brms_posterior,
