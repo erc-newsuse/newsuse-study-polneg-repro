@@ -1652,50 +1652,141 @@ stages:
       size: 382132909
     - path: stages/valence/glmm.py
       hash: md5
-      md5: a9a540d9a9093960e8203845f3de841b
-      size: 4004
+      md5: 8f2fad217bf734158d7b680830cf6b66
+      size: 5196
     params:
       params.yaml:
-        glmm.valence.targets.event.model:
-          subsample: 100000
-          formula: "{target} ~ 1\n  + political * country + weekend\n  + (1 + political
-            | outlet)\n"
-          family: mixture(gaussian, gaussian, order = "mu")
-          prior:
-          - normal(0, 1.5), class = b, dpar = mu1
-          - normal(0, 1.5), class = b, dpar = mu2
-          - normal(0, 1), class = sd, dpar = mu1
-          - normal(0, 1), class = sd, dpar = mu2
-          - normal(-3, 1.5), class = Intercept, dpar = mu1
-          - normal(3, 1.5), class = Intercept, dpar = mu2
-          - exponential(0.5), class = sigma1
-          - exponential(0.5), class = sigma2
-          - dirichlet(2, 2), class = theta
-        glmm.valence.targets.event.predictors:
-          fixed:
-          - political
-          - country
-          - weekend
-          groups:
-          - outlet
-          - year
-        glmm.valence.targets.event.solver:
-          algorithm: sampling
-          chains: 4
-          cores: 4
-          iter: 1500
-          warmup: 500
-          thin: 1
-          init: 0
-          backend: cmdstanr
-          control:
-            adapt_delta: 0.9
-            max_treedepth: 10
-          threads: 4
-          silent: 1
-          refresh: 1
+        glmm.valence.targets.event:
+          predictors:
+            fixed:
+            - political
+            - country
+            - weekend
+            groups:
+            - outlet
+            - year
+            - month
+          sample:
+            n: 20000
+            random_state: 2039487
+          model:
+            formula: "{target} ~ 1\n  + political * country + weekend\n  + (1 + political
+              | outlet)\n  + (1 + political | country:year:month)\n"
+            family: categorical
+          inference_method: nutpie
+          fit:
+            defaults:
+              draws: 1000
+              tune: 1000
+              chains: 4
+              cores: 4
+              progress_bar: true
+            numpyro:
+              draws: 1000
+              tune: 1000
+              chains: 4
+              cores: 1
+              progress_bar: true
+            nutpie:
+              draws: 1000
+              tune: 1000
+              chains: 4
+              cores: 4
+              progress_bar: true
+              nuts_sampler_kwargs:
+                backend: jax
+            random_seed: 301777
+          validation:
+            sample:
+              n: 10000
+              random_state: 930473
+          ppd:
+            draws: 10
+            random_seed: 117
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+          epred:
+            random_seed: 303
+            include_group_specific: false
+            sample_new_groups: true
+            kind: response_params
     outs:
-    - path: glmm/valence/event.rds
+    - path: glmm/valence/event.nc
       hash: md5
-      md5: d697553aa4d679c32b85c23d6a447dcb
-      size: 12100293
+      md5: a88c43a624b3eb0d9bf1fa384b0183ef
+      size: 180632562
+  valence-glmm@sentiment:
+    cmd:
+    - TARGET=sentiment python stages/valence/glmm.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/valence/glmm.py
+      hash: md5
+      md5: 8f2fad217bf734158d7b680830cf6b66
+      size: 5196
+    params:
+      params.yaml:
+        glmm.valence.targets.sentiment:
+          predictors:
+            fixed:
+            - political
+            - country
+            - weekend
+            groups:
+            - outlet
+            - year
+            - month
+          sample:
+            n: 20000
+            random_state: 2039487
+          model:
+            formula: "{target} ~ 1\n  + political * country + weekend\n  + (1 + political
+              | outlet)\n  + (1 + political | country:year:month)\n"
+            family: categorical
+          inference_method: nutpie
+          fit:
+            defaults:
+              draws: 1000
+              tune: 1000
+              chains: 4
+              cores: 4
+              progress_bar: true
+            numpyro:
+              draws: 1000
+              tune: 1000
+              chains: 4
+              cores: 1
+              progress_bar: true
+            nutpie:
+              draws: 1000
+              tune: 1000
+              chains: 4
+              cores: 4
+              progress_bar: true
+              nuts_sampler_kwargs:
+                backend: jax
+            random_seed: 2039487
+          validation:
+            sample:
+              n: 10000
+              random_state: 930473
+          ppd:
+            draws: 10
+            random_seed: 117
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+          epred:
+            random_seed: 303
+            include_group_specific: false
+            sample_new_groups: true
+            kind: response_params
+    outs:
+    - path: glmm/valence/sentiment.nc
+      hash: md5
+      md5: 4e64478ec29b9636c5cc9fe5b8f8951c
+      size: 180686979

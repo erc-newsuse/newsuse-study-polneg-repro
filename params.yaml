@@ -72,71 +72,8 @@ dataset:
   min_posts_per_day: 2
 
 glmm:
-  brms:
-    default: &glmm_default
-      n_threads: &glmm_n_threads
-        4
-      solver: &glmm_solver
-        algorithm: meanfield
-        chains: *glmm_n_threads
-        cores: *glmm_n_threads
-        iter: 1500
-        warmup: 1000
-        thin: 1
-        init: 0  # Start from prior mean (more stable for mixtures)
-        backend: cmdstanr
-        control: {}
-        threads: 4
-        # opencl: [0, 0]  # GPU device IDs [platform, device], set to null to disable
-        silent: 1  # Reduce output verbosity
-        refresh: 10  # Progress update frequency
-      inference: &glmm_inference
-        subsample: 100_000
-        ppd: &glmm_ppd
-          ndraws: 50
-          cores: *glmm_n_threads
-          allow_new_levels: true
-          sample_new_levels: gaussian
-        epd:
-          re_formula: null
-          allow_new_levels: true
-          sample_new_levels: gaussian
-        loglik:
-          <<: *glmm_ppd
-        ranef:
-          ndraws: 20
-          cores: *glmm_n_threads
-      analysis:
-        sample:
-          n: 1000
-          replace: true
-    advi: &glmm_advi
-      <<: *glmm_default
-      solver:
-        <<: *glmm_solver
-        algorithm: meanfield
-    fullrank: &glmm_fullrank
-      <<: *glmm_default
-      solver:
-        <<: *glmm_solver
-        algorithm: fullrank
-    pathfinder: &glmm_pathfinder
-      <<: *glmm_default
-      solver:
-        <<: *glmm_solver
-        algorithm: pathfinder
-    nuts: &glmm_nuts
-      <<: *glmm_default
-      solver:
-        <<: *glmm_solver
-        algorithm: sampling
-        refresh: 10
-        control:
-          adapt_delta: 0.9
-          max_treedepth: 10
   valence:
     default: &glmm_valence_default
-      <<: *glmm_nuts
       predictors:
         fixed:
           - political
@@ -146,30 +83,57 @@ glmm:
           - outlet
           - year
           - month
-      model:  &glmm_valence_model
-        subsample: 100_000  # Set to null or 0 to use all data
-        formula:
-          location: >
-            {target} ~ 1
-              + political * country + weekend
-              + (1 + political | outlet)
-              + (1 + political | country:year:month)
+      sample:
+        n: 20_000
+        random_state: 2039487
+      model:
+        formula: >
+          {target} ~ 1
+            + political * country + weekend
+            + (1 + political | outlet)
+            + (1 + political | country:year:month)
         family: categorical
-        link: logit
-        prior:
-          # Intercept for each category (on logit scale)
-          - "normal(0, 2), class = Intercept, dpar = mu0"
-          - "normal(0, 2), class = Intercept, dpar = mu1"
-          # Coefficients: effects on logit scale
-          - "normal(0, 2), class = b, dpar = mu0"
-          - "normal(0, 2), class = b, dpar = mu1"
+      inference_method: nutpie
+      fit: &glmm_valence_fit
+        defaults: &glmm_valence_fit_defaults
+          draws: 1000
+          tune: 1000
+          chains: 4
+          cores: 4
+          progress_bar: true
+        numpyro:
+          <<: *glmm_valence_fit_defaults
+          cores: 1
+        nutpie:
+          <<: *glmm_valence_fit_defaults
+          nuts_sampler_kwargs:
+            backend: jax
+      validation:
+        sample:
+          n: 10_000
+          random_state: 930473
+      ppd:
+        draws: 10
+        random_seed: 117
+        sample_new_groups: true
+        include_group_specific: true
+        kind: response
+      epred:
+        random_seed: 303
+        include_group_specific: false
+        sample_new_groups: true
+        kind: response_params
     targets:
       event:
         <<: *glmm_valence_default
-        seed: 34271  # use the same seed to force equal subsamples
+        fit:
+          <<: *glmm_valence_fit
+          random_seed: 301777
       sentiment:
         <<: *glmm_valence_default
-        seed: 34271
+        fit:
+          <<: *glmm_valence_fit
+          random_seed: 2039487
   engagement:
     default: &glmm_engagement_default
       subsample: 100_000

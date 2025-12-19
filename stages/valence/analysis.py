@@ -38,8 +38,6 @@ figpath.mkdir(parents=True, exist_ok=True)
 countries = config.categorical.country
 political = dict(enumerate(config.categorical.political))
 
-rng = np.random.default_rng(opts.seed + 303)
-
 sample_cols = ["chain", "draw"]
 
 # %% Load the valence transformer ----------------------------------------------------
@@ -67,7 +65,7 @@ if "weekend" in epred.coords:
 
 # %% ---------------------------------------------------------------------------------
 
-eprobs = epred.epred.to_dataframe().iloc[:, 0]
+eprobs = epred.p.to_dataframe().iloc[:, 0]
 
 # %% ---------------------------------------------------------------------------------
 

@@ -190,34 +190,12 @@ stages:
       cmd:
       - TARGET=${item} python stages/valence/glmm.py
       params:
-      - glmm.valence.targets.${item}.predictors
-      - glmm.valence.targets.${item}.model
-      - glmm.valence.targets.${item}.solver
+      - glmm.valence.targets.${item}
       deps:
       - stages/valence/glmm.py
       - data/proc/final.parquet
       outs:
-      - glmm/valence/${item}.rds:
-          persist: true
-
-  valence-inference:
-    foreach:
-    - event
-    - sentiment
-    do:
-      cmd:
-      - TARGET=${item} python stages/valence/inference.py
-      params:
-      - glmm.valence.targets.${item}.predictors
-      - glmm.valence.targets.${item}.inference
-      deps:
-      - stages/valence/inference.py
-      - data/proc/final.parquet
-      - glmm/valence/${item}.rds
-      outs:
       - glmm/valence/${item}.nc:
-          persist: true
-      - glmm/valence/${item}-ranef.nc:
           persist: true
 
   valence-analysis:

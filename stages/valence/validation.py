@@ -49,8 +49,6 @@ az.summary(idata)
 
 axes = az.plot_trace(
     idata,
-    var_names=["b_", "sd_"],
-    filter_vars="like",
     combined=True,
     figsize=(8, 24),
     labeller=ArvizLabeller(),
@@ -67,8 +65,6 @@ fig.savefig(figpath / f"{target}-trace.pdf")
 
 axes = az.plot_ess(
     idata,
-    var_names=["b_", "sd_"],
-    filter_vars="like",
     labeller=ArvizLabeller(),
     figsize=(10, 14),
 )
@@ -87,8 +83,6 @@ fig.savefig(figpath / f"{target}-ess.pdf")
 
 axes = az.plot_autocorr(
     idata,
-    var_names=["b_", "sd_"],
-    filter_vars="like",
     labeller=ArvizLabeller(),
     figsize=(12, 12),
 )
