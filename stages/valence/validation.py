@@ -12,7 +12,7 @@ import xarray as xr
 from newsuse.data import DataFrame
 
 from project import config, paths
-from project.inference import set_xindex
+from project.bayes import set_xindex
 from project.plotting import ArvizLabeller
 
 xr.set_options(**config.xarray)
@@ -40,6 +40,10 @@ data = DataFrame.from_(paths.final)
 
 idata = az.from_netcdf(paths.glmm / "valence" / f"{target}.nc")
 idata = set_xindex(idata, ["key", *opts.predictors.fixed, *opts.predictors.groups])
+
+# %% ---------------------------------------------------------------------------------
+
+az.summary(idata)
 
 # %% ---------------------------------------------------------------------------------
 

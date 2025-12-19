@@ -43,9 +43,13 @@ data = DataFrame.from_(
 ).rename(columns={f"{target}_latent": target})
 quantized = data[[*opts.predictors.fixed]].drop_duplicates(ignore_index=True)
 
-if (n := opts.inference.get("subsample")) and n > 0:
-    print(f"Subsampling data to {n} rows for faster processing...")
-    data = data.sample(n=n, random_state=rng)
+# %% ---------------------------------------------------------------------------------
+
+n = 1000
+grouped = data.groupby("outlet")
+
+print(f"Subsampling data to ~{len(grouped) * n} rows for faster processing...")
+data = grouped.sample(n=1000, random_state=rng).reset_index(drop=True)
 
 # %% ---------------------------------------------------------------------------------
 

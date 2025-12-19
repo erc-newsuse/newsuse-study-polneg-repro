@@ -6,4 +6,5 @@ from .inference import (
     brms_posterior_epred,
     brms_posterior_predictive,
     brmspy,
+    set_xindex,
 )

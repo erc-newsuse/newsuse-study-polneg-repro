@@ -103,7 +103,9 @@ def brm(
         raise RuntimeError(errmsg)
 
     # Handle model fit arguments
-    formula_r = ro.Formula(re.sub(r"\s+", " ", formula, flags=re.MULTILINE))
+    formulas = [formula] if isinstance(formula, str) else formula
+    formulas = [ro.Formula(re.sub(r"\s+", " ", f, flags=re.MULTILINE)) for f in formulas]
+    formula_r = ro.r["bf"](*formulas)
     prior_r = build_priors(prior) if prior is not None else ro.NULL
     data_r = df_to_r(data)
     brm_kwargs = {

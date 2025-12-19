@@ -52,8 +52,10 @@ else:
 
 
 def make_kwargs(opts):
+    formula_loc = opts.model.formula.location.format(target=target)
+    scale_formula = opts.model.formula.scale.strip().replace("\n", " ")
     kwargs = dict(OmegaConf.to_object(opts.solver))
-    kwargs["formula"] = opts.model.formula.format(target=target)
+    kwargs["formula"] = [formula_loc, scale_formula]
     kwargs["data"] = model_data
     kwargs["prior"] = opts.model.get("prior")
     kwargs["family"] = ro.r(opts.model.family)
@@ -69,7 +71,7 @@ def make_kwargs(opts):
 # %% ---------------------------------------------------------------------------------
 
 opts_advi = opts.copy()
-opts_advi.update(solver=config.glmm.profiles.advi.solver.copy())
+opts_advi.update(solver=config.glmm.brms.advi.solver.copy())
 
 # %%
 
