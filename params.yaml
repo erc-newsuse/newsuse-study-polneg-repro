@@ -84,22 +84,23 @@ glmm:
           - year
           - month
       sample:
-        n: 20_000
+        n: 100_000
         random_state: 2039487
+      formula: >
+        {target} ~ 0
+          + political * country + weekend
+          + (1 + political | outlet)
+          + (1 + political | country:year:month)
       model:
-        formula: >
-          {target} ~ 1
-            + political * country + weekend
-            + (1 + political | outlet)
-            + (1 + political | country:year:month)
-        family: categorical
+        family: cumulative
       inference_method: nutpie
       fit: &glmm_valence_fit
         defaults: &glmm_valence_fit_defaults
-          draws: 1000
-          tune: 1000
+          draws: 2000
+          tune: 2000
           chains: 4
           cores: 4
+          target_accept: 0.95  # package default is 0.8
           progress_bar: true
         numpyro:
           <<: *glmm_valence_fit_defaults
@@ -110,7 +111,7 @@ glmm:
             backend: jax
       validation:
         sample:
-          n: 10_000
+          n: 100_000
           random_state: 930473
       ppd:
         draws: 10
@@ -119,10 +120,12 @@ glmm:
         include_group_specific: true
         kind: response
       epred:
-        random_seed: 303
-        include_group_specific: false
-        sample_new_groups: true
-        kind: response_params
+        samples_per_simple_effect: 1_000
+        predict:
+          random_seed: 303
+          include_group_specific: true
+          sample_new_groups: true
+          kind: response_params
     targets:
       event:
         <<: *glmm_valence_default

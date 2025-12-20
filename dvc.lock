@@ -1652,8 +1652,8 @@ stages:
       size: 382132909
     - path: stages/valence/glmm.py
       hash: md5
-      md5: 8f2fad217bf734158d7b680830cf6b66
-      size: 5196
+      md5: 867c1c10767c116e7deb4a92d35907cd
+      size: 6977
     params:
       params.yaml:
         glmm.valence.targets.event:
@@ -1667,38 +1667,41 @@ stages:
             - year
             - month
           sample:
-            n: 20000
+            n: 100000
             random_state: 2039487
+          formula: "{target} ~ 0\n  + political * country + weekend\n  + (1 + political
+            | outlet)\n  + (1 + political | country:year:month)\n"
           model:
-            formula: "{target} ~ 1\n  + political * country + weekend\n  + (1 + political
-              | outlet)\n  + (1 + political | country:year:month)\n"
-            family: categorical
+            family: cumulative
           inference_method: nutpie
           fit:
             defaults:
-              draws: 1000
-              tune: 1000
+              draws: 2000
+              tune: 2000
               chains: 4
               cores: 4
+              target_accept: 0.95
               progress_bar: true
             numpyro:
-              draws: 1000
-              tune: 1000
+              draws: 2000
+              tune: 2000
               chains: 4
               cores: 1
+              target_accept: 0.95
               progress_bar: true
             nutpie:
-              draws: 1000
-              tune: 1000
+              draws: 2000
+              tune: 2000
               chains: 4
               cores: 4
+              target_accept: 0.95
               progress_bar: true
               nuts_sampler_kwargs:
                 backend: jax
             random_seed: 301777
           validation:
             sample:
-              n: 10000
+              n: 100000
               random_state: 930473
           ppd:
             draws: 10
@@ -1707,15 +1710,17 @@ stages:
             include_group_specific: true
             kind: response
           epred:
-            random_seed: 303
-            include_group_specific: false
-            sample_new_groups: true
-            kind: response_params
+            samples_per_simple_effect: 1000
+            predict:
+              random_seed: 303
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
     outs:
     - path: glmm/valence/event.nc
       hash: md5
-      md5: a88c43a624b3eb0d9bf1fa384b0183ef
-      size: 180632562
+      md5: 775836a434a5fda99f83b52feb958603
+      size: 253231469
   valence-glmm@sentiment:
     cmd:
     - TARGET=sentiment python stages/valence/glmm.py
@@ -1726,8 +1731,8 @@ stages:
       size: 382132909
     - path: stages/valence/glmm.py
       hash: md5
-      md5: 8f2fad217bf734158d7b680830cf6b66
-      size: 5196
+      md5: 867c1c10767c116e7deb4a92d35907cd
+      size: 6977
     params:
       params.yaml:
         glmm.valence.targets.sentiment:
@@ -1741,38 +1746,41 @@ stages:
             - year
             - month
           sample:
-            n: 20000
+            n: 100000
             random_state: 2039487
+          formula: "{target} ~ 0\n  + political * country + weekend\n  + (1 + political
+            | outlet)\n  + (1 + political | country:year:month)\n"
           model:
-            formula: "{target} ~ 1\n  + political * country + weekend\n  + (1 + political
-              | outlet)\n  + (1 + political | country:year:month)\n"
-            family: categorical
+            family: cumulative
           inference_method: nutpie
           fit:
             defaults:
-              draws: 1000
-              tune: 1000
+              draws: 2000
+              tune: 2000
               chains: 4
               cores: 4
+              target_accept: 0.95
               progress_bar: true
             numpyro:
-              draws: 1000
-              tune: 1000
+              draws: 2000
+              tune: 2000
               chains: 4
               cores: 1
+              target_accept: 0.95
               progress_bar: true
             nutpie:
-              draws: 1000
-              tune: 1000
+              draws: 2000
+              tune: 2000
               chains: 4
               cores: 4
+              target_accept: 0.95
               progress_bar: true
               nuts_sampler_kwargs:
                 backend: jax
             random_seed: 2039487
           validation:
             sample:
-              n: 10000
+              n: 100000
               random_state: 930473
           ppd:
             draws: 10
@@ -1781,12 +1789,14 @@ stages:
             include_group_specific: true
             kind: response
           epred:
-            random_seed: 303
-            include_group_specific: false
-            sample_new_groups: true
-            kind: response_params
+            samples_per_simple_effect: 1000
+            predict:
+              random_seed: 303
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
     outs:
     - path: glmm/valence/sentiment.nc
       hash: md5
-      md5: 4e64478ec29b9636c5cc9fe5b8f8951c
-      size: 180686979
+      md5: b3dec1cf6f1cf47637f918c65b54250e
+      size: 251713938

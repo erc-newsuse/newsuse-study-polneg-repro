@@ -3,17 +3,13 @@
 import os
 
 import arviz as az
-import matplotlib as mpl  # noqa
-import matplotlib.pyplot as plt  # noqa
-import numpy as np  # noqa
-import pandas as pd  # noqa
-import seaborn as sns  # noqa
+import matplotlib as mpl
+import matplotlib.pyplot as plt
 import xarray as xr
 from newsuse.data import DataFrame
 
 from project import config, paths
-from project.bayes import set_xindex
-from project.plotting import ArvizLabeller
+from project.bayes import index_idata, rebuild_model
 
 xr.set_options(**config.xarray)
 az.rcParams.update(config.arviz)
@@ -39,19 +35,25 @@ data = DataFrame.from_(paths.final)
 # %% ---------------------------------------------------------------------------------
 
 idata = az.from_netcdf(paths.glmm / "valence" / f"{target}.nc")
-idata = set_xindex(idata, ["key", *opts.predictors.fixed, *opts.predictors.groups])
+idata = index_idata(idata, ["key", *opts.predictors.fixed, *opts.predictors.groups])
+terms_fixed = [t for t in idata.posterior.data_vars if "|" not in t]
 
 # %% ---------------------------------------------------------------------------------
 
-az.summary(idata)
+model = rebuild_model(idata)
+
+# %% ---------------------------------------------------------------------------------
+
+stats = az.summary(idata)
+stats.describe()
 
 # %% ---------------------------------------------------------------------------------
 
 axes = az.plot_trace(
     idata,
+    var_names=terms_fixed,
     combined=True,
-    figsize=(8, 24),
-    labeller=ArvizLabeller(),
+    figsize=(6, 6),
 )
 fig = axes.flatten()[0].figure
 fig.tight_layout()
@@ -65,8 +67,8 @@ fig.savefig(figpath / f"{target}-trace.pdf")
 
 axes = az.plot_ess(
     idata,
-    labeller=ArvizLabeller(),
-    figsize=(10, 14),
+    var_names=terms_fixed,
+    figsize=(15, 15),
 )
 ylabel = axes[0, 0].get_ylabel()
 for ax in axes.flat:
@@ -83,7 +85,7 @@ fig.savefig(figpath / f"{target}-ess.pdf")
 
 axes = az.plot_autocorr(
     idata,
-    labeller=ArvizLabeller(),
+    var_names=terms_fixed,
     figsize=(12, 12),
 )
 fig = axes.flatten()[0].figure

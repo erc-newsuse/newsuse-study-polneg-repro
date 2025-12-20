@@ -11,6 +11,7 @@ from newsuse.data import DataFrame
 from omegaconf import OmegaConf
 
 from project import config, paths
+from project.bayes import store_model_metadata
 
 xr.set_options(**config.xarray)
 az.rcParams.update(config.arviz)
@@ -36,7 +37,9 @@ data = (
         outlet=lambda df: pd.Categorical(df["outlet"]),
         **{
             target: lambda df: pd.Categorical(
-                df[target], categories=[*config.categorical[target]]
+                df[target],
+                categories=[*config.categorical[target]],
+                ordered=True,
             )
         },
     )[["key", target, *opts.predictors.fixed, *opts.predictors.groups]]
@@ -54,12 +57,11 @@ else:
 # %% ---------------------------------------------------------------------------------
 
 print(f"Building GLMM for '{target}' using 'bambi'...")
-kwargs = {
+model = bmb.Model(
+    formula=opts.formula.format(target=target).strip().replace("\n", " "),
+    data=model_data,
     **opts.model,
-    "formula": opts.model.formula.format(target=target).strip().replace("\n", " "),
-}
-
-model = bmb.Model(data=model_data, **kwargs)
+)
 
 # %% ---------------------------------------------------------------------------------
 
@@ -117,11 +119,33 @@ if (group := "posterior_epred") in idata.groups():
     del idata["posterior_epred"]
 
 grid = model.data[opts.predictors.fixed].drop_duplicates(ignore_index=True)
+grid = (
+    # Make dummy values for group effects
+    # to allow independent sampling of group-level effects
+    # for proper marginalization
+    grid.loc[grid.index.repeat(opts.epred.samples_per_simple_effect)]
+    .groupby(level=0)
+    .apply(
+        lambda df: df.assign(
+            **{
+                n: str(df.name) + "_" + np.arange(len(df)).astype(str)
+                for n in opts.predictors.groups
+            }
+        )
+    )
+    .reset_index(drop=True)
+)
+
 epred = (
-    model.predict(idata, data=grid, inplace=False, **opts.epred)
+    model.predict(idata, data=grid, inplace=False, **opts.epred.predict)
     .posterior["p"]
     .assign_coords({n: ("__obs__", c.to_numpy()) for n, c in grid.items()})
     .rename({f"{target}_dim": target})
+    .groupby([*opts.predictors.fixed])
+    .mean()
+    .stack(__obs__=tuple(opts.predictors.fixed))
+    .transpose("chain", "draw", "__obs__", target)
+    .reset_index("__obs__")
 )
 
 idata.add_groups(**{group: epred.to_dataset()})
@@ -134,24 +158,51 @@ if (group := "log_likelihood") in idata.groups():
 
 epred = (
     model.predict(
-        idata.isel(draw=slice(0, opts.ppd.draws)), data=valid, inplace=False, **opts.epred
+        idata.isel(draw=slice(0, opts.ppd.draws)),
+        data=valid,
+        inplace=False,
+        **opts.epred.predict,
     )
     .posterior["p"]
     .rename({f"{target}_dim": target})
 )
-p = epred.values.reshape(-1, epred.sizes[target])
-t = ppd[target].values.flatten() + 1
-i = np.arange(len(p))
 
-loglik = np.log((1 - epred).prod(target))
-loglik -= np.log(1 - p[i, t]).reshape(loglik.shape)
-loglik += np.log(p[i, t]).reshape(loglik.shape)
+# Use observed category codes from validation set
+obs_codes = valid[target].cat.codes.to_numpy()
 
-loglik = loglik.assign_coords(
-    {n: ("__obs__", c.to_numpy()) for n, c in valid.items() if n != target}
+# For cumulative family: p contains P(Y <= k), need P(Y = k)
+# P(Y = 0) = P(Y <= 0)
+# P(Y = k) = P(Y <= k) - P(Y <= k-1) for k > 0
+cumprobs = epred.values
+cat_probs = np.diff(cumprobs, axis=-1, prepend=0)
+cat_probs = np.concatenate([cumprobs[..., :1], cat_probs[..., 1:]], axis=-1)
+cat_probs = xr.DataArray(
+    cat_probs,
+    dims=epred.dims,
+    coords=epred.coords,
+)
+
+# Log-likelihood: log(p_observed)
+obs_probs = cat_probs.isel({target: xr.DataArray(obs_codes, dims="__obs__")})
+loglik = (
+    np.log(np.clip(obs_probs, 1e-10, 1.0))
+    .drop_vars(target)  # drop the scalar coordinate to avoid name conflict
+    .assign_coords({n: ("__obs__", c.to_numpy()) for n, c in valid.items() if n != target})
+    .reset_index("__obs__")
 )
 
 idata.add_groups(**{group: loglik.to_dataset(name=target)})
+
+# %% ---------------------------------------------------------------------------------
+
+print("Storing model metadata in inference data...")
+store_model_metadata(
+    idata,
+    model,
+    formula=opts.formula.format(target=target),
+    family=opts.model.get("family", "categorical"),
+    target=target,
+)
 
 # %% ---------------------------------------------------------------------------------
 
