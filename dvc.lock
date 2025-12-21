@@ -1800,3 +1800,193 @@ stages:
       hash: md5
       md5: b3dec1cf6f1cf47637f918c65b54250e
       size: 251713938
+  engagement-glmm@reactions:
+    cmd:
+    - TARGET=reactions python stages/engagement/glmm.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/engagement/glmm.py
+      hash: md5
+      md5: 4eaab329464877595dde35c35928eb05
+      size: 7324
+    params:
+      params.yaml:
+        glmm.engagement.targets.reactions:
+          fit:
+            draws: 2000
+            tune: 2000
+            chains: 4
+            cores: 4
+            target_accept: 0.95
+            progress_bar: true
+            inference_method: nutpie
+            nuts_sampler_kwargs:
+              backend: jax
+            random_seed: 2042
+          ppd:
+            draws: 20
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+            random_seed: 3094857
+          epred:
+            samples_per_simple_effect: 100
+            predict:
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
+              random_seed: 4093857
+          sample:
+            n: 250000
+            random_state: 6939487
+          predictors:
+            fixed:
+            - political
+            - country
+            - weekend
+            - event
+            - sentiment
+            groups:
+            - outlet
+            - year
+            - month
+          formula:
+          - "{target} ~ 1\n  + political * event + political * sentiment + political
+            * country + weekend\n  + (1 | outlet) + (1 | outlet:year:month)\n"
+          - "alpha ~ event + sentiment + political + weekend\n"
+          model:
+            family: negativebinomial
+    outs:
+    - path: glmm/engagement/reactions.nc
+      hash: md5
+      md5: da57e9e4bea05173d8f65ca416a43cd4
+      size: 1414371107
+  engagement-glmm@comments:
+    cmd:
+    - TARGET=comments python stages/engagement/glmm.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/engagement/glmm.py
+      hash: md5
+      md5: 328db5faf7701383e12120a1d3628579
+      size: 7403
+    params:
+      params.yaml:
+        glmm.engagement.targets.comments:
+          fit:
+            draws: 2000
+            tune: 2000
+            chains: 4
+            cores: 4
+            progress_bar: true
+            inference_method: nutpie
+            nuts_sampler_kwargs:
+              backend: jax
+            random_seed: 30912
+          ppd:
+            draws: 20
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+            random_seed: 409
+          epred:
+            samples_per_simple_effect: 1000
+            predict:
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
+              random_seed: 20394447
+          sample:
+            n: 100000
+            random_state: 6939487
+          predictors:
+            fixed:
+            - political
+            - country
+            - weekend
+            - event
+            - sentiment
+            groups:
+            - outlet
+            - year
+            - month
+          formula:
+          - "{target} ~ 1\n  + political * event * sentiment + political * country
+            + weekend\n  + (1 | outlet) + (1 | outlet:year:month)\n"
+          - "alpha ~ political * event * sentiment + political * country + weekend\n"
+          model:
+            family: negativebinomial
+    outs:
+    - path: glmm/engagement/comments.nc
+      hash: md5
+      md5: 57e58c46057f07671dcd71b069295e76
+      size: 1222759896
+  engagement-glmm@shares:
+    cmd:
+    - TARGET=shares python stages/engagement/glmm.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/engagement/glmm.py
+      hash: md5
+      md5: 328db5faf7701383e12120a1d3628579
+      size: 7403
+    params:
+      params.yaml:
+        glmm.engagement.targets.shares:
+          fit:
+            draws: 2000
+            tune: 2000
+            chains: 4
+            cores: 4
+            progress_bar: true
+            inference_method: nutpie
+            nuts_sampler_kwargs:
+              backend: jax
+            random_seed: 40918
+          ppd:
+            draws: 20
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+            random_seed: 51447
+          epred:
+            samples_per_simple_effect: 1000
+            predict:
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
+              random_seed: 676447
+          sample:
+            n: 100000
+            random_state: 6939487
+          predictors:
+            fixed:
+            - political
+            - country
+            - weekend
+            - event
+            - sentiment
+            groups:
+            - outlet
+            - year
+            - month
+          formula:
+          - "{target} ~ 1\n  + political * event * sentiment + political * country
+            + weekend\n  + (1 | outlet) + (1 | outlet:year:month)\n"
+          - "alpha ~ political * event * sentiment + political * country + weekend\n"
+          model:
+            family: negativebinomial
+    outs:
+    - path: glmm/engagement/shares.nc
+      hash: md5
+      md5: d33f4019bd6119b4d9be6d62c7ddd840
+      size: 1225680910

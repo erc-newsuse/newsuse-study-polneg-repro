@@ -49,6 +49,7 @@ data = (
 # %% ---------------------------------------------------------------------------------
 
 if sample := opts.get("sample"):
+    print(f"Subsampling data for model fitting to {sample.n} observations...")
     model_data = data.sample(**sample, ignore_index=True)
 else:
     model_data = data
@@ -65,12 +66,8 @@ model = bmb.Model(
 
 # %% ---------------------------------------------------------------------------------
 
-print(f"Fitting GLMM for '{target}' using '{opts.inference_method}'...")
-kwargs = {
-    "inference_method": (method := opts.inference_method),
-    **OmegaConf.to_object(opts.fit[method]),
-}
-idata = model.fit(**kwargs)
+print(f"Fitting GLMM for '{target}' using '{opts.fit.inference_method}'...")
+idata = model.fit(**OmegaConf.to_object(opts.fit))
 
 # %% ---------------------------------------------------------------------------------
 
@@ -86,28 +83,6 @@ idata.add_groups(**{group: observed})
 
 # %% ---------------------------------------------------------------------------------
 
-# Prepare validation dataset for posterior predictive checks
-valid_sample_kwargs = opts.validation.sample
-
-if len(model.data) < len(data):
-    # Model fitted on subsample - use held-out data
-    print("Prepare held-out dataset subsample...")
-    held_out = data.pipe(lambda df: df[~df["key"].isin(model.data["key"])])
-    valid = held_out.sample(
-        n=min(valid_sample_kwargs.n, len(held_out)),
-        random_state=valid_sample_kwargs.random_state,
-        ignore_index=True,
-    )
-elif len(data) > valid_sample_kwargs.n:
-    # Model fitted on full data but data is large - sample for efficiency
-    print("Prepare validation dataset subsample...")
-    valid = data.sample(**valid_sample_kwargs, ignore_index=True)
-else:
-    # Model fitted on full data and data is small enough
-    valid = data
-
-# %% ---------------------------------------------------------------------------------
-
 print("Prepare posterior predictive group in inference data...")
 if (group := "posterior_predictive") in idata.groups():
     del idata["posterior_predictive"]
@@ -115,10 +90,15 @@ if (group := "posterior_predictive") in idata.groups():
 kwargs = OmegaConf.to_object(opts.ppd)
 ppd = (
     model.predict(
-        idata.isel(draw=slice(0, kwargs.pop("draws"))), data=valid, inplace=False, **kwargs
+        idata.isel(draw=slice(0, kwargs.pop("draws"))),
+        data=model.data,
+        inplace=False,
+        **kwargs,
     )
     .posterior_predictive.drop_vars("__obs__")
-    .assign_coords({n: ("__obs__", c.to_numpy()) for n, c in valid.items() if n != target})
+    .assign_coords(
+        {n: ("__obs__", c.to_numpy()) for n, c in model.data.items() if n != target}
+    )
 )
 ppd[target].values -= 1
 
@@ -171,7 +151,7 @@ if (group := "log_likelihood") in idata.groups():
 epred = (
     model.predict(
         idata.isel(draw=slice(0, opts.ppd.draws)),
-        data=valid,
+        data=model.data,
         inplace=False,
         **opts.epred.predict,
     )
@@ -179,8 +159,8 @@ epred = (
     .rename({f"{target}_dim": target})
 )
 
-# Use observed category codes from validation set
-obs_codes = valid[target].cat.codes.to_numpy()
+# Use observed category codes from model data
+obs_codes = model.data[target].cat.codes.to_numpy()
 
 # For cumulative family: p contains P(Y <= k), need P(Y = k)
 # P(Y = 0) = P(Y <= 0)
@@ -199,7 +179,9 @@ obs_probs = cat_probs.isel({target: xr.DataArray(obs_codes, dims="__obs__")})
 loglik = (
     np.log(np.clip(obs_probs, 1e-10, 1.0))
     .drop_vars(target)  # drop the scalar coordinate to avoid name conflict
-    .assign_coords({n: ("__obs__", c.to_numpy()) for n, c in valid.items() if n != target})
+    .assign_coords(
+        {n: ("__obs__", c.to_numpy()) for n, c in model.data.items() if n != target}
+    )
     .reset_index("__obs__")
 )
 

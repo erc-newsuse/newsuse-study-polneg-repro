@@ -121,8 +121,17 @@ def rebuild_model(idata: az.InferenceData) -> bmb.Model:
             categories=spec["categories"],
             ordered=spec["ordered"],
         )
+
+    # Handle compound formulas (e.g., hurdle models with `;` separators)
+    formula_str = idata.attrs["formula"]
+    if ";" in formula_str:
+        formula_parts = [part.strip() for part in formula_str.split(";")]
+        formula = bmb.Formula(*formula_parts)
+    else:
+        formula = formula_str
+
     return bmb.Model(
-        idata.attrs["formula"],
+        formula,
         model_data,
         family=idata.attrs["family"],
     )

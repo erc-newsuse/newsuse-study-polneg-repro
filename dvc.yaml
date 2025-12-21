@@ -218,21 +218,19 @@ stages:
       - figures/valence/validation/${item}:
           persist: true
 
-  engagement-model:
+  engagement-glmm:
     foreach:
     - reactions
     - comments
     - shares
     do:
       cmd:
-      - TARGET=${item} python stages/engagement/model.py
+      - TARGET=${item} python stages/engagement/glmm.py
       params:
-      - glmm.engagement.targets.${item}.predictors
-      - glmm.engagement.targets.${item}.model
-      - glmm.engagement.targets.${item}.solver
+      - glmm.engagement.targets.${item}
       deps:
-      - stages/engagement/model.py
+      - stages/engagement/glmm.py
       - data/proc/final.parquet
       outs:
-      - glmm/engagement/${item}.rds:
+      - glmm/engagement/${item}.nc:
           persist: true

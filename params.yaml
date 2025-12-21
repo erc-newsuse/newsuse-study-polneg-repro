@@ -73,13 +73,14 @@ dataset:
 
 glmm:
   defaults: &glmm_defaults
-    inference_method: nutpie
     fit: &glmm_fit
       draws: 2000
       tune: 2000
       chains: 4
       cores: 4
+      target_accept: 0.95
       progress_bar: true
+      inference_method: nutpie
       nuts_sampler_kwargs:
         backend: jax
     ppd: &glmm_ppd
@@ -88,7 +89,7 @@ glmm:
       include_group_specific: true
       kind: response
     epred: &glmm_epred
-      samples_per_simple_effect: 1_000
+      samples_per_simple_effect: 100
       predict: &glmm_epred_predict
         include_group_specific: true
         sample_new_groups: true
@@ -97,8 +98,8 @@ glmm:
     default: &glmm_valence_default
       <<: *glmm_defaults
       sample:
-        n: 100_000
-        random_state: 2039487
+        n: 500_000
+        random_state: 111487
       predictors:
         fixed:
           - political
@@ -117,40 +118,39 @@ glmm:
         family: cumulative
       fit: &glmm_valence_fit
         <<: *glmm_fit
-        target_accept: 0.95  # package default is 0.8
-      validation:
-        sample:
-          n: 100_000
-          random_state: 930473
     targets:
       event:
         <<: *glmm_valence_default
         fit:
           <<: *glmm_valence_fit
-          random_seed: 301777
+          random_seed: 3991777
         ppd:
           <<: *glmm_ppd
-          random_seed: 2049871
+          random_seed: 2578
         epred:
           <<: *glmm_epred
           predict:
             <<: *glmm_epred_predict
-            random_seed: 211190
+            random_seed: 773410
       sentiment:
         <<: *glmm_valence_default
         fit:
           <<: *glmm_valence_fit
-          random_seed: 2039487
+          random_seed: 11378303
         ppd:
           <<: *glmm_ppd
-          random_seed: 11173
+          random_seed: 5116
         epred:
           <<: *glmm_epred
           predict:
             <<: *glmm_epred_predict
-            random_seed: 143280
+            random_seed: 777
   engagement:
     default: &glmm_engagement_default
+      <<: *glmm_defaults
+      sample:
+        n: 500_000
+        random_state: 6939487
       predictors:
         fixed:
           - political
@@ -165,55 +165,54 @@ glmm:
       formula:
         - >
           {target} ~ 1
-            + political * event * sentiment + political * country + weekend
-            + (1 | outlet) + (1 | outlet:year:month)
+            + political * event + political * sentiment + political * country
+            + weekend + month
+            + (1 | outlet) + (1 | outlet:year)
         - >
-          alpha ~ political * event * sentiment + political * country +weekend
-        - >
-          psi ~ (1 | outlet) + (1 | outlet:year:month)
+          alpha ~ event + sentiment + political + weekend
       model:
-        family: hurdle_negativebinomial
-      validation:
-        sample:
-          n: 100_000
-          random_state: 9316605
+        family: negativebinomial
+      fit: &glmm_engagement_fit
+        <<: *glmm_fit
+      epred: &glmm_engagement_epred
+        <<: *glmm_epred
     targets:
       reactions:
         <<: *glmm_engagement_default
         fit:
-          <<: *glmm_fit
+          <<: *glmm_engagement_fit
           random_seed: 2042
         ppd:
           <<: *glmm_ppd
           random_seed: 3094857
         epred:
-          <<: *glmm_epred
+          <<: *glmm_engagement_epred
           predict:
             <<: *glmm_epred_predict
             random_seed: 4093857
       comments:
         <<: *glmm_engagement_default
         fit:
-          <<: *glmm_fit
+          <<: *glmm_engagement_fit
           random_seed: 30912
         ppd:
           <<: *glmm_ppd
           random_seed: 409
         epred:
-          <<: *glmm_epred
+          <<: *glmm_engagement_epred
           predict:
             <<: *glmm_epred_predict
             random_seed: 20394447
       shares:
         <<: *glmm_engagement_default
         fit:
-          <<: *glmm_fit
+          <<: *glmm_engagement_fit
           random_seed: 40918
         ppd:
           <<: *glmm_ppd
           random_seed: 51447
         epred:
-          <<: *glmm_epred
+          <<: *glmm_engagement_epred
           predict:
             <<: *glmm_epred_predict
             random_seed: 676447

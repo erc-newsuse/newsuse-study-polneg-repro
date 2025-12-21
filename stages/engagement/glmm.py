@@ -29,10 +29,6 @@ dirpath.mkdir(parents=True, exist_ok=True)
 
 # %% ---------------------------------------------------------------------------------
 
-# Load and prepare data
-predictors_fixed = opts.predictors.fixed
-predictors_groups = opts.predictors.groups
-
 data = (
     DataFrame.from_(paths.final)
     .assign(
@@ -54,8 +50,8 @@ data = (
         [
             "key",
             target,
-            *predictors_fixed,
-            *predictors_groups,
+            *opts.predictors.fixed,
+            *opts.predictors.groups,
         ]
     ]
     .convert_dtypes(dtype_backend="numpy_nullable")
@@ -64,6 +60,7 @@ data = (
 # %% ---------------------------------------------------------------------------------
 
 if sample := opts.get("sample"):
+    print(f"Subsampling data for model fitting to {sample.n} observations...")
     model_data = data.sample(**sample, ignore_index=True)
 else:
     model_data = data
@@ -84,12 +81,8 @@ model = bmb.Model(
 
 # %% ---------------------------------------------------------------------------------
 
-print(f"Fitting GLMM for '{target}' using '{config.glmm.defaults.inference_method}'...")
-fit_kwargs = OmegaConf.to_object(opts.fit)
-idata = model.fit(
-    inference_method=config.glmm.defaults.inference_method,
-    **fit_kwargs,
-)
+print(f"Fitting GLMM for '{target}' using '{opts.fit.inference_method}'...")
+idata = model.fit(**OmegaConf.to_object(opts.fit))
 
 # %% ---------------------------------------------------------------------------------
 
@@ -105,21 +98,6 @@ idata.add_groups(**{group: observed})
 
 # %% ---------------------------------------------------------------------------------
 
-if len(model.data) < len(data):
-    # Model fitted on subsample - use held-out data
-    print("Prepare held-out dataset subsample...")
-    held_out = data.pipe(lambda df: df[~df["key"].isin(model.data["key"])])
-    valid = held_out.sample(**opts.validation.sample, ignore_index=True)
-elif len(data) > (n := opts.validation.sample.n) and n >= 1:
-    # Model fitted on full data but data is large - sample for efficiency
-    print("Prepare validation dataset subsample...")
-    valid = data.sample(**opts.validation.sample, ignore_index=True)
-else:
-    # Model fitted on full data and data is small enough
-    valid = data
-
-# %% ---------------------------------------------------------------------------------
-
 print("Prepare posterior predictive group in inference data...")
 if (group := "posterior_predictive") in idata.groups():
     del idata["posterior_predictive"]
@@ -129,12 +107,14 @@ ppd_draws = ppd_kwargs.pop("draws")
 ppd = (
     model.predict(
         idata.isel(draw=slice(0, ppd_draws)),
-        data=valid,
+        data=model.data,
         inplace=False,
         **ppd_kwargs,
     )
     .posterior_predictive.drop_vars("__obs__")
-    .assign_coords({n: ("__obs__", c.to_numpy()) for n, c in valid.items() if n != target})
+    .assign_coords(
+        {n: ("__obs__", c.to_numpy()) for n, c in model.data.items() if n != target}
+    )
 )
 
 idata.add_groups(**{group: ppd})
@@ -146,7 +126,7 @@ if (group := "posterior_epred") in idata.groups():
     del idata["posterior_epred"]
 
 # Create grid for simple effects (fixed effects only)
-grid = model.data[predictors_fixed].drop_duplicates(ignore_index=True)
+grid = model.data[opts.predictors.fixed].drop_duplicates(ignore_index=True)
 grid = (
     # Make dummy values for group effects
     # to allow independent sampling of group-level effects
@@ -157,7 +137,7 @@ grid = (
         lambda df: df.assign(
             **{
                 n: str(df.name) + "_" + np.arange(len(df)).astype(str)
-                for n in predictors_groups
+                for n in opts.predictors.groups
             }
         )
     )
@@ -169,11 +149,12 @@ epred = (
     model.predict(idata, data=grid, inplace=False, **epred_kwargs)
     .posterior["mu"]  # For hurdle models, 'mu' is the expected value
     .assign_coords({n: ("__obs__", c.to_numpy()) for n, c in grid.items()})
-    .groupby([*predictors_fixed])
+    .groupby([*opts.predictors.fixed])
     .mean()
-    .stack(__obs__=tuple(predictors_fixed))
+    .stack(__obs__=tuple(opts.predictors.fixed))
     .transpose("chain", "draw", "__obs__")
     .reset_index("__obs__")
+    .dropna("__obs__")
 )
 
 idata.add_groups(**{group: epred.to_dataset()})
@@ -184,11 +165,10 @@ print("Prepare log-likelihood group in inference data...")
 if (group := "log_likelihood") in idata.groups():
     del idata["log_likelihood"]
 
-# For hurdle negative binomial, we need to compute log-likelihood manually
-# The model has three components: mu (mean), alpha (dispersion), psi (zero prob)
+# Get response parameters for log-likelihood computation
 epred_for_ll = model.predict(
     idata.isel(draw=slice(0, ppd_draws)),
-    data=valid,
+    data=model.data,
     inplace=False,
     kind="response_params",
     include_group_specific=True,
@@ -199,17 +179,12 @@ epred_for_ll = model.predict(
 posterior = epred_for_ll.posterior
 mu = posterior["mu"].values  # Expected count (chain, draw, obs)
 alpha = posterior["alpha"].values  # Dispersion parameter
-psi = posterior["psi"].values  # Zero-inflation probability
 
 # Get observed values
-y = valid[target].to_numpy()
-
-# Compute log-likelihood for hurdle negative binomial
-# P(Y=0) = psi
-# P(Y=y|Y>0) = (1-psi) * NegBin(y; mu, alpha) / (1 - NegBin(0; mu, alpha))
+y = model.data[target].to_numpy()
 
 # Negative binomial PMF: NegBin(y; mu, alpha) where variance = mu + alpha * mu^2
-# Using scipy parameterization: n = 1/alpha, p = 1/(1 + alpha*mu)
+# Using scipy parameterization: n = 1/alpha, p = n/(n + mu)
 nb_n = 1.0 / alpha  # Number of successes
 nb_p = nb_n / (nb_n + mu)  # Success probability
 
@@ -219,27 +194,8 @@ def negbin_logpmf(y, n, p):
     return gammaln(y + n) - gammaln(y + 1) - gammaln(n) + n * np.log(p) + y * np.log(1 - p)
 
 
-# Compute log-likelihood
-loglik_vals = np.zeros_like(mu)
-
-# For y = 0: log(psi)
-zero_mask = y == 0
-loglik_vals[..., zero_mask] = np.log(np.clip(psi[..., zero_mask], 1e-10, 1.0))
-
-# For y > 0: log(1-psi) + log(NegBin(y)) - log(1 - NegBin(0))
-nonzero_mask = y > 0
-if nonzero_mask.any():
-    log_one_minus_psi = np.log(np.clip(1 - psi[..., nonzero_mask], 1e-10, 1.0))
-    log_negbin_y = negbin_logpmf(
-        y[nonzero_mask],
-        nb_n[..., nonzero_mask],
-        nb_p[..., nonzero_mask],
-    )
-    log_negbin_0 = negbin_logpmf(0, nb_n[..., nonzero_mask], nb_p[..., nonzero_mask])
-    log_one_minus_negbin_0 = np.log(np.clip(1 - np.exp(log_negbin_0), 1e-10, 1.0))
-    loglik_vals[..., nonzero_mask] = (
-        log_one_minus_psi + log_negbin_y - log_one_minus_negbin_0
-    )
+# Compute log-likelihood for all observations
+loglik_vals = negbin_logpmf(y, nb_n, nb_p)
 
 loglik = xr.DataArray(
     loglik_vals,
@@ -249,7 +205,7 @@ loglik = xr.DataArray(
         "draw": idata.posterior.draw[:ppd_draws],
     },
 ).assign_coords(
-    {col: ("__obs__", c.to_numpy()) for col, c in valid.items() if col != target}
+    {col: ("__obs__", c.to_numpy()) for col, c in model.data.items() if col != target}
 )
 
 idata.add_groups(**{group: loglik.to_dataset(name=target)})
