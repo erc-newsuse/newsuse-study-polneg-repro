@@ -86,12 +86,24 @@ idata.add_groups(**{group: observed})
 
 # %% ---------------------------------------------------------------------------------
 
+# Prepare validation dataset for posterior predictive checks
+valid_sample_kwargs = opts.validation.sample
+
 if len(model.data) < len(data):
-    print("Prepare held out dataset subsample...")
-    valid = data.pipe(lambda df: df[~df["key"].isin(model.data["key"])]).sample(
-        **opts.validation.sample, ignore_index=True
+    # Model fitted on subsample - use held-out data
+    print("Prepare held-out dataset subsample...")
+    held_out = data.pipe(lambda df: df[~df["key"].isin(model.data["key"])])
+    valid = held_out.sample(
+        n=min(valid_sample_kwargs.n, len(held_out)),
+        random_state=valid_sample_kwargs.random_state,
+        ignore_index=True,
     )
+elif len(data) > valid_sample_kwargs.n:
+    # Model fitted on full data but data is large - sample for efficiency
+    print("Prepare validation dataset subsample...")
+    valid = data.sample(**valid_sample_kwargs, ignore_index=True)
 else:
+    # Model fitted on full data and data is small enough
     valid = data
 
 # %% ---------------------------------------------------------------------------------
