@@ -1967,8 +1967,8 @@ stages:
       size: 382132909
     - path: stages/valence/glmm.py
       hash: md5
-      md5: b089d8df9c6dad75dfc45d620becf827
-      size: 6936
+      md5: 4ceb2acc8fb587f9a861d9765720f605
+      size: 6885
     params:
       params.yaml:
         glmm.valence.targets.event:
@@ -1984,7 +1984,7 @@ stages:
               backend: jax
             random_seed: 3991777
           ppd:
-            draws: 20
+            draws: 100
             sample_new_groups: true
             include_group_specific: true
             kind: response
@@ -2003,21 +2003,524 @@ stages:
             fixed:
             - political
             - country
-            - weekend
             groups:
             - outlet
             - year
             - month
           formula:
-            base: "{target} ~ 0\n  + political * country + weekend\n  + (1 + political
+            base: "{target} ~ 0\n  + political * country +\n  + (1 + political | outlet)\n\
+              \  + (1 + political | country:year:month)\n"
+            extended: "{target} ~ 0\n  + political * country * {by} +\n  + (1 + political
               | outlet)\n  + (1 + political | country:year:month)\n"
-            extended: "{target} ~ 0\n  + political * country * {by} + weekend\n  +
-              (1 + political | outlet)\n  + (1 + political | country:year:month)\n"
           model:
             family: cumulative
             noncentered: true
     outs:
     - path: glmm/valence/event.nc
       hash: md5
-      md5: d949dcee7fc4ccb8e78353b62b47a9c1
-      size: 279808951
+      md5: b30834f1360cd75c3787b98b3c4d3bd2
+      size: 524861939
+  valence-glmm@event--quality:
+    cmd:
+    - TARGET=event BY=-quality python stages/valence/glmm.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/valence/glmm.py
+      hash: md5
+      md5: 4ceb2acc8fb587f9a861d9765720f605
+      size: 6885
+    params:
+      params.yaml:
+        glmm.valence.targets.event:
+          fit:
+            draws: 2000
+            tune: 2000
+            chains: 4
+            cores: 4
+            target_accept: 0.95
+            progress_bar: true
+            inference_method: nutpie
+            nuts_sampler_kwargs:
+              backend: jax
+            random_seed: 3991777
+          ppd:
+            draws: 100
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+            random_seed: 2578
+          epred:
+            samples_per_simple_effect: 100
+            predict:
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
+              random_seed: 773410
+          sample:
+            n: 100000
+            random_state: 111487
+          predictors:
+            fixed:
+            - political
+            - country
+            groups:
+            - outlet
+            - year
+            - month
+          formula:
+            base: "{target} ~ 0\n  + political * country +\n  + (1 + political | outlet)\n\
+              \  + (1 + political | country:year:month)\n"
+            extended: "{target} ~ 0\n  + political * country * {by} +\n  + (1 + political
+              | outlet)\n  + (1 + political | country:year:month)\n"
+          model:
+            family: cumulative
+            noncentered: true
+    outs:
+    - path: glmm/valence/event-quality.nc
+      hash: md5
+      md5: 63667743b7bfcc98908b85e55aac2409
+      size: 539078841
+  valence-glmm@event--ideology:
+    cmd:
+    - TARGET=event BY=-ideology python stages/valence/glmm.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/valence/glmm.py
+      hash: md5
+      md5: 4ceb2acc8fb587f9a861d9765720f605
+      size: 6885
+    params:
+      params.yaml:
+        glmm.valence.targets.event:
+          fit:
+            draws: 2000
+            tune: 2000
+            chains: 4
+            cores: 4
+            target_accept: 0.95
+            progress_bar: true
+            inference_method: nutpie
+            nuts_sampler_kwargs:
+              backend: jax
+            random_seed: 3991777
+          ppd:
+            draws: 100
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+            random_seed: 2578
+          epred:
+            samples_per_simple_effect: 100
+            predict:
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
+              random_seed: 773410
+          sample:
+            n: 100000
+            random_state: 111487
+          predictors:
+            fixed:
+            - political
+            - country
+            groups:
+            - outlet
+            - year
+            - month
+          formula:
+            base: "{target} ~ 0\n  + political * country +\n  + (1 + political | outlet)\n\
+              \  + (1 + political | country:year:month)\n"
+            extended: "{target} ~ 0\n  + political * country * {by} +\n  + (1 + political
+              | outlet)\n  + (1 + political | country:year:month)\n"
+          model:
+            family: cumulative
+            noncentered: true
+    outs:
+    - path: glmm/valence/event-ideology.nc
+      hash: md5
+      md5: 4e3d2946df0b11e280a1a693de040ce5
+      size: 539090560
+  valence-glmm@sentiment-:
+    cmd:
+    - TARGET=sentiment BY= python stages/valence/glmm.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/valence/glmm.py
+      hash: md5
+      md5: 4ceb2acc8fb587f9a861d9765720f605
+      size: 6885
+    params:
+      params.yaml:
+        glmm.valence.targets.sentiment:
+          fit:
+            draws: 2000
+            tune: 2000
+            chains: 4
+            cores: 4
+            target_accept: 0.95
+            progress_bar: true
+            inference_method: nutpie
+            nuts_sampler_kwargs:
+              backend: jax
+            random_seed: 11378303
+          ppd:
+            draws: 100
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+            random_seed: 5116
+          epred:
+            samples_per_simple_effect: 100
+            predict:
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
+              random_seed: 777
+          sample:
+            n: 100000
+            random_state: 111487
+          predictors:
+            fixed:
+            - political
+            - country
+            groups:
+            - outlet
+            - year
+            - month
+          formula:
+            base: "{target} ~ 0\n  + political * country +\n  + (1 + political | outlet)\n\
+              \  + (1 + political | country:year:month)\n"
+            extended: "{target} ~ 0\n  + political * country * {by} +\n  + (1 + political
+              | outlet)\n  + (1 + political | country:year:month)\n"
+          model:
+            family: cumulative
+            noncentered: true
+    outs:
+    - path: glmm/valence/sentiment.nc
+      hash: md5
+      md5: ad9da5b5c13ed282b07c2d0dd1d8bc92
+      size: 525457598
+  valence-glmm@sentiment--quality:
+    cmd:
+    - TARGET=sentiment BY=-quality python stages/valence/glmm.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/valence/glmm.py
+      hash: md5
+      md5: 4ceb2acc8fb587f9a861d9765720f605
+      size: 6885
+    params:
+      params.yaml:
+        glmm.valence.targets.sentiment:
+          fit:
+            draws: 2000
+            tune: 2000
+            chains: 4
+            cores: 4
+            target_accept: 0.95
+            progress_bar: true
+            inference_method: nutpie
+            nuts_sampler_kwargs:
+              backend: jax
+            random_seed: 11378303
+          ppd:
+            draws: 100
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+            random_seed: 5116
+          epred:
+            samples_per_simple_effect: 100
+            predict:
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
+              random_seed: 777
+          sample:
+            n: 100000
+            random_state: 111487
+          predictors:
+            fixed:
+            - political
+            - country
+            groups:
+            - outlet
+            - year
+            - month
+          formula:
+            base: "{target} ~ 0\n  + political * country +\n  + (1 + political | outlet)\n\
+              \  + (1 + political | country:year:month)\n"
+            extended: "{target} ~ 0\n  + political * country * {by} +\n  + (1 + political
+              | outlet)\n  + (1 + political | country:year:month)\n"
+          model:
+            family: cumulative
+            noncentered: true
+    outs:
+    - path: glmm/valence/sentiment-quality.nc
+      hash: md5
+      md5: b6090f8705be727d22d441bd3034eed7
+      size: 539417622
+  valence-glmm@sentiment--ideology:
+    cmd:
+    - TARGET=sentiment BY=-ideology python stages/valence/glmm.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/valence/glmm.py
+      hash: md5
+      md5: 4ceb2acc8fb587f9a861d9765720f605
+      size: 6885
+    params:
+      params.yaml:
+        glmm.valence.targets.sentiment:
+          fit:
+            draws: 2000
+            tune: 2000
+            chains: 4
+            cores: 4
+            target_accept: 0.95
+            progress_bar: true
+            inference_method: nutpie
+            nuts_sampler_kwargs:
+              backend: jax
+            random_seed: 11378303
+          ppd:
+            draws: 100
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+            random_seed: 5116
+          epred:
+            samples_per_simple_effect: 100
+            predict:
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
+              random_seed: 777
+          sample:
+            n: 100000
+            random_state: 111487
+          predictors:
+            fixed:
+            - political
+            - country
+            groups:
+            - outlet
+            - year
+            - month
+          formula:
+            base: "{target} ~ 0\n  + political * country +\n  + (1 + political | outlet)\n\
+              \  + (1 + political | country:year:month)\n"
+            extended: "{target} ~ 0\n  + political * country * {by} +\n  + (1 + political
+              | outlet)\n  + (1 + political | country:year:month)\n"
+          model:
+            family: cumulative
+            noncentered: true
+    outs:
+    - path: glmm/valence/sentiment-ideology.nc
+      hash: md5
+      md5: b3cc87e43f6388758b1d6d92446df2f8
+      size: 539450351
+  valence-glmm@valence-:
+    cmd:
+    - TARGET=valence BY= python stages/valence/glmm.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/valence/glmm.py
+      hash: md5
+      md5: 4ceb2acc8fb587f9a861d9765720f605
+      size: 6885
+    params:
+      params.yaml:
+        glmm.valence.targets.valence:
+          fit:
+            draws: 2000
+            tune: 2000
+            chains: 4
+            cores: 4
+            target_accept: 0.95
+            progress_bar: true
+            inference_method: nutpie
+            nuts_sampler_kwargs:
+              backend: jax
+            random_seed: 2049387
+          ppd:
+            draws: 100
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+            random_seed: 40957
+          epred:
+            samples_per_simple_effect: 100
+            predict:
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
+              random_seed: 3094857
+          sample:
+            n: 100000
+            random_state: 111487
+          predictors:
+            fixed:
+            - political
+            - country
+            groups:
+            - outlet
+            - year
+            - month
+          formula:
+            base: "{target} ~ 0\n  + political * country +\n  + (1 + political | outlet)\n\
+              \  + (1 + political | country:year:month)\n"
+            extended: "{target} ~ 0\n  + political * country * {by} +\n  + (1 + political
+              | outlet)\n  + (1 + political | country:year:month)\n"
+          model:
+            family: cumulative
+            noncentered: true
+    outs:
+    - path: glmm/valence/valence.nc
+      hash: md5
+      md5: bf1a6c8852b3f0f551455442327ebf9c
+      size: 542254981
+  valence-glmm@valence--quality:
+    cmd:
+    - TARGET=valence BY=-quality python stages/valence/glmm.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/valence/glmm.py
+      hash: md5
+      md5: 4ceb2acc8fb587f9a861d9765720f605
+      size: 6885
+    params:
+      params.yaml:
+        glmm.valence.targets.valence:
+          fit:
+            draws: 2000
+            tune: 2000
+            chains: 4
+            cores: 4
+            target_accept: 0.95
+            progress_bar: true
+            inference_method: nutpie
+            nuts_sampler_kwargs:
+              backend: jax
+            random_seed: 2049387
+          ppd:
+            draws: 100
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+            random_seed: 40957
+          epred:
+            samples_per_simple_effect: 100
+            predict:
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
+              random_seed: 3094857
+          sample:
+            n: 100000
+            random_state: 111487
+          predictors:
+            fixed:
+            - political
+            - country
+            groups:
+            - outlet
+            - year
+            - month
+          formula:
+            base: "{target} ~ 0\n  + political * country +\n  + (1 + political | outlet)\n\
+              \  + (1 + political | country:year:month)\n"
+            extended: "{target} ~ 0\n  + political * country * {by} +\n  + (1 + political
+              | outlet)\n  + (1 + political | country:year:month)\n"
+          model:
+            family: cumulative
+            noncentered: true
+    outs:
+    - path: glmm/valence/valence-quality.nc
+      hash: md5
+      md5: f890ba7cdb9de07d71b4d903d787d7a8
+      size: 559674537
+  valence-glmm@valence--ideology:
+    cmd:
+    - TARGET=valence BY=-ideology python stages/valence/glmm.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/valence/glmm.py
+      hash: md5
+      md5: 4ceb2acc8fb587f9a861d9765720f605
+      size: 6885
+    params:
+      params.yaml:
+        glmm.valence.targets.valence:
+          fit:
+            draws: 2000
+            tune: 2000
+            chains: 4
+            cores: 4
+            target_accept: 0.95
+            progress_bar: true
+            inference_method: nutpie
+            nuts_sampler_kwargs:
+              backend: jax
+            random_seed: 2049387
+          ppd:
+            draws: 100
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+            random_seed: 40957
+          epred:
+            samples_per_simple_effect: 100
+            predict:
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
+              random_seed: 3094857
+          sample:
+            n: 100000
+            random_state: 111487
+          predictors:
+            fixed:
+            - political
+            - country
+            groups:
+            - outlet
+            - year
+            - month
+          formula:
+            base: "{target} ~ 0\n  + political * country +\n  + (1 + political | outlet)\n\
+              \  + (1 + political | country:year:month)\n"
+            extended: "{target} ~ 0\n  + political * country * {by} +\n  + (1 + political
+              | outlet)\n  + (1 + political | country:year:month)\n"
+          model:
+            family: cumulative
+            noncentered: true
+    outs:
+    - path: glmm/valence/valence-ideology.nc
+      hash: md5
+      md5: 0f8da4f362cc8fa4ba8cee6413049e5f
+      size: 559706625

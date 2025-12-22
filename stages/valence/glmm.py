@@ -56,6 +56,9 @@ data = (
     .convert_dtypes(dtype_backend="numpy_nullable")
 )
 
+# if (col := "month") in data:
+#     data[col] = pd.Categorical(data[col])
+
 # %% ---------------------------------------------------------------------------------
 
 if sample := opts.get("sample"):
@@ -73,6 +76,7 @@ if by:
 else:
     formula = opts.formula.base.format(target=target)
 formula = formula.replace("\n", " ").strip()
+print("Model formula:", formula)
 
 model = bmb.Model(
     formula=formula,
@@ -164,7 +168,10 @@ print("Prepare log-likelihood group in inference data...")
 if (group := "log_likelihood") in idata.groups():
     del idata["log_likelihood"]
 
-epred = (
+# Get category probabilities from posterior predictions
+# NOTE: For cumulative family with kind="response_params", bambi returns
+# category probabilities P(Y=k) directly, NOT cumulative probabilities P(Y<=k)
+cat_probs = (
     model.predict(
         idata.isel(draw=slice(0, opts.ppd.draws)),
         data=model.data,
@@ -177,18 +184,6 @@ epred = (
 
 # Use observed category codes from model data
 obs_codes = model.data[target].cat.codes.to_numpy()
-
-# For cumulative family: p contains P(Y <= k), need P(Y = k)
-# P(Y = 0) = P(Y <= 0)
-# P(Y = k) = P(Y <= k) - P(Y <= k-1) for k > 0
-cumprobs = epred.values
-cat_probs = np.diff(cumprobs, axis=-1, prepend=0)
-cat_probs = np.concatenate([cumprobs[..., :1], cat_probs[..., 1:]], axis=-1)
-cat_probs = xr.DataArray(
-    cat_probs,
-    dims=epred.dims,
-    coords=epred.coords,
-)
 
 # Log-likelihood: log(p_observed)
 obs_probs = cat_probs.isel({target: xr.DataArray(obs_codes, dims="__obs__")})

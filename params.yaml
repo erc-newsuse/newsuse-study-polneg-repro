@@ -36,6 +36,7 @@ categorical:
     fr:  France
     esp: Spain
   quality: ["low", "medium", "high"]
+  ideology: ["left", "center", "right"]
   political: ["non-political", "political"]
   event: [-1, 0, 1]
   sentiment: [-1, 0, 1]
@@ -84,7 +85,7 @@ glmm:
       nuts_sampler_kwargs:
         backend: jax
     ppd: &glmm_ppd
-      draws: 20
+      draws: 100
       sample_new_groups: true
       include_group_specific: true
       kind: response
@@ -104,7 +105,6 @@ glmm:
         fixed:
           - political
           - country
-          - weekend
         groups:
           - outlet
           - year
@@ -112,12 +112,12 @@ glmm:
       formula:
         base: >
           {target} ~ 0
-            + political * country + weekend
+            + political * country +
             + (1 + political | outlet)
             + (1 + political | country:year:month)
         extended: >
           {target} ~ 0
-            + political * country * {by} + weekend
+            + political * country * {by} +
             + (1 + political | outlet)
             + (1 + political | country:year:month)
       model:
@@ -483,10 +483,15 @@ plotting:
         left:     "#00AEF3"
         center:   ${...palette.gray}
         right:    "#D81F29"
-    valence:
+    event:
       - ${..semantics.negative}
       - ${..semantics.other}
       - ${..semantics.positive}
+    sentiment:
+      - ${..semantics.negative}
+      - ${..semantics.other}
+      - ${..semantics.positive}
+    valence: ["#000000", "#2b363a", "#576c73", "#82a3ad", "#add8e6"]
     quality:
       - ${..semantics.quality.low}
       - ${..semantics.quality.medium}

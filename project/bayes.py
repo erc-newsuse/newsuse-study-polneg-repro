@@ -5,14 +5,13 @@ import arviz as az
 import bambi as bmb
 import numpy as np
 import pandas as pd
-import xarray as xr
 from rpy2 import robjects as ro
 
 __all__ = (
     "index_idata",
     "rebuild_model",
     "store_model_metadata",
-    "compute_hdi_summary",
+    "hdi",
 )
 
 DataCoordsT = Mapping[str, np.ndarray | tuple[str, np.ndarray]]
@@ -137,48 +136,12 @@ def rebuild_model(idata: az.InferenceData) -> bmb.Model:
     )
 
 
-def compute_hdi_summary(
-    da: xr.DataArray,
-    dims: str | list[str],
-    prob: float | None = None,
-) -> pd.DataFrame:
-    """Compute HDI summary statistics for a DataArray.
-
-    Computes median and Highest Density Interval (HDI) bounds
-    over the specified dimensions.
-
-    Parameters
-    ----------
-    da
-        xarray DataArray with posterior samples.
-    dims
-        Dimension(s) to compute HDI over (typically ["chain", "draw"] or "sample").
-    prob
-        Probability mass for HDI. If None, uses arviz default from
-        ``az.rcParams["stats.ci_prob"]``.
-
-    Returns
-    -------
-    pd.DataFrame
-        DataFrame with median, lower and upper HDI bounds.
-    """
+def hdi(s: pd.Series, prob: float | None = None) -> pd.Series:
+    """Compute HDI for a pandas Series."""
     if prob is None:
         prob = az.rcParams["stats.ci_prob"]
-    if isinstance(dims, str):
-        dims = [dims]
-    median = da.median(dim=dims)
-    hdi = az.hdi(da, hdi_prob=prob, input_core_dims=[dims])
-    return (
-        xr.Dataset(
-            {
-                "median": median,
-                "lower": hdi.sel(hdi="lower"),
-                "upper": hdi.sel(hdi="higher"),
-            }
-        )
-        .to_dataframe()
-        .reset_index()
-    )
+    hdi_bounds = az.hdi(s.values, hdi_prob=prob)
+    return pd.Series({"median": s.median(), "lower": hdi_bounds[0], "upper": hdi_bounds[1]})
 
 
 def index_idata(idata: az.InferenceData, xindex: Sequence[Hashable]) -> az.InferenceData:

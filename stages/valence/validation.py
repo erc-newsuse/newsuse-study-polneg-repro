@@ -5,7 +5,7 @@ import os
 import arviz as az
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import seaborn as sns
+import numpy as np
 import xarray as xr
 from newsuse.data import DataFrame
 
@@ -17,25 +17,33 @@ az.rcParams.update(config.arviz)
 mpl.rcParams.update(config.plotting.params)
 
 target = os.environ.get("TARGET")
-if not target:
+if target is None:
     target = input("Enter target (event): ").strip() or "event"
+
+by = os.environ.get("BY")
+if by is None:
+    by = input("Enter grouping variable: ").strip() or ""
+
 opts = config.glmm.valence.targets[target]
 support = config.categorical[target]
 
-figpath = paths.figures / "glmm" / "valence" / "validation" / target
+figpath = paths.figures / "valence" / "validation" / target
 figpath.mkdir(parents=True, exist_ok=True)
 
 labels = {
-    "countries": config.categorical.country,
+    "country": config.categorical.country,
     "political": dict(enumerate(config.categorical.political)),
     target: config.categorical[target],
 }
+if by:
+    labels[by] = config.categorical[by]
 
 data = DataFrame.from_(paths.final)
 
 # %% ---------------------------------------------------------------------------------
 
-idata = az.from_netcdf(paths.glmm / "valence" / f"{target}.nc")
+fname = f"{target}.nc" if not by else f"{target}-{by}.nc"
+idata = az.from_netcdf(paths.glmm / "valence" / fname)
 idata = index_idata(idata, ["key", *opts.predictors.fixed, *opts.predictors.groups])
 terms_fixed = [t for t in idata.posterior.data_vars if "|" not in t]
 
@@ -46,16 +54,8 @@ stats.describe()
 
 # %% ---------------------------------------------------------------------------------
 
-fig, ax = plt.subplots(figsize=(5, 21))
 bad = stats.query("r_hat > 1.01").sort_values("r_hat", ascending=False)
-sns.scatterplot(
-    data=bad.reset_index(),
-    x="r_hat",
-    y="index",
-    ax=ax,
-)
-ax.set_xlabel(r"$\hat{r}$")
-
+bad.head(len(bad))
 
 # %% ---------------------------------------------------------------------------------
 
@@ -96,7 +96,7 @@ fig.savefig(figpath / f"{target}-ess.pdf")
 axes = az.plot_autocorr(
     idata,
     var_names=terms_fixed,
-    figsize=(12, 12),
+    figsize=(18, 18),
 )
 fig = axes.flatten()[0].figure
 fig.tight_layout()
@@ -116,6 +116,7 @@ def plot_ppc(
         "kind": "cumulative",
         "legend": False,
         "mean": False,
+        "num_pp_samples": 10,
         **kwargs,
     }
     az.plot_ppc(idata, ax=ax, **kwargs)
@@ -128,12 +129,12 @@ def plot_ppc(
 
 fig, axes = plt.subplots(ncols=3, figsize=(7, 3))
 plot_ppc(idata, ax=axes[0])
-plot_ppc(idata.sel(political=1), ax=axes[1])
-plot_ppc(idata.sel(political=0), ax=axes[2])
+plot_ppc(idata.sel(political=0), ax=axes[1])
+plot_ppc(idata.sel(political=1), ax=axes[2])
 
 axes[0].set_title("Overall")
-axes[1].set_title("Political")
-axes[2].set_title("Other")
+axes[1].set_title("Non-Political")
+axes[2].set_title("Political")
 
 fig.tight_layout()
 fig.supxlabel(target.capitalize(), y=-0.03)
@@ -142,41 +143,33 @@ fig.savefig(figpath / f"{target}-ppc.pdf")
 
 # %% ---------------------------------------------------------------------------------
 
-fig, axes = plt.subplots(ncols=3, nrows=2, figsize=(7, 4))
+bys = ["country"] if not by else [by]
+for _by in bys:
+    fig, axes = plt.subplots(
+        ncols=(ncols := 3),
+        nrows=(nrows := int(np.ceil(len(labels[_by]) / ncols))),
+        figsize=(3 * ncols, 3 * nrows),
+    )
 
-for ax, country in zip(axes.flat, labels["countries"], strict=True):
-    plot_ppc(idata.sel(country=country), ax=ax)
-    ax.set_title(country.upper())
+    for ax, byval in zip(axes.flat, labels[_by], strict=True):
+        sel = {_by: byval}
+        plot_ppc(idata.sel(**sel), ax=ax)
 
-fig.tight_layout()
-fig.supxlabel(target.capitalize(), y=-0.03)
-fig.supylabel(r"$\mathbb{P}(X \leq x)$", x=-0.02)
-fig.savefig(figpath / f"{target}-ppc-by-country.pdf")
+    for ax, byval in zip(axes.flat, labels[_by], strict=True):
+        ax.set_title(byval.upper())
+        ax.set_xticks([])
 
-# %% ---------------------------------------------------------------------------------
-
-fig, axes = plt.subplots(ncols=6, nrows=2, figsize=(8, 3))
-
-for axrow, pol in zip(axes, labels["political"], strict=True):
-    for ax, country in zip(axrow, labels["countries"], strict=True):
-        plot_ppc(idata.sel(country=country, political=pol), ax=ax)
-
-for ax, country in zip(axes[0], labels["countries"], strict=True):
-    ax.set_title(country.upper())
-    ax.set_xticks([])
-for ax, pol in zip(axes[:, 0], labels["political"], strict=True):
-    ax.set_ylabel(labels["political"][pol])
-
-fig.supxlabel(target.capitalize(), y=0.05)
-fig.supylabel(r"$\mathbb{P}(X \leq x)$", x=0.02, y=0.55)
-fig.tight_layout()
-fig.savefig(figpath / f"{target}-ppc-by-country-political.pdf")
+    fig.supxlabel(target.capitalize(), y=0.05)
+    fig.supylabel(r"$\mathbb{P}(X \leq x)$", x=0.02, y=0.55)
+    fig.tight_layout()
+    fig.savefig(figpath / f"{target}-ppc-by-{_by}.pdf")
 
 # %% ---------------------------------------------------------------------------------
 
 fig, ax = plt.subplots(figsize=(7, 3))
 az.plot_bpv(idata, ax=ax, var_names=[target], kind="u_value")
 ax.set_title(rf"{target.capitalize()}: $u$-values")
+ax.set_ylim(0.8, 1.2)
 fig.tight_layout()
 fig.savefig(figpath / f"{target}-bpv.pdf")
 

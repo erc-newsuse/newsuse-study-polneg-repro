@@ -1,8 +1,9 @@
 # %% ---------------------------------------------------------------------------------
-"""Analysis of political valence differences using arviz/bambi machinery.
+"""Analysis of political valence differences by quality/ideology.
 
-This script tests whether the properly marginalized expected class probabilities
-differ between political and non-political posts overall and by country.
+This script analyzes whether quality or ideology moderate the effect of political
+content on valence. It uses models that include quality or ideology as interaction
+terms with political content to determine scientifically significant effects.
 Results are illustrated by point+interval estimates for class probabilities
 and corresponding odds ratios.
 """
@@ -31,6 +32,10 @@ target = os.environ.get("TARGET")
 if target is None:
     target = input("Enter target (event): ").strip() or "event"
 
+by = os.environ.get("BY")
+if by is None:
+    by = input("Enter grouping variable (quality): ").strip() or "quality"
+
 opts = config.glmm.valence.targets[target]
 support = np.asarray([*config.categorical[target]])
 
@@ -49,10 +54,15 @@ else:
         1: "positive",
     }
 
+# Setup grouping variable configuration
+by_categories = config.categorical[by]
+by_colors = config.plotting.color[by]
+
 # %% Load inference data -------------------------------------------------------------
 
-idata = az.from_netcdf(paths.glmm / "valence" / f"{target}.nc")
-idata = index_idata(idata, ["key", *sum(opts.predictors.values(), start=[])])
+model_path = paths.glmm / "valence" / f"{target}-{by}.nc"
+idata = az.from_netcdf(model_path)
+idata = index_idata(idata, ["key", *sum(opts.predictors.values(), start=[]), by])
 
 # Extract posterior expected probabilities
 epred = az.extract(idata, group="posterior_epred")
@@ -61,23 +71,15 @@ probs = epred.p.to_dataframe()["p"]
 
 # %% Compute posterior expected class probabilities ----------------------------------
 
-posterior = pd.concat(
-    [
-        probs.groupby(["country", "political", target])
-        .apply(hdi)
-        .unstack(-1)
-        .reset_index(),
-        probs.groupby(["political", target]).apply(hdi).unstack(-1).reset_index(),
-    ]
-).fillna({"country": "overall"})
+# Overall (marginalized over country) by political and grouping variable
+posterior = probs.groupby(["political", by, target]).apply(hdi).unstack(-1).reset_index()
 
 # %% Plot posterior expectations -----------------------------------------------------
 
-country_order = ["overall", *config.categorical.country]
-fig, axes = plt.subplots(ncols=len(country_order), figsize=(21, 3.5), sharey=True)
+fig, axes = plt.subplots(ncols=len(by_categories), figsize=(15, 4), sharey=True)
 
-for ax, country in zip(axes, country_order, strict=True):
-    gdf = posterior.query("country == @country")
+for ax, by_val in zip(axes, by_categories, strict=True):
+    gdf = posterior.query(f"{by} == @by_val")
     range_kw = config.plotting.objects.range
     (
         so.Plot(gdf, x=target, y="median", color="political")
@@ -87,8 +89,7 @@ for ax, country in zip(axes, country_order, strict=True):
         .on(ax)
         .plot()
     )
-    title = country.title() if country == "overall" else countries_map[country]
-    ax.set_title(title, fontsize="xx-large")
+    ax.set_title(by_val.title(), fontsize="xx-large")
     ax.set_xlabel(None)
     ax.set_ylabel(None)
     ax.set_ylim(0, 1)
@@ -111,16 +112,21 @@ handles = [
     )
 ]
 ax.legend(handles=handles, fontsize="large", title_fontsize="x-large", frameon=False)
-fig.suptitle(f"{target.capitalize()} valence", fontsize="xx-large", x=0.00, ha="left")
+fig.suptitle(
+    f"{target.capitalize()} valence by {by.capitalize()}",
+    fontsize="xx-large",
+    x=0.00,
+    ha="left",
+)
 fig.tight_layout()
-fig.savefig(figpath / "posterior-expectations.pdf")
+fig.savefig(figpath / f"{target}-posterior-expectations-by-{by}.pdf")
 
 
-# %% Compute political/non-political odds ratios -------------------------------------
+# %% Compute political/non-political odds ratios by grouping variable ----------------
 
 odds_ratios = (
     probs.pipe(logit)
-    .groupby(["country", "chain", "draw", target])
+    .groupby([by, "country", "chain", "draw", target])
     .diff()
     .dropna()
     .droplevel("political")
@@ -128,13 +134,10 @@ odds_ratios = (
 )
 
 posterior_or = (
-    pd.concat(
-        [
-            odds_ratios.groupby(["country", target]).apply(hdi).unstack(-1).reset_index(),
-            odds_ratios.groupby(target).apply(hdi).unstack(-1).reset_index(),
-        ]
-    )
-    .fillna({"country": "overall"})
+    odds_ratios.groupby([by, target])
+    .apply(hdi)
+    .unstack(-1)
+    .reset_index()
     .assign(
         sig=lambda df: df[["lower", "upper"]].sub(1).pipe(np.sign).prod(axis=1).eq(1),
     )
@@ -142,10 +145,10 @@ posterior_or = (
 
 # %% Plot odds ratios ----------------------------------------------------------------
 
-fig, axes = plt.subplots(ncols=len(country_order), figsize=(21, 3), sharey=True)
+fig, axes = plt.subplots(ncols=len(by_categories), figsize=(15, 3), sharey=True)
 
-for ax, country in zip(axes, country_order, strict=True):
-    gdf = posterior_or.query("country == @country")
+for ax, by_val in zip(axes, by_categories, strict=True):
+    gdf = posterior_or.query(f"{by} == @by_val")
     range_kw = config.plotting.objects.range
     (
         so.Plot(gdf, x=target, y="median", color=target)
@@ -164,8 +167,7 @@ for ax, country in zip(axes, country_order, strict=True):
         .on(ax)
         .plot()
     )
-    title = country.title() if country == "overall" else countries_map[country]
-    ax.set_title(title, fontsize="xx-large")
+    ax.set_title(by_val.title(), fontsize="xx-large")
     ax.set_xlabel(None)
     ax.set_ylabel(None)
     ax.set_yscale("log")
@@ -176,47 +178,63 @@ for ax, country in zip(axes, country_order, strict=True):
     )
 
 fig.legends.clear()
-fig.suptitle("Political / Non-Political", fontsize="xx-large", x=0.00, ha="left")
+fig.suptitle(
+    f"Political / Non-Political by {by.capitalize()}",
+    fontsize="xx-large",
+    x=0.00,
+    ha="left",
+)
 ax = axes[0]
 ax.set_ylabel("Posterior odds ratio", fontsize="xx-large")
 
 fig.tight_layout()
-fig.savefig(figpath / "posterior-odds-ratio.pdf")
+fig.savefig(figpath / f"{target}-posterior-odds-ratio-by-{by}.pdf")
 
-# %% Country effect size contrasts ---------------------------------------------------
 
-country_effects = (
-    probs.pipe(logit)
-    .groupby(["political", "chain", "draw", target])
-    .apply(lambda s: s - s.mean())
-    .droplevel([0, 1, 2, 3])
-    .pipe(np.exp)
-)
+# %% Compute differences in political effect across grouping variable ----------------
+# Test whether the political effect differs by quality/ideology level
 
-posterior_ce = (
-    country_effects.groupby(["country", "political", target])
-    .apply(hdi)
-    .unstack(-1)
-    .reset_index()
-    .assign(
-        **{target: lambda df: df[target].astype(int)},
-        sig=lambda df: df[["lower", "upper"]].sub(1).pipe(np.sign).prod(axis=1).eq(1),
+# First compute political effect (log-odds) for each level of grouping variable
+political_effects = odds_ratios.pipe(np.log)
+
+# Compute pairwise contrasts between levels of the grouping variable
+# Reference level is the first category
+ref_level = by_categories[1]
+contrast_effects = []
+
+for level in by_categories:
+    if level == ref_level:
+        continue
+    # Difference in political effect between level and reference
+    contrast = political_effects.xs(level, level=by) - political_effects.xs(
+        ref_level, level=by
     )
-)
-
-# %% Plot country effect size contrasts ----------------------------------------------
-
-fig, axes = plt.subplots(ncols=len(support), figsize=(15, 4), sharey=True)
-for ax, valence in zip(axes, support, strict=True):
-    gdf = (
-        posterior_ce.query(f"{target} == @valence")
-        .set_index("country")
-        .loc[[*config.categorical.country]]
+    contrast_df = (
+        contrast.groupby(target)
+        .apply(hdi)
+        .unstack(-1)
         .reset_index()
+        .assign(
+            contrast=f"{level} vs {ref_level}",
+            sig=lambda df: df[["lower", "upper"]].pipe(np.sign).prod(axis=1).eq(1),
+        )
     )
+    contrast_effects.append(contrast_df)
+
+posterior_contrasts = pd.concat(contrast_effects, ignore_index=True)
+
+# %% Plot effect contrasts -----------------------------------------------------------
+
+contrasts = posterior_contrasts["contrast"].unique()
+fig, axes = plt.subplots(ncols=len(contrasts), figsize=(5 * len(contrasts), 4), sharey=True)
+if len(contrasts) == 1:
+    axes = [axes]
+
+for ax, contrast in zip(axes, contrasts, strict=True):
+    gdf = posterior_contrasts.query("contrast == @contrast")
     range_kw = config.plotting.objects.range
     (
-        so.Plot(gdf, x="country", y="median", color="political")
+        so.Plot(gdf, x=target, y="median", color=target)
         .add(so.Range(**range_kw), so.Dodge(), ymin="lower", ymax="upper")
         .add(so.Dot(**config.plotting.objects.dot), so.Dodge())
         .add(
@@ -226,24 +244,31 @@ for ax, valence in zip(axes, support, strict=True):
             pointsize="sig",
         )
         .scale(
-            color=[*config.plotting.color.political],
+            color=[*config.plotting.color[target]],
             pointsize={True: 15, False: 0},
         )
         .on(ax)
         .plot()
     )
-    ax.set_title(str(target_map[valence]).title(), fontsize="xx-large")
+    ax.set_title(contrast.title(), fontsize="x-large")
     ax.set_xlabel(None)
     ax.set_ylabel(None)
-    ax.set_yscale("log", base=2)
-    ax.axhline(1.0, color="gray", linestyle="--", linewidth=1)
-    ax.set_ylim(2**-1.25, 2**1.25)
-    ax.set_xticks(gdf["country"])
-    ax.set_xticklabels([countries_map[c] for c in gdf["country"]], rotation=30, ha="right")
+    ax.axhline(0.0, color="gray", linestyle="--", linewidth=1)
+    ax.set_xticks(
+        support - support.min(), labels=[str(target_map[t]).title() for t in support]
+    )
 
 fig.legends.clear()
-axes[0].set_ylabel("Country / Grand Mean", fontsize="xx-large")
+fig.suptitle(
+    f"Difference in Political Effect by {by.capitalize()}",
+    fontsize="xx-large",
+    x=0.00,
+    ha="left",
+)
+ax = axes[0]
+ax.set_ylabel("Posterior contrast (log-odds)", fontsize="xx-large")
+
 fig.tight_layout()
-fig.savefig(figpath / "country-effect-sizes.pdf")
+fig.savefig(figpath / f"{target}-political-effect-contrasts-by-{by}.pdf")
 
 # %% ---------------------------------------------------------------------------------
