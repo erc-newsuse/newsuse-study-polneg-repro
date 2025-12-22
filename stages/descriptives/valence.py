@@ -5,6 +5,7 @@ from typing import Any
 import matplotlib as mpl
 import matplotlib.patheffects
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import seaborn as sns
 from newsuse.data import DataFrame
@@ -18,6 +19,7 @@ mpl.rcParams.update(config.plotting.params)
 targets = ["event", "sentiment", "valence"]
 quality = ["low", "medium", "high"]
 ideology = ["left", "center", "right"]
+valence = ["negative", "neutral", "positive"]
 
 domain = "valence"
 
@@ -56,7 +58,7 @@ def plot_frequencies(
     text: bool = True,
     text_xshift: float | None = None,
     text_yshift: float = 0.05,
-    fontsize: str = "x-small",
+    fontsize: str = "small",
     **kwargs: Any,
 ) -> None:
     kwargs = {"palette": palette, **kwargs} if hue else {"color": "black", **kwargs}
@@ -69,12 +71,13 @@ def plot_frequencies(
     cols = [x, y] if hue is None else [x, y, hue]
     if text_xshift is None:
         text_xshift = 2 if x == "valence" else 1
+    if hue is not None and isinstance(data[hue].dtype, pd.CategoricalDtype):
+        data = data.copy()
+        data[hue] = data[hue].cat.codes
     for _, row in data[cols].iterrows():
         if text:
             ax.text(
-                row[x]
-                + text_xshift
-                + (0.0 if hue is None else 0.2 * (-1 + 2 * row["political"])),
+                row[x] + text_xshift + (0.0 if hue is None else 0.2 * (-1 + 2 * row[hue])),
                 row[y] + text_yshift,
                 f"{row[y]:.1%}",
                 ha="center",
@@ -89,6 +92,8 @@ def plot_frequencies(
 fig, axes = plt.subplots(ncols=7, figsize=(21, 3))
 
 target = "event"
+support = np.asarray(config.categorical[target])
+
 ax = axes[0]
 dist = data[target].value_counts(normalize=True).sort_index().reset_index()
 plot_frequencies(ax, dist, target)
@@ -104,6 +109,12 @@ for ax, (country, df) in zip(
     plot_frequencies(ax, dist, target, legend=False)
     ax.set_title(config.categorical.country[country], fontsize="xx-large")
 
+for ax in axes.flat:
+    ax.set_xticks(support - support.min(), labels=valence)
+
+fig.suptitle(
+    f"{target.capitalize()} valence", fontsize="xx-large", x=0.0, y=0.95, ha="left"
+)
 fig.tight_layout()
 fig.savefig(figpath / f"{target}-frequencies.pdf")
 
@@ -120,9 +131,19 @@ dist = pd.concat(
     },
     names=["political"],
 ).reset_index()
-plot_frequencies(ax, dist, target, hue="political")
+plot_frequencies(ax, dist, target, hue="political", legend=True)
 ax.set_title(None)
 ax.set_ylabel(None)
+legend = ax.get_legend()
+ax.legend(
+    title=None,
+    frameon=False,
+    handles=legend.legend_handles,
+    labels=[
+        "non-political" if int(h.get_label()) == 0 else "political"
+        for h in legend.legend_handles
+    ],
+)
 
 for ax, (_, df) in zip(
     axes.flatten()[1:],
@@ -139,7 +160,9 @@ for ax, (_, df) in zip(
     plot_frequencies(ax, dist, target, hue="political", legend=False)
     ax.set_title(None)
 
-fig.supxlabel(target.capitalize(), y=0.05, fontsize="xx-large")
+for ax in axes.flat:
+    ax.set_xticks(support - support.min(), labels=valence)
+
 fig.tight_layout()
 fig.savefig(figpath / f"{target}-frequencies-political.pdf")
 
@@ -148,6 +171,8 @@ fig.savefig(figpath / f"{target}-frequencies-political.pdf")
 fig, axes = plt.subplots(ncols=7, figsize=(21, 3))
 
 target = "sentiment"
+support = np.asarray(config.categorical[target])
+
 ax = axes[0]
 dist = data[target].value_counts(normalize=True).sort_index().reset_index()
 plot_frequencies(ax, dist, target)
@@ -163,6 +188,12 @@ for ax, (country, df) in zip(
     plot_frequencies(ax, dist, target, legend=False)
     ax.set_title(config.categorical.country[country], fontsize="xx-large")
 
+for ax in axes.flat:
+    ax.set_xticks(support - support.min(), labels=valence)
+
+fig.suptitle(
+    f"{target.capitalize()} valence", fontsize="xx-large", x=0.0, y=0.95, ha="left"
+)
 fig.tight_layout()
 fig.savefig(figpath / f"{target}-frequencies.pdf")
 
@@ -171,6 +202,8 @@ fig.savefig(figpath / f"{target}-frequencies.pdf")
 fig, axes = plt.subplots(ncols=7, figsize=(21, 3))
 
 target = "sentiment"
+support = np.asarray(config.categorical[target])
+
 ax = axes[0]
 dist = pd.concat(
     {
@@ -182,6 +215,16 @@ dist = pd.concat(
 plot_frequencies(ax, dist, target, hue="political")
 ax.set_title(None)
 ax.set_ylabel(None)
+legend = ax.get_legend()
+ax.legend(
+    title=None,
+    frameon=False,
+    handles=legend.legend_handles,
+    labels=[
+        "non-political" if int(h.get_label()) == 0 else "political"
+        for h in legend.legend_handles
+    ],
+)
 
 for ax, (_, df) in zip(
     axes.flatten()[1:],
@@ -198,7 +241,9 @@ for ax, (_, df) in zip(
     plot_frequencies(ax, dist, target, hue="political", legend=False)
     ax.set_title(None)
 
-fig.supxlabel(target.capitalize(), y=0.05, fontsize="xx-large")
+for ax in axes.flat:
+    ax.set_xticks(support - support.min(), labels=valence)
+
 fig.tight_layout()
 fig.savefig(figpath / f"{target}-frequencies-political.pdf")
 
@@ -207,11 +252,13 @@ fig.savefig(figpath / f"{target}-frequencies-political.pdf")
 fig, axes = plt.subplots(ncols=7, figsize=(21, 3))
 
 target = "valence"
+support = np.asarray(config.categorical[target])
+
 ax = axes[0]
 dist = data[target].value_counts(normalize=True).sort_index().reset_index()
 plot_frequencies(ax, dist, target)
 ax.set_title("Overall")
-ax.set_ylabel("Frequency")
+ax.set_ylabel(None)
 
 for ax, (country, df) in zip(
     axes.flatten()[1:],
@@ -222,6 +269,10 @@ for ax, (country, df) in zip(
     plot_frequencies(ax, dist, target, legend=False)
     ax.set_title(config.categorical.country[country])
 
+for ax in axes.flat:
+    ax.set_xticks(support - support.min())
+
+fig.suptitle("Combined valence", fontsize="xx-large", x=0.0, y=0.95, ha="left")
 fig.tight_layout()
 fig.savefig(figpath / f"{target}-frequencies.pdf")
 
@@ -230,23 +281,89 @@ fig.savefig(figpath / f"{target}-frequencies.pdf")
 fig, axes = plt.subplots(ncols=7, figsize=(21, 3))
 
 target = "valence"
-ax = axes[0]
-dist = data[[target, "political"]].value_counts(normalize=True).sort_index().reset_index()
-plot_frequencies(ax, dist, target, hue="political")
-ax.set_title("Overall")
-ax.set_ylabel("Frequency")
+support = np.asarray(config.categorical[target])
 
-for ax, (country, df) in zip(
+ax = axes[0]
+dist = pd.concat(
+    {
+        pol: data.query(f"political == {pol}")[[target]].value_counts(normalize=True)
+        for pol in [0, 1]
+    },
+    names=["political"],
+).reset_index()
+plot_frequencies(ax, dist, target, hue="political")
+ax.set_title(None)
+ax.set_ylabel(None)
+legend = ax.get_legend()
+ax.legend(
+    title=None,
+    frameon=False,
+    handles=legend.legend_handles,
+    labels=[
+        "non-political" if int(h.get_label()) == 0 else "political"
+        for h in legend.legend_handles
+    ],
+)
+
+for ax, (_, df) in zip(
     axes.flatten()[1:],
     data.groupby("country", observed=True),
     strict=True,
 ):
-    dist = df[[target, "political"]].value_counts(normalize=True).sort_index().reset_index()
+    dist = pd.concat(
+        {
+            pol: df.query(f"political == {pol}")[[target]].value_counts(normalize=True)
+            for pol in [0, 1]
+        },
+        names=["political"],
+    ).reset_index()
     plot_frequencies(ax, dist, target, hue="political", legend=False)
-    ax.set_title(config.categorical.country[country])
+    ax.set_title(None)
+
+for ax in axes.flat:
+    ax.set_xticks(support - support.min())
 
 fig.tight_layout()
 fig.savefig(figpath / f"{target}-frequencies-political.pdf")
+
+# %% ---------------------------------------------------------------------------------
+
+for by in ["quality", "ideology"]:
+    df = (
+        data.groupby(["country", "political", by], observed=True)["valence"]
+        .value_counts(normalize=True)
+        .sort_index()
+        .reset_index(name="proportion")
+    )
+
+    nrows = df["political"].nunique()
+    ncols = len(config.categorical.country)
+
+    fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=(ncols * 3, nrows * 3))
+
+    for ax, ((political, country), gdf) in zip(
+        axes.flat,
+        df.groupby(["political", "country"], observed=True),
+        strict=True,
+    ):
+        plot_frequencies(
+            ax,
+            gdf,
+            x="valence",
+            y="proportion",
+            hue=by,
+            palette=config.plotting.color[by],
+            text_xshift=0.2,
+            text_yshift=0.02,
+            fontsize="x-small",
+            legend=ax is axes.flatten()[0],
+            text=False,
+        )
+        pol = "political" if political == 1 else "non-political"
+        ax.set_title(f"{config.categorical.country[country]} | {pol}")
+
+    fig.tight_layout()
+    fig.savefig(figpath / f"valence-frequencies-by-{by}.pdf")
 
 # %% Event latent valence ------------------------------------------------------------
 
@@ -384,130 +501,5 @@ ax.set_ylabel(None)
 fig.tight_layout()
 fig.supxlabel(f"Expected {target}", y=-0.05)
 fig.savefig(figpath / f"{target}-expected.pdf")
-
-# %% ---------------------------------------------------------------------------------
-
-for by in ["quality", "ideology"]:
-    fig, axes = plt.subplots(ncols=2, figsize=(7, 3))
-    for ax, target in zip(axes, biases, strict=True):
-        sns.boxplot(
-            data,
-            x=by,
-            y=f"{target}_latent",
-            hue="political",
-            ax=ax,
-            palette=config.plotting.color.political,
-            legend=ax is axes.flatten()[0],
-        )
-        ax.set_xlabel(None)
-        ax.set_ylabel(None)
-        ax.set_title(target.capitalize())
-
-    # Add custom legend
-    ax = axes.flatten()[0]
-    handles, labels = ax.get_legend_handles_labels()
-    ax.get_legend().remove()
-    fig.legend(
-        handles,
-        ["non-political", "political"],
-        title=None,
-        loc="lower left",
-        ncols=2,
-        frameon=False,
-        bbox_to_anchor=(0.06, 0.02),
-    )
-
-    fig.supxlabel(f"Outlet {by}", y=0.05)
-    fig.tight_layout()
-    fig.savefig(figpath / f"valence-latent-by-{by}.pdf")
-
-# %% Event and sentiment valence by quality ------------------------------------------
-
-# fig, axes = plt.subplot_mosaic(
-#     """
-#     AAABBCC
-#     AAADDEE
-#     AAAFFGG
-#     """,
-#     figsize=(12, 5),
-# )
-
-# ax = axes["A"]
-# sns.kdeplot(
-#     data,
-#     x="event_latent",
-#     y="sentiment_latent",
-#     hue="political",
-#     ax=ax,
-#     palette=config.plotting.color.political,
-#     alpha=0.7,
-#     fill=True,
-# )
-# for target, thresholds in biases.items():
-#     for threshold in thresholds:
-#         if target == "event":
-#             ax.axvline(threshold, color="black", linestyle="--", linewidth=1)
-#         elif target == "sentiment":
-#             ax.axhline(threshold, color="black", linestyle="--", linewidth=1)
-# ax.set_xlabel("Event latent valence")
-# ax.set_ylabel("Sentiment latent valence")
-
-# for keys, target in zip(batched(list(axes)[1:], 2), [*biases, "valence"], strict=True):
-#     for key, split in zip(keys, ["quality", "ideology"], strict=True):
-#         ax = axes[key]
-#         y = target + ("_expected" if target == "valence" else "_latent")
-#         sns.boxplot(
-#             data,
-#             x=split,
-#             y=y,
-#             hue="political",
-#             ax=ax,
-#             palette=config.plotting.color.political,
-#             legend=False,
-#         )
-#         ax.set_title(target.capitalize() if target != "valence" else "Expected valence")
-#         ax.set_ylabel(None)
-#         if key == "F":
-#             ax.set_xlabel("Outlet quality")
-#         elif key == "G":
-#             ax.set_xlabel("Outlet ideology")
-#         else:
-#             ax.set_xlabel(None)
-#             ax.tick_params(axis="x", bottom=False, labelbottom=False)
-
-# fig.tight_layout()
-# fig.savefig(figpath / "event-sentiment-valence-by-quality.pdf")
-
-
-# %% Spearman correlations between valence dimensions by outlet ----------------------
-
-for x in ["quality", "ideology"]:
-    Rho = (
-        data.groupby(["country", x, "name", "political"], observed=True)
-        .apply(
-            lambda df: (
-                df[[f"{t}_latent" for t in biases]].corr(method="spearman").iloc[0, 1]
-            ),
-            include_groups=False,
-        )
-        .reset_index(name="rho")
-    )
-
-    fig, ax = plt.subplots()
-    sns.boxplot(
-        Rho,
-        x=x,
-        y="rho",
-        hue="political",
-        ax=ax,
-        palette=config.plotting.color.political,
-        legend=True,
-    )
-    ax.legend(loc="lower right", title="political")
-    ax.set_ylim(0, 1)
-    ax.set_xlabel(None)
-    ax.set_ylabel("Spearman correlation")
-    fig.tight_layout()
-    fig.savefig(figpath / f"outlet-valence-rho-by-{x}.pdf")
 
 # %% ---------------------------------------------------------------------------------

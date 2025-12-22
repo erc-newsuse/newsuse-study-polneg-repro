@@ -5,11 +5,12 @@ import os
 import arviz as az
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import seaborn as sns
 import xarray as xr
 from newsuse.data import DataFrame
 
 from project import config, paths
-from project.bayes import index_idata, rebuild_model
+from project.bayes import index_idata
 
 xr.set_options(**config.xarray)
 az.rcParams.update(config.arviz)
@@ -40,12 +41,21 @@ terms_fixed = [t for t in idata.posterior.data_vars if "|" not in t]
 
 # %% ---------------------------------------------------------------------------------
 
-model = rebuild_model(idata)
+stats = az.summary(idata)
+stats.describe()
 
 # %% ---------------------------------------------------------------------------------
 
-stats = az.summary(idata)
-stats.describe()
+fig, ax = plt.subplots(figsize=(5, 21))
+bad = stats.query("r_hat > 1.01").sort_values("r_hat", ascending=False)
+sns.scatterplot(
+    data=bad.reset_index(),
+    x="r_hat",
+    y="index",
+    ax=ax,
+)
+ax.set_xlabel(r"$\hat{r}$")
+
 
 # %% ---------------------------------------------------------------------------------
 

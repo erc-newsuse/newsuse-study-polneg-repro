@@ -109,13 +109,20 @@ glmm:
           - outlet
           - year
           - month
-      formula: >
-        {target} ~ 0
-          + political * country + weekend
-          + (1 + political | outlet)
-          + (1 + political | country:year:month)
+      formula:
+        base: >
+          {target} ~ 0
+            + political * country + weekend
+            + (1 + political | outlet)
+            + (1 + political | country:year:month)
+        extended: >
+          {target} ~ 1
+            + political * country * {by} + weekend
+            + (1 + political | outlet)
+            + (1 + political | country:year:month)
       model:
         family: cumulative
+        noncentered: true
       fit: &glmm_valence_fit
         <<: *glmm_fit
     targets:
@@ -145,6 +152,19 @@ glmm:
           predict:
             <<: *glmm_epred_predict
             random_seed: 777
+      valence:
+        <<: *glmm_valence_default
+        fit:
+          <<: *glmm_valence_fit
+          random_seed: 2049387
+        ppd:
+          <<: *glmm_ppd
+          random_seed: 40957
+        epred:
+          <<: *glmm_epred
+          predict:
+            <<: *glmm_epred_predict
+            random_seed: 3094857
   engagement:
     default: &glmm_engagement_default
       <<: *glmm_defaults

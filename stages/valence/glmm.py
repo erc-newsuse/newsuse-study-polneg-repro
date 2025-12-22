@@ -21,7 +21,13 @@ az.rcParams.update(config.arviz)
 target = os.environ.get("TARGET")
 if target is None:
     target = input("Enter target name (event): ").strip() or "event"
+by = os.environ.get("BY")
+if by is None:
+    by = input("Enter grouping variable: ").strip() or ""
+by = by.removeprefix("-")
+
 opts = config.glmm.valence.targets[target]
+support = np.asarray([*config.categorical[target]])
 
 dirpath = paths.glmm / "valence"
 dirpath.mkdir(parents=True, exist_ok=True)
@@ -42,7 +48,7 @@ data = (
                 ordered=True,
             )
         },
-    )[["key", target, *opts.predictors.fixed, *opts.predictors.groups]]
+    )[["key", target, *opts.predictors.fixed, *(by or ()), *opts.predictors.groups]]
     .convert_dtypes(dtype_backend="numpy_nullable")
 )
 
@@ -58,8 +64,12 @@ else:
 # %% ---------------------------------------------------------------------------------
 
 print(f"Building GLMM for '{target}' using 'bambi'...")
+if by:
+    formula = opts.formula.extended.format(target=target, by=by)
+else:
+    formula = opts.formula.base.format(target=target)
 model = bmb.Model(
-    formula=opts.formula.format(target=target).strip().replace("\n", " "),
+    formula=formula.strip().replace("\n", " "),
     data=model_data,
     **opts.model,
 )
@@ -100,7 +110,7 @@ ppd = (
         {n: ("__obs__", c.to_numpy()) for n, c in model.data.items() if n != target}
     )
 )
-ppd[target].values -= 1
+ppd[target].values += min(support)  # adjust for 0-indexing
 
 idata.add_groups(**{group: ppd})
 
@@ -201,6 +211,7 @@ store_model_metadata(
 # %% ---------------------------------------------------------------------------------
 
 print("Saving model inference data as NetCDF file...")
-idata.to_netcdf(dirpath / f"{target}.nc")
+name = f"{target}.nc" if not by else f"{target}-{by}.nc"
+idata.to_netcdf(dirpath / name)
 
 # %% ---------------------------------------------------------------------------------
