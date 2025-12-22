@@ -32,6 +32,9 @@ support = np.asarray([*config.categorical[target]])
 dirpath = paths.glmm / "valence"
 dirpath.mkdir(parents=True, exist_ok=True)
 
+predictors_fixed = [*opts.predictors.fixed, *([by] if by else [])]
+predictors_groups = [*opts.predictors.groups]
+
 # %% ---------------------------------------------------------------------------------
 
 data = (
@@ -48,7 +51,8 @@ data = (
                 ordered=True,
             )
         },
-    )[["key", target, *opts.predictors.fixed, *(by or ()), *opts.predictors.groups]]
+    )[["key", target, *predictors_fixed, *predictors_groups]]
+    .dropna(ignore_index=True)
     .convert_dtypes(dtype_backend="numpy_nullable")
 )
 
@@ -68,8 +72,10 @@ if by:
     formula = opts.formula.extended.format(target=target, by=by)
 else:
     formula = opts.formula.base.format(target=target)
+formula = formula.replace("\n", " ").strip()
+
 model = bmb.Model(
-    formula=formula.strip().replace("\n", " "),
+    formula=formula,
     data=model_data,
     **opts.model,
 )
@@ -120,7 +126,7 @@ print("Prepare posterior expectations group in inference data...")
 if (group := "posterior_epred") in idata.groups():
     del idata["posterior_epred"]
 
-grid = model.data[opts.predictors.fixed].drop_duplicates(ignore_index=True)
+grid = model.data[predictors_fixed].drop_duplicates(ignore_index=True)
 grid = (
     # Make dummy values for group effects
     # to allow independent sampling of group-level effects
@@ -131,7 +137,7 @@ grid = (
         lambda df: df.assign(
             **{
                 n: str(df.name) + "_" + np.arange(len(df)).astype(str)
-                for n in opts.predictors.groups
+                for n in predictors_groups
             }
         )
     )
@@ -143,9 +149,9 @@ epred = (
     .posterior["p"]
     .assign_coords({n: ("__obs__", c.to_numpy()) for n, c in grid.items()})
     .rename({f"{target}_dim": target})
-    .groupby([*opts.predictors.fixed])
+    .groupby(predictors_fixed)
     .mean()
-    .stack(__obs__=tuple(opts.predictors.fixed))
+    .stack(__obs__=tuple(predictors_fixed))
     .transpose("chain", "draw", "__obs__", target)
     .reset_index("__obs__")
 )
@@ -203,7 +209,7 @@ print("Storing model metadata in inference data...")
 store_model_metadata(
     idata,
     model,
-    formula=opts.formula.format(target=target),
+    formula=formula,
     family=opts.model.get("family", "categorical"),
     target=target,
 )

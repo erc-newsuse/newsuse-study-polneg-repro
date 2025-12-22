@@ -1957,3 +1957,67 @@ stages:
       hash: md5
       md5: d33f4019bd6119b4d9be6d62c7ddd840
       size: 1225680910
+  valence-glmm@event-:
+    cmd:
+    - TARGET=event BY= python stages/valence/glmm.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/valence/glmm.py
+      hash: md5
+      md5: b089d8df9c6dad75dfc45d620becf827
+      size: 6936
+    params:
+      params.yaml:
+        glmm.valence.targets.event:
+          fit:
+            draws: 2000
+            tune: 2000
+            chains: 4
+            cores: 4
+            target_accept: 0.95
+            progress_bar: true
+            inference_method: nutpie
+            nuts_sampler_kwargs:
+              backend: jax
+            random_seed: 3991777
+          ppd:
+            draws: 20
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+            random_seed: 2578
+          epred:
+            samples_per_simple_effect: 100
+            predict:
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
+              random_seed: 773410
+          sample:
+            n: 100000
+            random_state: 111487
+          predictors:
+            fixed:
+            - political
+            - country
+            - weekend
+            groups:
+            - outlet
+            - year
+            - month
+          formula:
+            base: "{target} ~ 0\n  + political * country + weekend\n  + (1 + political
+              | outlet)\n  + (1 + political | country:year:month)\n"
+            extended: "{target} ~ 0\n  + political * country * {by} + weekend\n  +
+              (1 + political | outlet)\n  + (1 + political | country:year:month)\n"
+          model:
+            family: cumulative
+            noncentered: true
+    outs:
+    - path: glmm/valence/event.nc
+      hash: md5
+      md5: d949dcee7fc4ccb8e78353b62b47a9c1
+      size: 279808951

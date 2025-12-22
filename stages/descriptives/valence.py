@@ -361,6 +361,8 @@ for by in ["quality", "ideology"]:
         )
         pol = "political" if political == 1 else "non-political"
         ax.set_title(f"{config.categorical.country[country]} | {pol}")
+        if (legend := ax.get_legend()) is not None:
+            legend.set_title(None)
 
     fig.tight_layout()
     fig.savefig(figpath / f"valence-frequencies-by-{by}.pdf")
