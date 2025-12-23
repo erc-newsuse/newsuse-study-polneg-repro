@@ -12,6 +12,7 @@ __all__ = (
     "rebuild_model",
     "store_model_metadata",
     "hdi",
+    "eti",
 )
 
 DataCoordsT = Mapping[str, np.ndarray | tuple[str, np.ndarray]]
@@ -142,6 +143,14 @@ def hdi(s: pd.Series, prob: float | None = None) -> pd.Series:
         prob = az.rcParams["stats.ci_prob"]
     hdi_bounds = az.hdi(s.values, hdi_prob=prob)
     return pd.Series({"median": s.median(), "lower": hdi_bounds[0], "upper": hdi_bounds[1]})
+
+
+def eti(s: pd.Series, alpha: float = 0.95) -> pd.Series:
+    """Compute Equal-Tailed Interval (ETI) for a pandas Series."""
+    return pd.Series(
+        s.quantile([(1 - alpha) / 2, 0.5, (1 + alpha) / 2]).to_numpy(),
+        index=["lower", "median", "upper"],
+    )
 
 
 def index_idata(idata: az.InferenceData, xindex: Sequence[Hashable]) -> az.InferenceData:

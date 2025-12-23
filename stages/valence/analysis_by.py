@@ -20,7 +20,7 @@ import xarray as xr
 from scipy.special import logit
 
 from project import config, paths
-from project.bayes import hdi, index_idata
+from project.bayes import eti, index_idata
 
 xr.set_options(**config.xarray)
 az.rcParams.update(config.arviz)
@@ -72,7 +72,7 @@ probs = epred.p.to_dataframe()["p"]
 # %% Compute posterior expected class probabilities ----------------------------------
 
 # Overall (marginalized over country) by political and grouping variable
-posterior = probs.groupby(["political", by, target]).apply(hdi).unstack(-1).reset_index()
+posterior = probs.groupby(["political", by, target]).apply(eti).unstack(-1).reset_index()
 
 # %% Plot posterior expectations -----------------------------------------------------
 
@@ -135,7 +135,7 @@ odds_ratios = (
 
 posterior_or = (
     odds_ratios.groupby([by, target])
-    .apply(hdi)
+    .apply(eti)
     .unstack(-1)
     .reset_index()
     .assign(
@@ -211,7 +211,7 @@ for level in by_categories:
     )
     contrast_df = (
         contrast.groupby(target)
-        .apply(hdi)
+        .apply(eti)
         .unstack(-1)
         .reset_index()
         .assign(

@@ -19,7 +19,7 @@ import xarray as xr
 from scipy.special import logit
 
 from project import config, paths
-from project.bayes import hdi, index_idata
+from project.bayes import eti, index_idata
 
 xr.set_options(**config.xarray)
 az.rcParams.update(config.arviz)
@@ -64,10 +64,10 @@ probs = epred.p.to_dataframe()["p"]
 posterior = pd.concat(
     [
         probs.groupby(["country", "political", target])
-        .apply(hdi)
+        .apply(eti)
         .unstack(-1)
         .reset_index(),
-        probs.groupby(["political", target]).apply(hdi).unstack(-1).reset_index(),
+        probs.groupby(["political", target]).apply(eti).unstack(-1).reset_index(),
     ]
 ).fillna({"country": "overall"})
 
@@ -130,8 +130,8 @@ odds_ratios = (
 posterior_or = (
     pd.concat(
         [
-            odds_ratios.groupby(["country", target]).apply(hdi).unstack(-1).reset_index(),
-            odds_ratios.groupby(target).apply(hdi).unstack(-1).reset_index(),
+            odds_ratios.groupby(["country", target]).apply(eti).unstack(-1).reset_index(),
+            odds_ratios.groupby(target).apply(eti).unstack(-1).reset_index(),
         ]
     )
     .fillna({"country": "overall"})
@@ -195,7 +195,7 @@ country_effects = (
 
 posterior_ce = (
     country_effects.groupby(["country", "political", target])
-    .apply(hdi)
+    .apply(eti)
     .unstack(-1)
     .reset_index()
     .assign(
