@@ -5,6 +5,7 @@ import os
 import arviz as az
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import numpy as np
 import seaborn as sns
 import xarray as xr
 from newsuse.data import DataFrame
@@ -19,23 +20,32 @@ mpl.rcParams.update(config.plotting.params)
 target = os.environ.get("TARGET")
 if not target:
     target = input("Enter target (reactions): ").strip() or "reactions"
+
+by = os.environ.get("BY")
+if by is None:
+    by = input("Enter grouping variable: ").strip() or ""
+by = by.removeprefix("-")
+
 opts = config.glmm.engagement.targets[target]
 
 figpath = paths.figures / "glmm" / "engagement" / "validation" / target
 figpath.mkdir(parents=True, exist_ok=True)
 
 labels = {
-    "countries": config.categorical.country,
+    "country": config.categorical.country,
     "political": dict(enumerate(config.categorical.political)),
     "event": config.categorical.event,
     "sentiment": config.categorical.sentiment,
 }
+if by:
+    labels[by] = config.categorical[by]
 
 data = DataFrame.from_(paths.final)
 
 # %% ---------------------------------------------------------------------------------
 
-idata = az.from_netcdf(paths.glmm / "engagement" / f"{target}.nc")
+fname = f"{target}.nc" if not by else f"{target}-{by}.nc"
+idata = az.from_netcdf(paths.glmm / "engagement" / fname)
 idata = index_idata(idata, ["key", *opts.predictors.fixed, *opts.predictors.groups])
 terms_fixed = [t for t in idata.posterior.data_vars if "|" not in t]
 
@@ -148,7 +158,7 @@ fig.savefig(figpath / f"{target}-ppc.pdf")
 
 fig, axes = plt.subplots(ncols=3, nrows=2, figsize=(7, 4))
 
-for ax, country in zip(axes.flat, labels["countries"], strict=True):
+for ax, country in zip(axes.flat, labels["country"], strict=True):
     plot_ppc(idata.sel(country=country), ax=ax)
     ax.set_title(country.upper())
 
@@ -160,6 +170,28 @@ fig.tight_layout()
 fig.supxlabel(target.capitalize(), y=-0.03)
 fig.supylabel(r"$\mathbb{P}(X \leq x)$", x=-0.02)
 fig.savefig(figpath / f"{target}-ppc-by-country.pdf")
+
+# %% ---------------------------------------------------------------------------------
+
+if by:
+    fig, axes = plt.subplots(
+        ncols=(ncols := 3),
+        nrows=(nrows := int(np.ceil(len(labels[by]) / ncols))),
+        figsize=(3 * ncols, 3 * nrows),
+    )
+
+    for ax, byval in zip(axes.flat, labels[by], strict=True):
+        plot_ppc(idata.sel(**{by: byval}), ax=ax)
+
+    for ax, byval in zip(axes.flat, labels[by], strict=True):
+        ax.set_title(byval.upper())
+        ax.set_xscale("log")
+        ax.set_yscale("log")
+
+    fig.tight_layout()
+    fig.supxlabel(target.capitalize(), y=-0.03)
+    fig.supylabel(r"$\mathbb{P}(X \leq x)$", x=-0.02)
+    fig.savefig(figpath / f"{target}-ppc-by-{by}.pdf")
 
 # %% ---------------------------------------------------------------------------------
 
