@@ -115,6 +115,7 @@ def plot_ppc(
         "kind": "cumulative",
         "legend": False,
         "mean": False,
+        "num_pp_samples": 10,
         **kwargs,
     }
     az.plot_ppc(idata, ax=ax, **kwargs)

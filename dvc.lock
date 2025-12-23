@@ -2524,3 +2524,73 @@ stages:
       hash: md5
       md5: 0f8da4f362cc8fa4ba8cee6413049e5f
       size: 559706625
+  engagement-glmm@reactions-:
+    cmd:
+    - TARGET=reactions BY= python stages/engagement/glmm.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/engagement/glmm.py
+      hash: md5
+      md5: 3716851936d91452f86f576d9d2cead1
+      size: 8134
+    params:
+      params.yaml:
+        glmm.engagement.targets.reactions:
+          fit:
+            draws: 2000
+            tune: 2000
+            chains: 4
+            cores: 4
+            target_accept: 0.95
+            progress_bar: true
+            inference_method: nutpie
+            nuts_sampler_kwargs:
+              backend: jax
+            random_seed: 2042
+          ppd:
+            draws: 100
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+            random_seed: 3094857
+          epred:
+            samples_per_simple_effect: 100
+            predict:
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
+              random_seed: 4093857
+          sample:
+            n: 100000
+            random_state: 6939487
+          predictors:
+            fixed:
+            - political
+            - country
+            - event
+            - sentiment
+            groups:
+            - outlet
+            - weekend
+            - year
+            - month
+          formula:
+            base:
+            - "{target} ~ 1\n  + political * event * country + political * sentiment
+              * country\n  + (1 | outlet:weekend) + (1 | outlet:year) + (1 | month)\n"
+            - "alpha ~ country\n"
+            extended:
+            - "{target} ~ 1\n  + political * event * {by} + political * sentiment
+              * {by} + country\n  + (1 | outlet:weekend) + (1 | outlet:year) + (1
+              | month)\n"
+            - "alpha ~ country\n"
+          model:
+            family: negativebinomial
+    outs:
+    - path: glmm/engagement/reactions.nc
+      hash: md5
+      md5: d7abd204d2d7a13f23fae5ca29b5ea49
+      size: 575816849

@@ -169,27 +169,34 @@ glmm:
     default: &glmm_engagement_default
       <<: *glmm_defaults
       sample:
-        n: 500_000
+        n: 100_000
         random_state: 6939487
       predictors:
         fixed:
           - political
           - country
-          - weekend
           - event
           - sentiment
         groups:
           - outlet
+          - weekend
           - year
           - month
       formula:
+        base:
         - >
           {target} ~ 1
-            + political * event + political * sentiment + political * country
-            + weekend + month
-            + (1 | outlet) + (1 | outlet:year)
+            + political * event * country + political * sentiment * country
+            + (1 | outlet:weekend) + (1 | outlet:year) + (1 | month)
         - >
-          alpha ~ event + sentiment + political + weekend
+          alpha ~ country
+        extended:
+        - >
+          {target} ~ 1
+            + political * event * {by} + political * sentiment * {by} + country
+            + (1 | outlet:weekend) + (1 | outlet:year) + (1 | month)
+        - >
+          alpha ~ country
       model:
         family: negativebinomial
       fit: &glmm_engagement_fit

@@ -22,10 +22,18 @@ az.rcParams.update(config.arviz)
 target = os.environ.get("TARGET")
 if target is None:
     target = input("Enter target name (reactions): ").strip() or "reactions"
+by = os.environ.get("BY")
+if by is None:
+    by = input("Enter grouping variable: ").strip() or ""
+by = by.removeprefix("-")
+
 opts = config.glmm.engagement.targets[target]
 
 dirpath = paths.glmm / "engagement"
 dirpath.mkdir(parents=True, exist_ok=True)
+
+predictors_fixed = [*opts.predictors.fixed, *([by] if by else [])]
+predictors_groups = [*opts.predictors.groups]
 
 # %% ---------------------------------------------------------------------------------
 
@@ -46,14 +54,22 @@ data = (
             categories=[*config.categorical.sentiment],
             ordered=True,
         ),
-    )[
-        [
-            "key",
-            target,
-            *opts.predictors.fixed,
-            *opts.predictors.groups,
-        ]
-    ]
+        valence=lambda df: pd.Categorical(
+            df["valence"],
+            categories=[*config.categorical.valence],
+            ordered=True,
+        ),
+        quality=lambda df: pd.Categorical(
+            df["quality"],
+            categories=[*config.categorical.quality],
+            ordered=True,
+        ),
+        ideology=lambda df: pd.Categorical(
+            df["ideology"],
+            categories=[*config.categorical.ideology],
+        ),
+    )[["key", target, *predictors_fixed, *predictors_groups]]
+    .dropna(ignore_index=True)
     .convert_dtypes(dtype_backend="numpy_nullable")
 )
 
@@ -67,12 +83,15 @@ else:
 
 # %% ---------------------------------------------------------------------------------
 
-# Build formula from list of formulas (mean, dispersion, zero-inflation)
-formula_strings = [f.format(target=target).strip().replace("\n", " ") for f in opts.formula]
-formula = bmb.Formula(*formula_strings)
-
 print(f"Building GLMM for '{target}' using 'bambi'...")
-print(f"Formula: {formula}")
+formula_list = opts.formula.extended if by else opts.formula.base
+# Only the first formula (conditional mean) uses target/by interpolation
+formula_strings = [
+    formula_list[0].format(target=target, by=by).strip().replace("\n", " "),
+    *[f.strip().replace("\n", " ") for f in formula_list[1:]],
+]
+formula = bmb.Formula(*formula_strings)
+print("Model formula:", formula)
 model = bmb.Model(
     formula=formula,
     data=model_data,
@@ -126,7 +145,7 @@ if (group := "posterior_epred") in idata.groups():
     del idata["posterior_epred"]
 
 # Create grid for simple effects (fixed effects only)
-grid = model.data[opts.predictors.fixed].drop_duplicates(ignore_index=True)
+grid = model.data[predictors_fixed].drop_duplicates(ignore_index=True)
 grid = (
     # Make dummy values for group effects
     # to allow independent sampling of group-level effects
@@ -137,7 +156,7 @@ grid = (
         lambda df: df.assign(
             **{
                 n: str(df.name) + "_" + np.arange(len(df)).astype(str)
-                for n in opts.predictors.groups
+                for n in predictors_groups
             }
         )
     )
@@ -149,9 +168,9 @@ epred = (
     model.predict(idata, data=grid, inplace=False, **epred_kwargs)
     .posterior["mu"]  # For hurdle models, 'mu' is the expected value
     .assign_coords({n: ("__obs__", c.to_numpy()) for n, c in grid.items()})
-    .groupby([*opts.predictors.fixed])
+    .groupby(predictors_fixed)
     .mean()
-    .stack(__obs__=tuple(opts.predictors.fixed))
+    .stack(__obs__=tuple(predictors_fixed))
     .transpose("chain", "draw", "__obs__")
     .reset_index("__obs__")
     .dropna("__obs__")
@@ -183,19 +202,27 @@ alpha = posterior["alpha"].values  # Dispersion parameter
 # Get observed values
 y = model.data[target].to_numpy()
 
-# Negative binomial PMF: NegBin(y; mu, alpha) where variance = mu + alpha * mu^2
-# Using scipy parameterization: n = 1/alpha, p = n/(n + mu)
-nb_n = 1.0 / alpha  # Number of successes
-nb_p = nb_n / (nb_n + mu)  # Success probability
+# Negative binomial PMF using PyMC/Bambi parameterization:
+# Mean = mu, Variance = mu + mu^2/alpha
+# PMF: binom(x + alpha - 1, x) * (alpha/(mu+alpha))^alpha * (mu/(mu+alpha))^x
+# where n = alpha (not 1/alpha), p = alpha/(mu+alpha)
 
 
-def negbin_logpmf(y, n, p):
-    """Log PMF of negative binomial distribution."""
-    return gammaln(y + n) - gammaln(y + 1) - gammaln(n) + n * np.log(p) + y * np.log(1 - p)
+def negbin_logpmf(y, mu, alpha):
+    """Log PMF of negative binomial distribution (PyMC parameterization)."""
+    p = alpha / (mu + alpha)  # Success probability
+    q = mu / (mu + alpha)  # Failure probability (1 - p)
+    return (
+        gammaln(y + alpha)
+        - gammaln(y + 1)
+        - gammaln(alpha)
+        + alpha * np.log(p)
+        + y * np.log(q)
+    )
 
 
 # Compute log-likelihood for all observations
-loglik_vals = negbin_logpmf(y, nb_n, nb_p)
+loglik_vals = negbin_logpmf(y, mu, alpha)
 
 loglik = xr.DataArray(
     loglik_vals,
@@ -226,6 +253,7 @@ store_model_metadata(
 # %% ---------------------------------------------------------------------------------
 
 print("Saving model inference data as NetCDF file...")
-idata.to_netcdf(dirpath / f"{target}.nc")
+name = f"{target}.nc" if not by else f"{target}-{by}.nc"
+idata.to_netcdf(dirpath / name)
 
 # %% ---------------------------------------------------------------------------------

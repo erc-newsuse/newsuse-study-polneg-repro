@@ -36,7 +36,6 @@ data = DataFrame.from_(paths.final).assign(
     quality=lambda df: pd.Categorical(df["quality"], categories=quality, ordered=True),
     ideology=lambda df: pd.Categorical(df["ideology"], categories=ideology),
 )
-# data = data.sample(10**5, random_state=17)
 
 # %% ---------------------------------------------------------------------------------
 
