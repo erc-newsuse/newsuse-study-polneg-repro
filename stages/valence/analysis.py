@@ -111,7 +111,12 @@ handles = [
     )
 ]
 ax.legend(handles=handles, fontsize="large", title_fontsize="x-large", frameon=False)
-fig.suptitle(f"{target.capitalize()} valence", fontsize="xx-large", x=0.00, ha="left")
+fig.suptitle(
+    f"{('overall' if target == 'valence' else target).capitalize()} valence",
+    fontsize="xx-large",
+    x=0.00,
+    ha="left",
+)
 fig.tight_layout()
 fig.savefig(figpath / "posterior-expectations.pdf")
 
