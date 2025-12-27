@@ -6,7 +6,6 @@ import arviz as az
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
-import seaborn as sns
 import xarray as xr
 from newsuse.data import DataFrame
 
@@ -47,7 +46,7 @@ data = DataFrame.from_(paths.final)
 fname = f"{target}.nc" if not by else f"{target}-{by}.nc"
 idata = az.from_netcdf(paths.glmm / "engagement" / fname)
 idata = index_idata(idata, ["key", *opts.predictors.fixed, *opts.predictors.groups])
-terms_fixed = [t for t in idata.posterior.data_vars if "|" not in t]
+terms_fixed = sorted([t for t in idata.posterior.data_vars if "|" not in t])
 
 # %% ---------------------------------------------------------------------------------
 
@@ -56,15 +55,11 @@ stats.describe()
 
 # %% ---------------------------------------------------------------------------------
 
-fig, ax = plt.subplots(figsize=(5, 21))
-bad = stats.query("r_hat > 1.01").sort_values("r_hat", ascending=False)
-sns.scatterplot(
-    data=bad.reset_index(),
-    x="r_hat",
-    y="index",
-    ax=ax,
+bad = stats.query("(r_hat > 1.01) | (ess_bulk < 400) | (ess_tail < 400)").sort_values(
+    "r_hat", ascending=False
 )
-ax.set_xlabel(r"$\hat{r}$")
+if (n := len(bad)) > 0:
+    bad.head(n)
 
 # %% ---------------------------------------------------------------------------------
 

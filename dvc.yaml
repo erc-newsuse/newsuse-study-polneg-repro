@@ -184,8 +184,8 @@ stages:
 
   valence-glmm:
     matrix:
-      target: ["event", "sentiment", "valence"]
       by: ["", "-quality", "-ideology"]
+      target: ["event", "sentiment", "valence"]
     cmd:
     - TARGET=${item.target} BY=${item.by} python stages/valence/glmm.py
     params:
@@ -217,8 +217,8 @@ stages:
 
   engagement-glmm:
     matrix:
-      target: ["reactions", "comments", "shares"]
       by: ["", "-quality", "-ideology"]
+      target: ["reactions", "comments", "shares"]
     cmd:
     - TARGET=${item.target} BY=${item.by} python stages/engagement/glmm.py
     params:

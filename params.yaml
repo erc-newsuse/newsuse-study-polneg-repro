@@ -79,7 +79,7 @@ glmm:
       tune: 2000
       chains: 4
       cores: 4
-      target_accept: 0.95
+      target_accept: 0.99
       progress_bar: true
       inference_method: nutpie
       nuts_sampler_kwargs:
@@ -99,7 +99,7 @@ glmm:
     default: &glmm_valence_default
       <<: *glmm_defaults
       sample:
-        n: 100_000
+        n: 250_000
         random_state: 111487
       predictors:
         fixed:
@@ -186,6 +186,7 @@ glmm:
         base:
         - >
           {target} ~ 1
+            + event * sentiment
             + political * event * country + political * sentiment * country
             + (1 | outlet:weekend) + (1 | outlet:year) + (1 | month)
         - >
@@ -193,6 +194,7 @@ glmm:
         extended:
         - >
           {target} ~ 1
+            + event * sentiment
             + political * event * {by} + political * sentiment * {by} + country
             + (1 | outlet:weekend) + (1 | outlet:year) + (1 | month)
         - >
