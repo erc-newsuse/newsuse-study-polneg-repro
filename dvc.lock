@@ -3154,3 +3154,642 @@ stages:
       hash: md5
       md5: 8aa9860d0b3aa13586bad775fecf6e8f
       size: 561144666
+  engagement-glmm@-reactions:
+    cmd:
+    - TARGET=reactions BY= python stages/engagement/glmm.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/engagement/glmm.py
+      hash: md5
+      md5: ddd4d6be877f61253af7d7f956289f84
+      size: 8021
+    params:
+      params.yaml:
+        glmm.engagement.targets.reactions:
+          fit:
+            draws: 2000
+            tune: 2000
+            chains: 4
+            cores: 4
+            target_accept: 0.99
+            progress_bar: true
+            inference_method: nutpie
+            nuts_sampler_kwargs:
+              backend: jax
+            random_seed: 2042
+          ppd:
+            draws: 100
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+            random_seed: 3094857
+          epred:
+            samples_per_simple_effect: 100
+            predict:
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
+              random_seed: 4093857
+          sample:
+            n: 100000
+            random_state: 6939487
+          predictors:
+            fixed:
+            - political
+            - country
+            - event
+            - sentiment
+            groups:
+            - outlet
+            - weekend
+            - year
+            - month
+          formula:
+            base:
+            - "{target} ~ 1\n  + event * sentiment\n  + political * event * country
+              + political * sentiment * country\n  + (1 | outlet:weekend) + (1 | outlet:year)
+              + (1 | month)\n"
+            - "alpha ~ country\n"
+            extended:
+            - "{target} ~ 1\n  + event * sentiment\n  + political * event * {by} +
+              political * sentiment * {by} + country\n  + (1 | outlet:weekend) + (1
+              | outlet:year) + (1 | month)\n"
+            - "alpha ~ country\n"
+          model:
+            family: negativebinomial
+    outs:
+    - path: glmm/engagement/reactions.nc
+      hash: md5
+      md5: 4044afac2132eb63ee7eb42b442fb340
+      size: 576489245
+  engagement-glmm@-comments:
+    cmd:
+    - TARGET=comments BY= python stages/engagement/glmm.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/engagement/glmm.py
+      hash: md5
+      md5: 185a1a4df124ac87f1462293e81ed6b9
+      size: 8326
+    params:
+      params.yaml:
+        glmm.engagement.targets.comments:
+          fit:
+            draws: 2000
+            tune: 2000
+            chains: 4
+            cores: 4
+            target_accept: 0.99
+            progress_bar: true
+            inference_method: nutpie
+            nuts_sampler_kwargs:
+              backend: jax
+            random_seed: 30912
+          ppd:
+            draws: 100
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+            random_seed: 409
+          epred:
+            samples_per_simple_effect: 100
+            predict:
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
+              random_seed: 20394447
+          sample:
+            n: 100000
+            random_state: 6939487
+          predictors:
+            fixed:
+            - political
+            - country
+            - event
+            - sentiment
+            groups:
+            - outlet
+            - weekend
+            - year
+            - month
+          formula:
+            base:
+            - "{target} ~ 1\n  + event * sentiment\n  + political * event * country
+              + political * sentiment * country\n  + (1 | outlet:weekend) + (1 | outlet:year)
+              + (1 | month)\n"
+            - "alpha ~ country\n"
+            extended:
+            - "{target} ~ 1\n  + event * sentiment\n  + political * event * {by} +
+              political * sentiment * {by} + country\n  + (1 | outlet:weekend) + (1
+              | outlet:year) + (1 | month)\n"
+            - "alpha ~ country\n"
+          model:
+            family: negativebinomial
+    outs:
+    - path: glmm/engagement/comments.nc
+      hash: md5
+      md5: 186a8e217f79701a98831cbaf96c2753
+      size: 564730541
+  engagement-glmm@-shares:
+    cmd:
+    - TARGET=shares BY= python stages/engagement/glmm.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/engagement/glmm.py
+      hash: md5
+      md5: 185a1a4df124ac87f1462293e81ed6b9
+      size: 8326
+    params:
+      params.yaml:
+        glmm.engagement.targets.shares:
+          fit:
+            draws: 2000
+            tune: 2000
+            chains: 4
+            cores: 4
+            target_accept: 0.99
+            progress_bar: true
+            inference_method: nutpie
+            nuts_sampler_kwargs:
+              backend: jax
+            random_seed: 40918
+          ppd:
+            draws: 100
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+            random_seed: 51447
+          epred:
+            samples_per_simple_effect: 100
+            predict:
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
+              random_seed: 676447
+          sample:
+            n: 100000
+            random_state: 6939487
+          predictors:
+            fixed:
+            - political
+            - country
+            - event
+            - sentiment
+            groups:
+            - outlet
+            - weekend
+            - year
+            - month
+          formula:
+            base:
+            - "{target} ~ 1\n  + event * sentiment\n  + political * event * country
+              + political * sentiment * country\n  + (1 | outlet:weekend) + (1 | outlet:year)
+              + (1 | month)\n"
+            - "alpha ~ country\n"
+            extended:
+            - "{target} ~ 1\n  + event * sentiment\n  + political * event * {by} +
+              political * sentiment * {by} + country\n  + (1 | outlet:weekend) + (1
+              | outlet:year) + (1 | month)\n"
+            - "alpha ~ country\n"
+          model:
+            family: negativebinomial
+    outs:
+    - path: glmm/engagement/shares.nc
+      hash: md5
+      md5: 71b8ea48a52d56153e67df8754e5d906
+      size: 554451521
+  engagement-glmm@-quality-reactions:
+    cmd:
+    - TARGET=reactions BY=-quality python stages/engagement/glmm.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/engagement/glmm.py
+      hash: md5
+      md5: 185a1a4df124ac87f1462293e81ed6b9
+      size: 8326
+    params:
+      params.yaml:
+        glmm.engagement.targets.reactions:
+          fit:
+            draws: 2000
+            tune: 2000
+            chains: 4
+            cores: 4
+            target_accept: 0.99
+            progress_bar: true
+            inference_method: nutpie
+            nuts_sampler_kwargs:
+              backend: jax
+            random_seed: 2042
+          ppd:
+            draws: 100
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+            random_seed: 3094857
+          epred:
+            samples_per_simple_effect: 100
+            predict:
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
+              random_seed: 4093857
+          sample:
+            n: 100000
+            random_state: 6939487
+          predictors:
+            fixed:
+            - political
+            - country
+            - event
+            - sentiment
+            groups:
+            - outlet
+            - weekend
+            - year
+            - month
+          formula:
+            base:
+            - "{target} ~ 1\n  + event * sentiment\n  + political * event * country
+              + political * sentiment * country\n  + (1 | outlet:weekend) + (1 | outlet:year)
+              + (1 | month)\n"
+            - "alpha ~ country\n"
+            extended:
+            - "{target} ~ 1\n  + event * sentiment\n  + political * event * {by} +
+              political * sentiment * {by} + country\n  + (1 | outlet:weekend) + (1
+              | outlet:year) + (1 | month)\n"
+            - "alpha ~ country\n"
+          model:
+            family: negativebinomial
+    outs:
+    - path: glmm/engagement/reactions-quality.nc
+      hash: md5
+      md5: dc7a2696d97c515d84a4c896b3cb205c
+      size: 583273007
+  engagement-glmm@-quality-comments:
+    cmd:
+    - TARGET=comments BY=-quality python stages/engagement/glmm.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/engagement/glmm.py
+      hash: md5
+      md5: 185a1a4df124ac87f1462293e81ed6b9
+      size: 8326
+    params:
+      params.yaml:
+        glmm.engagement.targets.comments:
+          fit:
+            draws: 2000
+            tune: 2000
+            chains: 4
+            cores: 4
+            target_accept: 0.99
+            progress_bar: true
+            inference_method: nutpie
+            nuts_sampler_kwargs:
+              backend: jax
+            random_seed: 30912
+          ppd:
+            draws: 100
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+            random_seed: 409
+          epred:
+            samples_per_simple_effect: 100
+            predict:
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
+              random_seed: 20394447
+          sample:
+            n: 100000
+            random_state: 6939487
+          predictors:
+            fixed:
+            - political
+            - country
+            - event
+            - sentiment
+            groups:
+            - outlet
+            - weekend
+            - year
+            - month
+          formula:
+            base:
+            - "{target} ~ 1\n  + event * sentiment\n  + political * event * country
+              + political * sentiment * country\n  + (1 | outlet:weekend) + (1 | outlet:year)
+              + (1 | month)\n"
+            - "alpha ~ country\n"
+            extended:
+            - "{target} ~ 1\n  + event * sentiment\n  + political * event * {by} +
+              political * sentiment * {by} + country\n  + (1 | outlet:weekend) + (1
+              | outlet:year) + (1 | month)\n"
+            - "alpha ~ country\n"
+          model:
+            family: negativebinomial
+    outs:
+    - path: glmm/engagement/comments-quality.nc
+      hash: md5
+      md5: fc3472cd6aacb6f4ef74d687b7e4349d
+      size: 571581377
+  engagement-glmm@-quality-shares:
+    cmd:
+    - TARGET=shares BY=-quality python stages/engagement/glmm.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/engagement/glmm.py
+      hash: md5
+      md5: 185a1a4df124ac87f1462293e81ed6b9
+      size: 8326
+    params:
+      params.yaml:
+        glmm.engagement.targets.shares:
+          fit:
+            draws: 2000
+            tune: 2000
+            chains: 4
+            cores: 4
+            target_accept: 0.99
+            progress_bar: true
+            inference_method: nutpie
+            nuts_sampler_kwargs:
+              backend: jax
+            random_seed: 40918
+          ppd:
+            draws: 100
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+            random_seed: 51447
+          epred:
+            samples_per_simple_effect: 100
+            predict:
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
+              random_seed: 676447
+          sample:
+            n: 100000
+            random_state: 6939487
+          predictors:
+            fixed:
+            - political
+            - country
+            - event
+            - sentiment
+            groups:
+            - outlet
+            - weekend
+            - year
+            - month
+          formula:
+            base:
+            - "{target} ~ 1\n  + event * sentiment\n  + political * event * country
+              + political * sentiment * country\n  + (1 | outlet:weekend) + (1 | outlet:year)
+              + (1 | month)\n"
+            - "alpha ~ country\n"
+            extended:
+            - "{target} ~ 1\n  + event * sentiment\n  + political * event * {by} +
+              political * sentiment * {by} + country\n  + (1 | outlet:weekend) + (1
+              | outlet:year) + (1 | month)\n"
+            - "alpha ~ country\n"
+          model:
+            family: negativebinomial
+    outs:
+    - path: glmm/engagement/shares-quality.nc
+      hash: md5
+      md5: 5030ce2515921391d414ae8c62f7373d
+      size: 561622529
+  engagement-glmm@-ideology-reactions:
+    cmd:
+    - TARGET=reactions BY=-ideology python stages/engagement/glmm.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/engagement/glmm.py
+      hash: md5
+      md5: 185a1a4df124ac87f1462293e81ed6b9
+      size: 8326
+    params:
+      params.yaml:
+        glmm.engagement.targets.reactions:
+          fit:
+            draws: 2000
+            tune: 2000
+            chains: 4
+            cores: 4
+            target_accept: 0.99
+            progress_bar: true
+            inference_method: nutpie
+            nuts_sampler_kwargs:
+              backend: jax
+            random_seed: 2042
+          ppd:
+            draws: 100
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+            random_seed: 3094857
+          epred:
+            samples_per_simple_effect: 100
+            predict:
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
+              random_seed: 4093857
+          sample:
+            n: 100000
+            random_state: 6939487
+          predictors:
+            fixed:
+            - political
+            - country
+            - event
+            - sentiment
+            groups:
+            - outlet
+            - weekend
+            - year
+            - month
+          formula:
+            base:
+            - "{target} ~ 1\n  + event * sentiment\n  + political * event * country
+              + political * sentiment * country\n  + (1 | outlet:weekend) + (1 | outlet:year)
+              + (1 | month)\n"
+            - "alpha ~ country\n"
+            extended:
+            - "{target} ~ 1\n  + event * sentiment\n  + political * event * {by} +
+              political * sentiment * {by} + country\n  + (1 | outlet:weekend) + (1
+              | outlet:year) + (1 | month)\n"
+            - "alpha ~ country\n"
+          model:
+            family: negativebinomial
+    outs:
+    - path: glmm/engagement/reactions-ideology.nc
+      hash: md5
+      md5: 0b7d02b4825b493e4c7a9dbb83e3056e
+      size: 583286026
+  engagement-glmm@-ideology-comments:
+    cmd:
+    - TARGET=comments BY=-ideology python stages/engagement/glmm.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/engagement/glmm.py
+      hash: md5
+      md5: 185a1a4df124ac87f1462293e81ed6b9
+      size: 8326
+    params:
+      params.yaml:
+        glmm.engagement.targets.comments:
+          fit:
+            draws: 2000
+            tune: 2000
+            chains: 4
+            cores: 4
+            target_accept: 0.99
+            progress_bar: true
+            inference_method: nutpie
+            nuts_sampler_kwargs:
+              backend: jax
+            random_seed: 30912
+          ppd:
+            draws: 100
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+            random_seed: 409
+          epred:
+            samples_per_simple_effect: 100
+            predict:
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
+              random_seed: 20394447
+          sample:
+            n: 100000
+            random_state: 6939487
+          predictors:
+            fixed:
+            - political
+            - country
+            - event
+            - sentiment
+            groups:
+            - outlet
+            - weekend
+            - year
+            - month
+          formula:
+            base:
+            - "{target} ~ 1\n  + event * sentiment\n  + political * event * country
+              + political * sentiment * country\n  + (1 | outlet:weekend) + (1 | outlet:year)
+              + (1 | month)\n"
+            - "alpha ~ country\n"
+            extended:
+            - "{target} ~ 1\n  + event * sentiment\n  + political * event * {by} +
+              political * sentiment * {by} + country\n  + (1 | outlet:weekend) + (1
+              | outlet:year) + (1 | month)\n"
+            - "alpha ~ country\n"
+          model:
+            family: negativebinomial
+    outs:
+    - path: glmm/engagement/comments-ideology.nc
+      hash: md5
+      md5: 0fb280ceebe357dc3ff32121c969f60a
+      size: 571570643
+  engagement-glmm@-ideology-shares:
+    cmd:
+    - TARGET=shares BY=-ideology python stages/engagement/glmm.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/engagement/glmm.py
+      hash: md5
+      md5: 185a1a4df124ac87f1462293e81ed6b9
+      size: 8326
+    params:
+      params.yaml:
+        glmm.engagement.targets.shares:
+          fit:
+            draws: 2000
+            tune: 2000
+            chains: 4
+            cores: 4
+            target_accept: 0.99
+            progress_bar: true
+            inference_method: nutpie
+            nuts_sampler_kwargs:
+              backend: jax
+            random_seed: 40918
+          ppd:
+            draws: 100
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+            random_seed: 51447
+          epred:
+            samples_per_simple_effect: 100
+            predict:
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
+              random_seed: 676447
+          sample:
+            n: 100000
+            random_state: 6939487
+          predictors:
+            fixed:
+            - political
+            - country
+            - event
+            - sentiment
+            groups:
+            - outlet
+            - weekend
+            - year
+            - month
+          formula:
+            base:
+            - "{target} ~ 1\n  + event * sentiment\n  + political * event * country
+              + political * sentiment * country\n  + (1 | outlet:weekend) + (1 | outlet:year)
+              + (1 | month)\n"
+            - "alpha ~ country\n"
+            extended:
+            - "{target} ~ 1\n  + event * sentiment\n  + political * event * {by} +
+              political * sentiment * {by} + country\n  + (1 | outlet:weekend) + (1
+              | outlet:year) + (1 | month)\n"
+            - "alpha ~ country\n"
+          model:
+            family: negativebinomial
+    outs:
+    - path: glmm/engagement/shares-ideology.nc
+      hash: md5
+      md5: cadcf5eb315278a74be032500f8d3be7
+      size: 561592008

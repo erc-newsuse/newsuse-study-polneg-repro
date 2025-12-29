@@ -1,5 +1,6 @@
 import json
 from collections.abc import Hashable, Mapping, Sequence
+from typing import Any
 
 import arviz as az
 import bambi as bmb
@@ -145,11 +146,19 @@ def hdi(s: pd.Series, prob: float | None = None) -> pd.Series:
     return pd.Series({"median": s.median(), "lower": hdi_bounds[0], "upper": hdi_bounds[1]})
 
 
-def eti(s: pd.Series, alpha: float = 0.95) -> pd.Series:
+def eti(
+    s: pd.Series,
+    *,
+    alpha: float | None = None,
+    method: str = "inverted_cdf",
+    **kwargs: Any,
+) -> pd.Series:
     """Compute Equal-Tailed Interval (ETI) for a pandas Series."""
+    if alpha is None:
+        alpha = float(1 - az.rcParams["stats.ci_prob"])
     return pd.Series(
-        s.quantile([(1 - alpha) / 2, 0.5, (1 + alpha) / 2]).to_numpy(),
-        index=["lower", "median", "upper"],
+        np.quantile(s, [0.5, alpha / 2, 1 - alpha / 2], method=method, **kwargs),
+        index=["median", "lower", "upper"],
     )
 
 

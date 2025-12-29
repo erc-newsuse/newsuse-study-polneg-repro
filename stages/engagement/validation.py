@@ -27,7 +27,7 @@ by = by.removeprefix("-")
 
 opts = config.glmm.engagement.targets[target]
 
-figpath = paths.figures / "glmm" / "engagement" / "validation" / target
+figpath = paths.figures / "engagement" / "validation" / target
 figpath.mkdir(parents=True, exist_ok=True)
 
 labels = {

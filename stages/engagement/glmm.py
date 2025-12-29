@@ -144,29 +144,18 @@ print("Prepare posterior expectations group in inference data...")
 if (group := "posterior_epred") in idata.groups():
     del idata["posterior_epred"]
 
-# Create grid for simple effects (fixed effects only)
-grid = model.data[predictors_fixed].drop_duplicates(ignore_index=True)
+# Create grid for simple effects
 grid = (
-    # Make dummy values for group effects
-    # to allow independent sampling of group-level effects
-    # for proper marginalization
-    grid.loc[grid.index.repeat(opts.epred.samples_per_simple_effect)]
-    .groupby(level=0)
-    .apply(
-        lambda df: df.assign(
-            **{
-                n: str(df.name) + "_" + np.arange(len(df)).astype(str)
-                for n in predictors_groups
-            }
-        )
-    )
+    model.data.groupby([*predictors_fixed, "month"], observed=False)
+    # Create balanced sample based on the observed distribution
+    # of group effects to account for group-effects' correlations
+    .sample(n=opts.epred.samples_per_simple_effect, replace=True)
     .reset_index(drop=True)
 )
-
 epred_kwargs = OmegaConf.to_object(opts.epred.predict)
 epred = (
     model.predict(idata, data=grid, inplace=False, **epred_kwargs)
-    .posterior["mu"]  # For hurdle models, 'mu' is the expected value
+    .posterior["mu"]
     .assign_coords({n: ("__obs__", c.to_numpy()) for n, c in grid.items()})
     .groupby(predictors_fixed)
     .mean()
