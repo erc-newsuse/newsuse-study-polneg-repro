@@ -3233,8 +3233,8 @@ stages:
       size: 382132909
     - path: stages/engagement/glmm.py
       hash: md5
-      md5: ddd4d6be877f61253af7d7f956289f84
-      size: 8021
+      md5: 25ebc7255855e4b14fc41aa45382dce5
+      size: 8277
     params:
       params.yaml:
         glmm.engagement.targets.comments:
@@ -3279,21 +3279,19 @@ stages:
           formula:
             base:
             - "{target} ~ 1\n  + event * sentiment\n  + political * event * country
-              + political * sentiment * country\n  + (1 | outlet:weekend) + (1 | outlet:year)
-              + (1 | month)\n"
-            - "alpha ~ country\n"
+              + political * sentiment * country\n  + (1 | outlet) + (1 | country:year:month)\n"
+            - "alpha ~ country + (1 | outlet)\n"
             extended:
             - "{target} ~ 1\n  + event * sentiment\n  + political * event * {by} +
-              political * sentiment * {by} + country\n  + (1 | outlet:weekend) + (1
-              | outlet:year) + (1 | month)\n"
-            - "alpha ~ country\n"
+              political * sentiment * {by} + country\n  + (1 | outlet) + (1 | country:year:month)\n"
+            - "alpha ~ country + (1 | outlet)\n"
           model:
             family: negativebinomial
     outs:
     - path: glmm/engagement/comments.nc
       hash: md5
-      md5: 58baf71fbda3825e0ed3677eb0e35554
-      size: 564688147
+      md5: 333de6d96f880bd9cc7b726eaef9ff20
+      size: 540612994
   engagement-glmm@-shares:
     cmd:
     - TARGET=shares BY= python stages/engagement/glmm.py
@@ -3304,8 +3302,8 @@ stages:
       size: 382132909
     - path: stages/engagement/glmm.py
       hash: md5
-      md5: ddd4d6be877f61253af7d7f956289f84
-      size: 8021
+      md5: 25ebc7255855e4b14fc41aa45382dce5
+      size: 8277
     params:
       params.yaml:
         glmm.engagement.targets.shares:
@@ -3350,21 +3348,19 @@ stages:
           formula:
             base:
             - "{target} ~ 1\n  + event * sentiment\n  + political * event * country
-              + political * sentiment * country\n  + (1 | outlet:weekend) + (1 | outlet:year)
-              + (1 | month)\n"
-            - "alpha ~ country\n"
+              + political * sentiment * country\n  + (1 | outlet) + (1 | country:year:month)\n"
+            - "alpha ~ country + (1 | outlet)\n"
             extended:
             - "{target} ~ 1\n  + event * sentiment\n  + political * event * {by} +
-              political * sentiment * {by} + country\n  + (1 | outlet:weekend) + (1
-              | outlet:year) + (1 | month)\n"
-            - "alpha ~ country\n"
+              political * sentiment * {by} + country\n  + (1 | outlet) + (1 | country:year:month)\n"
+            - "alpha ~ country + (1 | outlet)\n"
           model:
             family: negativebinomial
     outs:
     - path: glmm/engagement/shares.nc
       hash: md5
-      md5: f930f949a25e19eaefb15223346e56b2
-      size: 554377859
+      md5: dd7b8caa0dd11edccd7c6e8ed0f1714f
+      size: 529233553
   engagement-glmm@-quality-reactions:
     cmd:
     - TARGET=reactions BY=-quality python stages/engagement/glmm.py
@@ -3375,8 +3371,8 @@ stages:
       size: 382132909
     - path: stages/engagement/glmm.py
       hash: md5
-      md5: ddd4d6be877f61253af7d7f956289f84
-      size: 8021
+      md5: 25ebc7255855e4b14fc41aa45382dce5
+      size: 8277
     params:
       params.yaml:
         glmm.engagement.targets.reactions:
@@ -3421,21 +3417,19 @@ stages:
           formula:
             base:
             - "{target} ~ 1\n  + event * sentiment\n  + political * event * country
-              + political * sentiment * country\n  + (1 | outlet:weekend) + (1 | outlet:year)
-              + (1 | month)\n"
-            - "alpha ~ country\n"
+              + political * sentiment * country\n  + (1 | outlet) + (1 | country:year:month)\n"
+            - "alpha ~ country + (1 | outlet)\n"
             extended:
             - "{target} ~ 1\n  + event * sentiment\n  + political * event * {by} +
-              political * sentiment * {by} + country\n  + (1 | outlet:weekend) + (1
-              | outlet:year) + (1 | month)\n"
-            - "alpha ~ country\n"
+              political * sentiment * {by} + country\n  + (1 | outlet) + (1 | country:year:month)\n"
+            - "alpha ~ country + (1 | outlet)\n"
           model:
             family: negativebinomial
     outs:
     - path: glmm/engagement/reactions-quality.nc
       hash: md5
-      md5: 6630c9168b1bd2740c8e59ccfe0407af
-      size: 583222092
+      md5: 8ce5940f072d0796a1e26291a33fbac4
+      size: 568141720
   engagement-glmm@-quality-comments:
     cmd:
     - TARGET=comments BY=-quality python stages/engagement/glmm.py
@@ -3446,8 +3440,8 @@ stages:
       size: 382132909
     - path: stages/engagement/glmm.py
       hash: md5
-      md5: ddd4d6be877f61253af7d7f956289f84
-      size: 8021
+      md5: 25ebc7255855e4b14fc41aa45382dce5
+      size: 8277
     params:
       params.yaml:
         glmm.engagement.targets.comments:
@@ -3492,21 +3486,19 @@ stages:
           formula:
             base:
             - "{target} ~ 1\n  + event * sentiment\n  + political * event * country
-              + political * sentiment * country\n  + (1 | outlet:weekend) + (1 | outlet:year)
-              + (1 | month)\n"
-            - "alpha ~ country\n"
+              + political * sentiment * country\n  + (1 | outlet) + (1 | country:year:month)\n"
+            - "alpha ~ country + (1 | outlet)\n"
             extended:
             - "{target} ~ 1\n  + event * sentiment\n  + political * event * {by} +
-              political * sentiment * {by} + country\n  + (1 | outlet:weekend) + (1
-              | outlet:year) + (1 | month)\n"
-            - "alpha ~ country\n"
+              political * sentiment * {by} + country\n  + (1 | outlet) + (1 | country:year:month)\n"
+            - "alpha ~ country + (1 | outlet)\n"
           model:
             family: negativebinomial
     outs:
     - path: glmm/engagement/comments-quality.nc
       hash: md5
-      md5: 80f02974e5de0ea910529ddfc7e5383e
-      size: 571508568
+      md5: 8d3b254e0fa6972e82d2174976c19b51
+      size: 556741015
   engagement-glmm@-quality-shares:
     cmd:
     - TARGET=shares BY=-quality python stages/engagement/glmm.py

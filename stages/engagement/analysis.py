@@ -18,6 +18,8 @@ az.rcParams.update(config.arviz)
 mpl.rcParams.update(config.plotting.params)
 so.Plot.config.theme.update(config.plotting.params)
 
+rng = np.random.default_rng(303)
+
 # %% -------------------------------------------------------------------------------
 
 # Configuration
@@ -75,17 +77,19 @@ if (group := "posterior_epred") in idata.groups():
 
 # Create grid for simple effects (fixed effects only)
 grid = (
-    model.data.groupby([*predictors_fixed, "month"], observed=False)
+    # model.data.groupby([*predictors_fixed, "month"], observed=False)
+    model.data.groupby([*predictors_fixed], observed=False)
     .sample(n=opts.epred.samples_per_simple_effect, replace=True)
     .reset_index(drop=True)
 )
 
 epred_kwargs = {
     **opts.epred.predict,
+    "include_group_specific": False,
 }
 epred = (
     model.predict(idata, data=grid, inplace=False, **epred_kwargs)
-    .posterior["mu"]
+    .posterior[["mu", "alpha"]]
     .assign_coords({n: ("__obs__", c.to_numpy()) for n, c in grid.items()})
     .groupby(predictors_fixed)
     .mean()
@@ -95,7 +99,13 @@ epred = (
     .dropna("__obs__")
 )
 
-idata.add_groups(**{group: epred.to_dataset()})
+sigma2 = (
+    idata.posterior["1|outlet_sigma"] ** 2
+    + idata.posterior["1|country:year:month_sigma"] ** 2
+)
+epred = np.exp(np.log(epred) + sigma2 / 2)
+
+idata.add_groups(**{group: epred})
 
 # %% ---------------------------------------------------------------------------------
 
@@ -151,7 +161,8 @@ valence_effects = (
     )
     .reset_index()
     .assign(
-        sig=lambda df: df[["lower", "upper"]].pipe(np.log).pipe(np.sign).prod(axis=1).eq(1)
+        sig=lambda df: df[["lower", "upper"]].pipe(np.log).pipe(np.sign).prod(axis=1).eq(1),
+        up=lambda df: df["median"] > 1,
     )
 )
 
@@ -164,20 +175,21 @@ for ax, (valence, gdf) in zip(axes, valence_rates.groupby("valence"), strict=Tru
         so.Plot(gdf, x="rate", y="median", color="rate")
         .add(
             so.Range(**config.plotting.objects.range),
-            so.Shift(x=0.1),
             ymin="lower",
             ymax="upper",
         )
         .add(so.Dot(**config.plotting.objects.dot))
         .add(
-            so.Dot(marker="*", edgecolor="black", color="red"),
-            so.Shift(x=0.2, y=20),
+            so.Dot(edgecolor="black", color="red"),
+            so.Shift(x=0.2),
+            marker="up",
             pointsize="sig",
             data=valence_effects.query("valence == @valence"),
         )
         .scale(
             color=[*config.plotting.color[valence]],
-            pointsize={True: 12, False: 0},
+            marker={True: "^", False: "v"},
+            pointsize={True: 10, False: 0},
         )
         .on(ax)
         .plot()
@@ -223,7 +235,8 @@ sentiment_by_event_effects = (
     .unstack(-1)
     .reset_index()
     .assign(
-        sig=lambda df: df[["lower", "upper"]].pipe(np.log).pipe(np.sign).prod(axis=1).eq(1)
+        sig=lambda df: df[["lower", "upper"]].pipe(np.log).pipe(np.sign).prod(axis=1).eq(1),
+        up=lambda df: df["median"] > 1,
     )
 )
 
@@ -238,7 +251,8 @@ event_by_sentiment_effects = (
     .unstack(-1)
     .reset_index()
     .assign(
-        sig=lambda df: df[["lower", "upper"]].pipe(np.log).pipe(np.sign).prod(axis=1).eq(1)
+        sig=lambda df: df[["lower", "upper"]].pipe(np.log).pipe(np.sign).prod(axis=1).eq(1),
+        up=lambda df: df["median"] > 1,
     )
 )
 
@@ -252,24 +266,24 @@ ax = axes[0]
     .add(
         so.Range(**config.plotting.objects.range),
         so.Dodge(),
-        so.Shift(x=0.12),
         ymin="lower",
         ymax="upper",
     )
     .add(so.Dot(**config.plotting.objects.dot), so.Dodge())
     .add(
-        so.Dot(marker="*", edgecolor="black", color="red"),
+        so.Dot(edgecolor="black", color="red", artist_kws={"zorder": 100}),
         so.Dodge(),
-        so.Shift(x=-0.07, y=0),
+        marker="up",
         pointsize="sig",
         y="median",
         data=sentiment_by_event_effects.assign(
-            median=valence_overall_rates["median"] * 1.2
+            median=lambda df: valence_overall_rates["median"] * (0.9 + df["up"] * 0.2)
         ),
     )
     .scale(
         color=[*config.plotting.color.sentiment],
-        pointsize={True: 12, False: 0},
+        marker={True: "^", False: "v"},
+        pointsize={True: 10, False: 0},
     )
     .on(ax)
     .plot()
@@ -314,16 +328,20 @@ ax = axes[1]
     )
     .add(so.Dot(**config.plotting.objects.dot), so.Dodge())
     .add(
-        so.Dot(marker="*", edgecolor="black", color="red"),
+        so.Dot(edgecolor="black", color="red", artist_kws={"zorder": 100}),
+        # so.Shift(x=-.1),
         so.Dodge(),
-        so.Shift(x=-0.07, y=0),
+        marker="up",
         pointsize="sig",
         y="median",
-        data=event_by_sentiment_effects.assign(median=lambda df: df["median"] * 1.3),
+        data=event_by_sentiment_effects.assign(
+            median=lambda df: df["median"] * (0.8 + df["up"] * 0.4)
+        ),
     )
     .scale(
         color=[*config.plotting.color.event],
-        pointsize={True: 12, False: 0},
+        marker={True: "^", False: "v"},
+        pointsize={True: 10, False: 0},
     )
     .on(ax)
     .plot()
