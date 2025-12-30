@@ -3509,8 +3509,8 @@ stages:
       size: 382132909
     - path: stages/engagement/glmm.py
       hash: md5
-      md5: ddd4d6be877f61253af7d7f956289f84
-      size: 8021
+      md5: 25ebc7255855e4b14fc41aa45382dce5
+      size: 8277
     params:
       params.yaml:
         glmm.engagement.targets.shares:
@@ -3555,21 +3555,19 @@ stages:
           formula:
             base:
             - "{target} ~ 1\n  + event * sentiment\n  + political * event * country
-              + political * sentiment * country\n  + (1 | outlet:weekend) + (1 | outlet:year)
-              + (1 | month)\n"
-            - "alpha ~ country\n"
+              + political * sentiment * country\n  + (1 | outlet) + (1 | country:year:month)\n"
+            - "alpha ~ country + (1 | outlet)\n"
             extended:
             - "{target} ~ 1\n  + event * sentiment\n  + political * event * {by} +
-              political * sentiment * {by} + country\n  + (1 | outlet:weekend) + (1
-              | outlet:year) + (1 | month)\n"
-            - "alpha ~ country\n"
+              political * sentiment * {by} + country\n  + (1 | outlet) + (1 | country:year:month)\n"
+            - "alpha ~ country + (1 | outlet)\n"
           model:
             family: negativebinomial
     outs:
     - path: glmm/engagement/shares-quality.nc
       hash: md5
-      md5: d7776091e6322fff15a8f6a03b30d5a8
-      size: 561526845
+      md5: f47f3574b929e91f71980b6910334653
+      size: 545593269
   engagement-glmm@-ideology-reactions:
     cmd:
     - TARGET=reactions BY=-ideology python stages/engagement/glmm.py
@@ -3580,8 +3578,8 @@ stages:
       size: 382132909
     - path: stages/engagement/glmm.py
       hash: md5
-      md5: ddd4d6be877f61253af7d7f956289f84
-      size: 8021
+      md5: 25ebc7255855e4b14fc41aa45382dce5
+      size: 8277
     params:
       params.yaml:
         glmm.engagement.targets.reactions:
@@ -3626,21 +3624,19 @@ stages:
           formula:
             base:
             - "{target} ~ 1\n  + event * sentiment\n  + political * event * country
-              + political * sentiment * country\n  + (1 | outlet:weekend) + (1 | outlet:year)
-              + (1 | month)\n"
-            - "alpha ~ country\n"
+              + political * sentiment * country\n  + (1 | outlet) + (1 | country:year:month)\n"
+            - "alpha ~ country + (1 | outlet)\n"
             extended:
             - "{target} ~ 1\n  + event * sentiment\n  + political * event * {by} +
-              political * sentiment * {by} + country\n  + (1 | outlet:weekend) + (1
-              | outlet:year) + (1 | month)\n"
-            - "alpha ~ country\n"
+              political * sentiment * {by} + country\n  + (1 | outlet) + (1 | country:year:month)\n"
+            - "alpha ~ country + (1 | outlet)\n"
           model:
             family: negativebinomial
     outs:
     - path: glmm/engagement/reactions-ideology.nc
       hash: md5
-      md5: 6b474d6b4136a676fcf2236579c6c630
-      size: 583250957
+      md5: a6ef09d1b987a29ac1d54c8d2550c321
+      size: 568188971
   engagement-glmm@-ideology-comments:
     cmd:
     - TARGET=comments BY=-ideology python stages/engagement/glmm.py
@@ -3651,8 +3647,8 @@ stages:
       size: 382132909
     - path: stages/engagement/glmm.py
       hash: md5
-      md5: 185a1a4df124ac87f1462293e81ed6b9
-      size: 8326
+      md5: 25ebc7255855e4b14fc41aa45382dce5
+      size: 8277
     params:
       params.yaml:
         glmm.engagement.targets.comments:
@@ -3697,21 +3693,19 @@ stages:
           formula:
             base:
             - "{target} ~ 1\n  + event * sentiment\n  + political * event * country
-              + political * sentiment * country\n  + (1 | outlet:weekend) + (1 | outlet:year)
-              + (1 | month)\n"
-            - "alpha ~ country\n"
+              + political * sentiment * country\n  + (1 | outlet) + (1 | country:year:month)\n"
+            - "alpha ~ country + (1 | outlet)\n"
             extended:
             - "{target} ~ 1\n  + event * sentiment\n  + political * event * {by} +
-              political * sentiment * {by} + country\n  + (1 | outlet:weekend) + (1
-              | outlet:year) + (1 | month)\n"
-            - "alpha ~ country\n"
+              political * sentiment * {by} + country\n  + (1 | outlet) + (1 | country:year:month)\n"
+            - "alpha ~ country + (1 | outlet)\n"
           model:
             family: negativebinomial
     outs:
     - path: glmm/engagement/comments-ideology.nc
       hash: md5
-      md5: 0fb280ceebe357dc3ff32121c969f60a
-      size: 571570643
+      md5: 9aa27fd0549ec6886fd93715d060a9da
+      size: 556713031
   engagement-glmm@-ideology-shares:
     cmd:
     - TARGET=shares BY=-ideology python stages/engagement/glmm.py
@@ -3722,8 +3716,8 @@ stages:
       size: 382132909
     - path: stages/engagement/glmm.py
       hash: md5
-      md5: 185a1a4df124ac87f1462293e81ed6b9
-      size: 8326
+      md5: 25ebc7255855e4b14fc41aa45382dce5
+      size: 8277
     params:
       params.yaml:
         glmm.engagement.targets.shares:
@@ -3768,18 +3762,16 @@ stages:
           formula:
             base:
             - "{target} ~ 1\n  + event * sentiment\n  + political * event * country
-              + political * sentiment * country\n  + (1 | outlet:weekend) + (1 | outlet:year)
-              + (1 | month)\n"
-            - "alpha ~ country\n"
+              + political * sentiment * country\n  + (1 | outlet) + (1 | country:year:month)\n"
+            - "alpha ~ country + (1 | outlet)\n"
             extended:
             - "{target} ~ 1\n  + event * sentiment\n  + political * event * {by} +
-              political * sentiment * {by} + country\n  + (1 | outlet:weekend) + (1
-              | outlet:year) + (1 | month)\n"
-            - "alpha ~ country\n"
+              political * sentiment * {by} + country\n  + (1 | outlet) + (1 | country:year:month)\n"
+            - "alpha ~ country + (1 | outlet)\n"
           model:
             family: negativebinomial
     outs:
     - path: glmm/engagement/shares-ideology.nc
       hash: md5
-      md5: cadcf5eb315278a74be032500f8d3be7
-      size: 561592008
+      md5: a044fe47212b50d3d3ae2fdddd61e260
+      size: 545636277

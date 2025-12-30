@@ -5,12 +5,11 @@ import os
 import arviz as az
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import numpy as np
+import pandas as pd
 import xarray as xr
-from newsuse.data import DataFrame
 
 from project import config, paths
-from project.bayes import index_idata
+from project.bayes import index_idata, rebuild_model
 
 xr.set_options(**config.xarray)
 az.rcParams.update(config.arviz)
@@ -38,38 +37,97 @@ labels = {
 if by:
     labels[by] = config.categorical[by]
 
-data = DataFrame.from_(paths.final)
+alpha = 1 - az.rcParams["stats.ci_prob"]
 
 # %% ---------------------------------------------------------------------------------
 
 fname = f"{target}.nc" if not by else f"{target}-{by}.nc"
 idata = az.from_netcdf(paths.glmm / "valence" / fname)
 idata = index_idata(idata, ["key", *opts.predictors.fixed, *opts.predictors.groups])
-terms_fixed = [t for t in idata.posterior.data_vars if "|" not in t]
+model = rebuild_model(idata)
+
+terms_rx = {
+    "fixed": [r"^threshold$", r"^(political)?:?(country)?$"],
+    "group (sd)": [r"\|.*_sigma$"],
+    "group": [r"\|(outlet|country:year:month)$"],
+}
+terms_opts = {
+    "var_names": sum([v for k, v in terms_rx.items() if k != "group"], []),
+    "filter_vars": "regex",
+}
 
 # %% ---------------------------------------------------------------------------------
 
-stats = az.summary(idata)
-stats.describe()
+stats = {
+    kind: az.summary(idata, var_names=terms, filter_vars="regex")
+    for kind, terms in terms_rx.items()
+}
+stats["group (stats)"] = stats.pop("group").describe()[1:]
+
+stats = pd.concat(stats, names=["kind"]).rename(
+    index=lambda s: str(s).split("_", 1)[0], level=-1
+)
+
+stats.head(len(stats))
 
 # %% ---------------------------------------------------------------------------------
 
-bad = stats.query("r_hat > 1.01").sort_values("r_hat", ascending=False)
+
+def bold_row(row: pd.Series, *, threshold: float = 1.01) -> list[str]:
+    if row[r"$\hat{R}$"] > threshold:
+        return ["bfseries:--rwrap"] * len(row)
+    return [""] * len(row)
+
+
+# Print 'stat' nicely in LaTeX format
+print(
+    stats.rename(
+        columns={
+            "mean": "Mean",
+            "sd": "SD",
+            f"hdi_{(conf := alpha / 2 * 100):.1f}%": rf"HDI {conf:.1f}\%",
+            f"hdi_{(100 - conf):.1f}%": rf"HDI {100 - conf:.1f}\%",
+            "mcse_mean": "MCSE (mean)",
+            "mcse_sd": "MCSE (SD)",
+            "ess_bulk": "ESS (bulk)",
+            "ess_tail": "ESS (tail)",
+            "r_hat": r"$\hat{R}$",
+        }
+    )
+    .rename(index=lambda s: s.replace("%", r"\%"), level=-1)
+    .rename(index=lambda s: s.replace("_", r"\_"), level=-1)
+    .style.apply(bold_row, axis=1)
+    .format(precision=2, escape="latex")
+    .to_latex(
+        convert_css=False,
+        multirow_align="t",
+        hrules=True,
+    )
+)
+
+# %% ---------------------------------------------------------------------------------
+
+bad = az.summary(idata).query("r_hat > 1.01").sort_values("r_hat", ascending=False)
 bad.head(len(bad))
 
 # %% ---------------------------------------------------------------------------------
 
 axes = az.plot_trace(
     idata,
-    var_names=terms_fixed,
+    **terms_opts,
     combined=True,
-    figsize=(6, 6),
+    figsize=(10, 15),
+    legend=True,
 )
 fig = axes.flatten()[0].figure
 fig.tight_layout()
 
-axes[0, 0].set_title("Posterior density", fontsize="x-large")
-axes[0, 1].set_title("Trace plot", fontsize="x-large")
+for ax in axes[:, 0].flat:
+    if legend := ax.get_legend():
+        legend.set_title(None)
+for ax in axes[:, 1].flat:
+    if legend := ax.get_legend():
+        legend.remove()
 
 fig.savefig(figpath / f"{target}-trace.pdf")
 
@@ -77,7 +135,7 @@ fig.savefig(figpath / f"{target}-trace.pdf")
 
 axes = az.plot_ess(
     idata,
-    var_names=terms_fixed,
+    **terms_opts,
     figsize=(15, 15),
 )
 ylabel = axes[0, 0].get_ylabel()
@@ -90,18 +148,6 @@ fig.supylabel(ylabel, fontsize="xx-large")
 fig.tight_layout()
 
 fig.savefig(figpath / f"{target}-ess.pdf")
-
-# %% ---------------------------------------------------------------------------------
-
-axes = az.plot_autocorr(
-    idata,
-    var_names=terms_fixed,
-    figsize=(18, 18),
-)
-fig = axes.flatten()[0].figure
-fig.tight_layout()
-
-fig.savefig(figpath / f"{target}-autocorr.pdf")
 
 # %% ---------------------------------------------------------------------------------
 
@@ -127,40 +173,27 @@ def plot_ppc(
 
 # %% ---------------------------------------------------------------------------------
 
-fig, axes = plt.subplots(ncols=3, figsize=(7, 3))
-plot_ppc(idata, ax=axes[0])
-plot_ppc(idata.sel(political=0), ax=axes[1])
-plot_ppc(idata.sel(political=1), ax=axes[2])
-
-axes[0].set_title("Overall")
-axes[1].set_title("Non-Political")
-axes[2].set_title("Political")
-
-fig.tight_layout()
-fig.supxlabel(target.capitalize(), y=-0.03)
-fig.supylabel(r"$\mathbb{P}(X \leq x)$", x=-0.02)
-fig.savefig(figpath / f"{target}-ppc.pdf")
-
-# %% ---------------------------------------------------------------------------------
-
 bys = ["country"] if not by else [by]
 for _by in bys:
     fig, axes = plt.subplots(
-        ncols=(ncols := 3),
-        nrows=(nrows := int(np.ceil(len(labels[_by]) / ncols))),
-        figsize=(3 * ncols, 3 * nrows),
+        ncols=(ncols := len(labels[_by])),
+        nrows=(nrows := 2),
+        figsize=((height := 3) * ncols, height * nrows),
     )
-
-    for ax, byval in zip(axes.flat, labels[_by], strict=True):
-        sel = {_by: byval}
-        plot_ppc(idata.sel(**sel), ax=ax)
-
-    for ax, byval in zip(axes.flat, labels[_by], strict=True):
-        ax.set_title(byval.upper())
-        ax.set_xticks([])
-
-    fig.supxlabel(target.capitalize(), y=0.05)
-    fig.supylabel(r"$\mathbb{P}(X \leq x)$", x=0.02, y=0.55)
+    for axrow, political in zip(axes, [0, 1], strict=True):
+        for ax, byval in zip(axrow.flat, labels[_by], strict=True):
+            sel = {_by: byval, "political": political}
+            plot_ppc(idata.sel(**sel), ax=ax)
+            ax.set_xticks(labels[target])
+            ax.set_xlabel(None)
+            ax.set_ylabel(None)
+            if ax in axes[0]:
+                ax.set_title(labels[_by][byval])
+        axrow[0].set_ylabel(
+            "Non-Political" if political == 0 else "Political", fontsize="xx-large"
+        )
+    fig.supxlabel(target.capitalize(), y=0.0, fontsize="xx-large")
+    fig.supylabel(r"$\mathbb{P}(X \leq x)$", x=0.01, y=0.55, fontsize="xx-large")
     fig.tight_layout()
     fig.savefig(figpath / f"{target}-ppc-by-{_by}.pdf")
 
