@@ -1,12 +1,4 @@
 # %% ---------------------------------------------------------------------------------
-"""Analysis of political valence differences using arviz/bambi machinery.
-
-This script tests whether the properly marginalized expected class probabilities
-differ between political and non-political posts overall and by country.
-Results are illustrated by point+interval estimates for class probabilities
-and corresponding odds ratios.
-"""
-
 import os
 
 import arviz as az
@@ -19,7 +11,7 @@ import xarray as xr
 from scipy.special import logit
 
 from project import config, paths
-from project.bayes import eti, index_idata
+from project.bayes import eti, index_idata, rebuild_model
 
 xr.set_options(**config.xarray)
 az.rcParams.update(config.arviz)
@@ -49,11 +41,17 @@ else:
         1: "positive",
     }
 
+predictors_fixed = [*opts.predictors.fixed]
+predictors_groups = [*opts.predictors.groups]
+
 # %% Load inference data -------------------------------------------------------------
 
 idata = az.from_netcdf(paths.glmm / "valence" / f"{target}.nc")
-idata = index_idata(idata, ["key", *sum(opts.predictors.values(), start=[])])
+model = rebuild_model(idata)
 
+# %% ---------------------------------------------------------------------------------
+
+idata = index_idata(idata, ["key", *sum(opts.predictors.values(), start=[])])
 # Extract posterior expected probabilities
 epred = az.extract(idata, group="posterior_epred")
 # Get probabilities as xarray DataArray

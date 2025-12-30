@@ -85,7 +85,7 @@ epred_kwargs = {
 }
 epred = (
     model.predict(idata, data=grid, inplace=False, **epred_kwargs)
-    .posterior["mu"]  # For hurdle models, 'mu' is the expected value
+    .posterior["mu"]
     .assign_coords({n: ("__obs__", c.to_numpy()) for n, c in grid.items()})
     .groupby(predictors_fixed)
     .mean()

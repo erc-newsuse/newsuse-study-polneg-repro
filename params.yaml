@@ -188,17 +188,17 @@ glmm:
           {target} ~ 1
             + event * sentiment
             + political * event * country + political * sentiment * country
-            + (1 | outlet:weekend) + (1 | outlet:year) + (1 | month)
+            + (1 | outlet) + (1 | country:year:month)
         - >
-          alpha ~ country
+          alpha ~ country + (1 | outlet)
         extended:
         - >
           {target} ~ 1
             + event * sentiment
             + political * event * {by} + political * sentiment * {by} + country
-            + (1 | outlet:weekend) + (1 | outlet:year) + (1 | month)
+            + (1 | outlet) + (1 | country:year:month)
         - >
-          alpha ~ country
+          alpha ~ country + (1 | outlet)
       model:
         family: negativebinomial
       fit: &glmm_engagement_fit

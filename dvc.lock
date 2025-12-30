@@ -3235,8 +3235,8 @@ stages:
       size: 382132909
     - path: stages/engagement/glmm.py
       hash: md5
-      md5: 185a1a4df124ac87f1462293e81ed6b9
-      size: 8326
+      md5: ddd4d6be877f61253af7d7f956289f84
+      size: 8021
     params:
       params.yaml:
         glmm.engagement.targets.comments:
@@ -3294,8 +3294,8 @@ stages:
     outs:
     - path: glmm/engagement/comments.nc
       hash: md5
-      md5: 186a8e217f79701a98831cbaf96c2753
-      size: 564730541
+      md5: 58baf71fbda3825e0ed3677eb0e35554
+      size: 564688147
   engagement-glmm@-shares:
     cmd:
     - TARGET=shares BY= python stages/engagement/glmm.py
@@ -3306,8 +3306,8 @@ stages:
       size: 382132909
     - path: stages/engagement/glmm.py
       hash: md5
-      md5: 185a1a4df124ac87f1462293e81ed6b9
-      size: 8326
+      md5: ddd4d6be877f61253af7d7f956289f84
+      size: 8021
     params:
       params.yaml:
         glmm.engagement.targets.shares:
@@ -3365,8 +3365,8 @@ stages:
     outs:
     - path: glmm/engagement/shares.nc
       hash: md5
-      md5: 71b8ea48a52d56153e67df8754e5d906
-      size: 554451521
+      md5: f930f949a25e19eaefb15223346e56b2
+      size: 554377859
   engagement-glmm@-quality-reactions:
     cmd:
     - TARGET=reactions BY=-quality python stages/engagement/glmm.py
@@ -3377,8 +3377,8 @@ stages:
       size: 382132909
     - path: stages/engagement/glmm.py
       hash: md5
-      md5: 185a1a4df124ac87f1462293e81ed6b9
-      size: 8326
+      md5: ddd4d6be877f61253af7d7f956289f84
+      size: 8021
     params:
       params.yaml:
         glmm.engagement.targets.reactions:
@@ -3436,8 +3436,8 @@ stages:
     outs:
     - path: glmm/engagement/reactions-quality.nc
       hash: md5
-      md5: dc7a2696d97c515d84a4c896b3cb205c
-      size: 583273007
+      md5: 6630c9168b1bd2740c8e59ccfe0407af
+      size: 583222092
   engagement-glmm@-quality-comments:
     cmd:
     - TARGET=comments BY=-quality python stages/engagement/glmm.py
@@ -3448,8 +3448,8 @@ stages:
       size: 382132909
     - path: stages/engagement/glmm.py
       hash: md5
-      md5: 185a1a4df124ac87f1462293e81ed6b9
-      size: 8326
+      md5: ddd4d6be877f61253af7d7f956289f84
+      size: 8021
     params:
       params.yaml:
         glmm.engagement.targets.comments:
@@ -3507,8 +3507,8 @@ stages:
     outs:
     - path: glmm/engagement/comments-quality.nc
       hash: md5
-      md5: fc3472cd6aacb6f4ef74d687b7e4349d
-      size: 571581377
+      md5: 80f02974e5de0ea910529ddfc7e5383e
+      size: 571508568
   engagement-glmm@-quality-shares:
     cmd:
     - TARGET=shares BY=-quality python stages/engagement/glmm.py
@@ -3519,8 +3519,8 @@ stages:
       size: 382132909
     - path: stages/engagement/glmm.py
       hash: md5
-      md5: 185a1a4df124ac87f1462293e81ed6b9
-      size: 8326
+      md5: ddd4d6be877f61253af7d7f956289f84
+      size: 8021
     params:
       params.yaml:
         glmm.engagement.targets.shares:
@@ -3578,8 +3578,8 @@ stages:
     outs:
     - path: glmm/engagement/shares-quality.nc
       hash: md5
-      md5: 5030ce2515921391d414ae8c62f7373d
-      size: 561622529
+      md5: d7776091e6322fff15a8f6a03b30d5a8
+      size: 561526845
   engagement-glmm@-ideology-reactions:
     cmd:
     - TARGET=reactions BY=-ideology python stages/engagement/glmm.py
@@ -3590,8 +3590,8 @@ stages:
       size: 382132909
     - path: stages/engagement/glmm.py
       hash: md5
-      md5: 185a1a4df124ac87f1462293e81ed6b9
-      size: 8326
+      md5: ddd4d6be877f61253af7d7f956289f84
+      size: 8021
     params:
       params.yaml:
         glmm.engagement.targets.reactions:
@@ -3649,8 +3649,8 @@ stages:
     outs:
     - path: glmm/engagement/reactions-ideology.nc
       hash: md5
-      md5: 0b7d02b4825b493e4c7a9dbb83e3056e
-      size: 583286026
+      md5: 6b474d6b4136a676fcf2236579c6c630
+      size: 583250957
   engagement-glmm@-ideology-comments:
     cmd:
     - TARGET=comments BY=-ideology python stages/engagement/glmm.py
