@@ -59,15 +59,22 @@ probs = epred.p.to_dataframe()["p"]
 
 # %% Compute posterior expected class probabilities ----------------------------------
 
-posterior = pd.concat(
-    [
-        probs.groupby(["country", "political", target])
-        .apply(eti)
-        .unstack(-1)
-        .reset_index(),
-        probs.groupby(["political", target]).apply(eti).unstack(-1).reset_index(),
-    ]
-).fillna({"country": "overall"})
+probs_country = (
+    probs.groupby(["country", "political", target]).apply(eti).unstack(-1).reset_index()
+)
+
+probs_overall = (
+    probs.groupby(["political", target, "chain", "draw"])
+    .mean()
+    .groupby(["political", target])
+    .apply(eti)
+    .unstack(-1)
+    .reset_index()
+)
+
+posterior = pd.concat([probs_country, probs_overall], ignore_index=True).fillna(
+    {"country": "overall"}
+)
 
 # %% Plot posterior expectations -----------------------------------------------------
 
@@ -121,22 +128,36 @@ fig.savefig(figpath / "posterior-expectations.pdf")
 
 # %% Compute political/non-political odds ratios -------------------------------------
 
-odds_ratios = (
+or_country = (
     probs.pipe(logit)
     .groupby(["country", "chain", "draw", target])
     .diff()
     .dropna()
     .droplevel("political")
     .pipe(np.exp)
+    .groupby(["country", target])
+    .apply(eti)
+    .unstack(-1)
+    .reset_index()
+)
+
+or_overall = (
+    probs.pipe(logit)
+    .groupby(["political", target, "chain", "draw"])
+    .mean()
+    .groupby(["chain", "draw", target])
+    .diff()
+    .dropna()
+    .droplevel("political")
+    .pipe(np.exp)
+    .groupby(target)
+    .apply(eti)
+    .unstack(-1)
+    .reset_index()
 )
 
 posterior_or = (
-    pd.concat(
-        [
-            odds_ratios.groupby(["country", target]).apply(eti).unstack(-1).reset_index(),
-            odds_ratios.groupby(target).apply(eti).unstack(-1).reset_index(),
-        ]
-    )
+    pd.concat([or_country, or_overall], ignore_index=True)
     .fillna({"country": "overall"})
     .assign(
         sig=lambda df: df[["lower", "upper"]].sub(1).pipe(np.sign).prod(axis=1).eq(1),
