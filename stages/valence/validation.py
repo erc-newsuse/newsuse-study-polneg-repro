@@ -58,6 +58,15 @@ terms_opts = {
 
 # %% ---------------------------------------------------------------------------------
 
+model.build()
+axes = model.plot_priors()
+fig = axes.flatten()[0].figure
+fig.tight_layout()
+fig.savefig(figpath / f"{target}-priors.pdf")
+print(model)
+
+# %% ---------------------------------------------------------------------------------
+
 stats = {
     kind: az.summary(idata, var_names=terms, filter_vars="regex")
     for kind, terms in terms_rx.items()
@@ -112,22 +121,28 @@ bad.head(len(bad))
 
 # %% ---------------------------------------------------------------------------------
 
+fig, axes = plt.subplots(
+    figsize=(figsize := (24, 8)),
+    nrows=2,
+    ncols=8,
+)
 axes = az.plot_trace(
     idata,
     **terms_opts,
     combined=True,
-    figsize=(10, 15),
-    legend=True,
+    figsize=figsize,
+    legend=False,
+    axes=axes.T,
 )
 fig = axes.flatten()[0].figure
 fig.tight_layout()
 
-for ax in axes[:, 0].flat:
-    if legend := ax.get_legend():
-        legend.set_title(None)
-for ax in axes[:, 1].flat:
-    if legend := ax.get_legend():
-        legend.remove()
+# for ax in axes[:, 0].flat:
+#     if legend := ax.get_legend():
+#         legend.set_title(None)
+# for ax in axes[:, 1].flat:
+#     if legend := ax.get_legend():
+#         legend.remove()
 
 fig.savefig(figpath / f"{target}-trace.pdf")
 
