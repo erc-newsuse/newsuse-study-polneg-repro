@@ -63,6 +63,8 @@ data = (
 
 if sample := opts.get("sample"):
     print(f"Subsampling data for model fitting to {sample.n} observations...")
+    if by:
+        sample.update(n=sample["n"] // 2)
     model_data = data.sample(**sample, ignore_index=True)
 else:
     model_data = data

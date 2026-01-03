@@ -3815,7 +3815,7 @@ stages:
               kind: response_params
               random_seed: 773410
           sample:
-            n: 500000
+            n: 1000000
             random_state: 2226487
           predictors:
             fixed:
@@ -3836,8 +3836,8 @@ stages:
     outs:
     - path: glmm/valence/event.nc
       hash: md5
-      md5: 009eb553c77e041cf663ba8c802821d1
-      size: 1835104851
+      md5: 1d36bcd8a79d70d99b3e565673c700c2
+      size: 3427219270
   valence-glmm@-sentiment:
     cmd:
     - TARGET=sentiment BY= python stages/valence/glmm.py
@@ -3878,7 +3878,7 @@ stages:
               kind: response_params
               random_seed: 777
           sample:
-            n: 500000
+            n: 1000000
             random_state: 2226487
           predictors:
             fixed:
@@ -3899,5 +3899,5 @@ stages:
     outs:
     - path: glmm/valence/sentiment.nc
       hash: md5
-      md5: c786c2d4809633283273edb8a10fee73
-      size: 1838066579
+      md5: 7f99fc47f24f1e6a4c2611aaf0702a94
+      size: 3434357151
