@@ -99,8 +99,8 @@ glmm:
     default: &glmm_valence_default
       <<: *glmm_defaults
       sample:
-        n: 250_000
-        random_state: 111487
+        n: 500_000
+        random_state: 2226487
       predictors:
         fixed:
           - political
@@ -112,12 +112,12 @@ glmm:
       formula:
         base: >
           {target} ~ 0
-            + political * country +
+            + political * country
             + (1 + political | outlet)
             + (1 + political | country:year:month)
         extended: >
           {target} ~ 0
-            + political * country * {by} +
+            + political * country * {by}
             + (1 + political | outlet)
             + (1 + political | country:year:month)
       model:
