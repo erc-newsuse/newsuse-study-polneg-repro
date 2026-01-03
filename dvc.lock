@@ -3785,8 +3785,8 @@ stages:
       size: 382132909
     - path: stages/valence/glmm.py
       hash: md5
-      md5: 4ceb2acc8fb587f9a861d9765720f605
-      size: 6885
+      md5: 41aca296e4421ab5e0317ecb58b9154c
+      size: 6938
     params:
       params.yaml:
         glmm.valence.targets.event:
@@ -3836,8 +3836,8 @@ stages:
     outs:
     - path: glmm/valence/event.nc
       hash: md5
-      md5: 1d36bcd8a79d70d99b3e565673c700c2
-      size: 3427219270
+      md5: 5126732ae0cee8d81088f68cd7d180a5
+      size: 3427221498
   valence-glmm@-sentiment:
     cmd:
     - TARGET=sentiment BY= python stages/valence/glmm.py
@@ -3848,8 +3848,8 @@ stages:
       size: 382132909
     - path: stages/valence/glmm.py
       hash: md5
-      md5: 4ceb2acc8fb587f9a861d9765720f605
-      size: 6885
+      md5: 41aca296e4421ab5e0317ecb58b9154c
+      size: 6938
     params:
       params.yaml:
         glmm.valence.targets.sentiment:
@@ -3899,5 +3899,5 @@ stages:
     outs:
     - path: glmm/valence/sentiment.nc
       hash: md5
-      md5: 7f99fc47f24f1e6a4c2611aaf0702a94
-      size: 3434357151
+      md5: 380414ac048ae84ce326cfd267725a71
+      size: 3434329526

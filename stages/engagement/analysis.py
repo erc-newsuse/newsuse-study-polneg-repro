@@ -29,7 +29,7 @@ if target is None:
 
 opts = config.glmm.engagement.targets[target]
 
-figpath = paths.figures / "glmm" / "engagement"
+figpath = paths.figures / "engagement"
 figpath.mkdir(parents=True, exist_ok=True)
 
 countries_map = config.categorical.country
@@ -56,6 +56,14 @@ def contr_effect(s: pd.Series, level: int | str = 0) -> pd.Series:
     x = s.to_numpy()
     contr = x - (x.sum() - x) / (x.size - 1)
     contr = pd.Series(contr, index=pd.Series(index, name="contrast"))
+    return contr
+
+
+def contr_ref(s: pd.Series, ref: int | str, level: int | str) -> pd.Series:
+    index = s.index.get_level_values(level)
+    x = s.to_numpy()
+    contr = x[index != ref] - x[index == ref]
+    contr = pd.Series(contr, index=pd.Series(index[index != ref], name="contrast"))
     return contr
 
 
@@ -121,14 +129,14 @@ rates = mu.pipe(np.log).groupby(["event", "sentiment", "political", "chain", "dr
 
 # %% ---------------------------------------------------------------------------------
 
-valence_rates = (
+valence_means = (
     pd.concat(
         {
             valence: (
-                rates.groupby([valence, "chain", "draw"])
+                rates.groupby([valence, "political", "chain", "draw"])
                 .mean()
                 .pipe(np.exp)
-                .groupby([valence])
+                .groupby([valence, "political"])
                 .apply(eti)
                 .unstack(-1)
             )
@@ -138,19 +146,19 @@ valence_rates = (
         names=["valence"],
     )
     .reset_index()
-    .rename(columns={"event": "rate"})
+    .rename(columns={"event": "value"})
 )
 
 valence_effects = (
     pd.concat(
         {
             valence: (
-                rates.groupby([valence, "chain", "draw"])
+                rates.groupby([valence, "political", "chain", "draw"])
                 .mean()
-                .groupby(["chain", "draw"])
-                .apply(contr_effect)
+                .groupby(["political", "chain", "draw"])
+                .apply(contr_ref, ref=0, level=0)
                 .pipe(np.exp)
-                .groupby(["contrast"])
+                .groupby(["political", "contrast"])
                 .apply(eti)
                 .unstack(-1)
             )
@@ -166,34 +174,88 @@ valence_effects = (
     )
 )
 
+valence_political_effects = (
+    pd.concat(
+        {
+            valence: (
+                rates.groupby([valence, "political", "chain", "draw"])
+                .mean()
+                .groupby([valence, "chain", "draw"])
+                .diff()
+                .dropna()
+                .droplevel("political")
+                .pipe(np.exp)
+                .groupby([valence])
+                .apply(eti)
+                .unstack(-1)
+                .reset_index(names=["value"])
+            )
+            for valence in ["event", "sentiment"]
+        },
+        axis=0,
+        names=["valence"],
+    )
+    .reset_index("valence")
+    .reset_index(drop=True)
+    .assign(
+        sig=lambda df: df[["lower", "upper"]].pipe(np.log).pipe(np.sign).prod(axis=1).eq(1),
+        up=lambda df: df["median"] > 1,
+    )
+)
+
 # %% ---------------------------------------------------------------------------------
 
 fig, axes = plt.subplots(ncols=2, figsize=(7, 3), sharex=True, sharey=True)
 
-for ax, (valence, gdf) in zip(axes, valence_rates.groupby("valence"), strict=True):
+for ax, (valence, gdf) in zip(axes, valence_means.groupby("valence"), strict=True):
     (
-        so.Plot(gdf, x="rate", y="median", color="rate")
+        so.Plot(gdf, x="value", y="median", color="political")
+        .add(
+            so.Line(linestyle="--"),
+            so.Dodge(),
+        )
         .add(
             so.Range(**config.plotting.objects.range),
+            so.Dodge(),
             ymin="lower",
             ymax="upper",
         )
-        .add(so.Dot(**config.plotting.objects.dot))
-        .add(
-            so.Dot(edgecolor="black", color="red"),
-            so.Shift(x=0.2),
-            marker="up",
-            pointsize="sig",
-            data=valence_effects.query("valence == @valence"),
-        )
-        .scale(
-            color=[*config.plotting.color[valence]],
-            marker={True: "^", False: "v"},
-            pointsize={True: 10, False: 0},
-        )
+        .add(so.Dot(**config.plotting.objects.dot), so.Dodge())
+        .scale(color=[*config.plotting.color.political])
         .on(ax)
         .plot()
     )
+    sigdata = valence_effects.query("valence == @valence").merge(
+        gdf.loc[gdf["value"] != 0, ["median", "value", "political"]].rename(
+            columns={"median": "y", "value": "contrast"}
+        ),
+    )
+    for _, row in sigdata.iterrows():
+        if not row["sig"]:
+            continue
+        x = row["contrast"] + 0.5 * (-1 + 2 * row["political"])
+        xy = (x, row["y"])
+        starkw = {
+            "marker": "*",
+            "edgecolor": "black",
+            "color": "red",
+            "s": 200,
+            "zorder": 100,
+        }
+        ax.scatter([x], [row["y"]], **starkw)
+    poldata = valence_political_effects.query("valence == @valence").merge(
+        valence_means.groupby(["valence", "value"])["median"].mean().reset_index(name="y")
+    )
+    for _, row in poldata.iterrows():
+        if not row["sig"]:
+            continue
+        kw = {
+            **starkw,
+            "marker": "^" if row["up"] else "v",
+            "color": "black",
+            "s": 100,
+        }
+        ax.scatter([row["value"]], [row["y"]], **kw)
     ax.set_yscale("log")
     ax.set_title(f"{valence.capitalize()} valence", fontsize="xx-large")
     ax.set_xlabel(None)
@@ -208,29 +270,67 @@ for ax, (valence, gdf) in zip(axes, valence_rates.groupby("valence"), strict=Tru
 
 axes[0].set_ylabel(target.capitalize(), fontsize="xx-large")
 fig.legends.clear()
+
+# Custom legend handles for political
+handles_political = [
+    mpl.lines.Line2D(
+        [],
+        [],
+        color=c,
+        marker="o",
+        linestyle="",
+        markersize=8,
+        label=label,
+    )
+    for c, label in zip(
+        config.plotting.color.political, config.categorical.political, strict=True
+    )
+]
+# Custom legend handles for significance markers
+handles_sig = [
+    mpl.lines.Line2D(
+        [],
+        [],
+        color=c,
+        marker=m,
+        markeredgecolor="black",
+        linestyle="",
+        markersize=8,
+        label=label,
+    )
+    for c, m, label in [
+        ("red", "*", "different than neutral"),
+        ("black", "^", "political higher"),
+        ("black", "v", "political lower"),
+    ]
+]
+# Make legend at the bottom of the figure
+fig.legend(
+    handles=(handles := [*handles_political, *handles_sig]),
+    loc="lower center",
+    ncol=len(handles),
+    frameon=False,
+    bbox_to_anchor=(0.5, -0.1),
+    handletextpad=0.05,
+)
 fig.tight_layout()
-fig.savefig(figpath / f"{target}-valence-rates.pdf")
+fig.savefig(figpath / f"{target}-rates.pdf")
 
+# %% ---------------------------------------------------------------------------------
 
-# %% Overall valence rates -----------------------------------------------------------
-
-valence_overall_rates = (
-    rates.groupby(["event", "sentiment", "chain", "draw"])
-    .mean()
-    .pipe(np.exp)
-    .groupby(["event", "sentiment"])
+joint_means = (
+    rates.pipe(np.exp)
+    .groupby(["event", "sentiment", "political"])
     .apply(eti)
     .unstack(-1)
     .reset_index()
 )
 
-sentiment_by_event_effects = (
-    rates.groupby(["event", "sentiment", "chain", "draw"])
-    .mean()
-    .groupby(["event", "chain", "draw"])
-    .apply(contr_effect, level="sentiment")
+joint_effects = (
+    rates.groupby(["event", "political", "chain", "draw"])
+    .apply(contr_ref, ref=0, level="sentiment")
     .pipe(np.exp)
-    .groupby(["event", "contrast"])
+    .groupby(["event", "political", "contrast"])
     .apply(eti)
     .unstack(-1)
     .reset_index()
@@ -240,13 +340,15 @@ sentiment_by_event_effects = (
     )
 )
 
-event_by_sentiment_effects = (
-    rates.groupby(["event", "sentiment", "chain", "draw"])
+joint_political_effects = (
+    rates.groupby(["event", "sentiment", "political", "chain", "draw"])
     .mean()
-    .groupby(["sentiment", "chain", "draw"])
-    .apply(contr_effect, level="event")
+    .groupby(["event", "sentiment", "chain", "draw"])
+    .diff()
+    .dropna()
+    .droplevel("political")
     .pipe(np.exp)
-    .groupby(["sentiment", "contrast"])
+    .groupby(["event", "sentiment"])
     .apply(eti)
     .unstack(-1)
     .reset_index()
@@ -258,123 +360,71 @@ event_by_sentiment_effects = (
 
 # %% ---------------------------------------------------------------------------------
 
-fig, axes = plt.subplots(ncols=2, figsize=(8, 4))
+fig, axes = plt.subplots(ncols=3, figsize=(9, 3), sharex=True, sharey=True)
 
-ax = axes[0]
-(
-    so.Plot(valence_overall_rates, x="event", y="median", color="sentiment")
-    .add(
-        so.Range(**config.plotting.objects.range),
-        so.Dodge(),
-        ymin="lower",
-        ymax="upper",
+for ax, (event, gdf) in zip(axes.flat, joint_means.groupby("event"), strict=True):
+    (
+        so.Plot(gdf, x="sentiment", y="median", color="political")
+        .add(
+            so.Line(linestyle="--"),
+            so.Dodge(),
+        )
+        .add(
+            so.Range(**config.plotting.objects.range),
+            so.Dodge(),
+            ymin="lower",
+            ymax="upper",
+        )
+        .add(so.Dot(**config.plotting.objects.dot), so.Dodge())
+        .scale(color=[*config.plotting.color.political])
+        .on(ax)
+        .plot()
     )
-    .add(so.Dot(**config.plotting.objects.dot), so.Dodge())
-    .add(
-        so.Dot(edgecolor="black", color="red", artist_kws={"zorder": 100}),
-        so.Dodge(),
-        marker="up",
-        pointsize="sig",
-        y="median",
-        data=sentiment_by_event_effects.assign(
-            median=lambda df: valence_overall_rates["median"] * (0.9 + df["up"] * 0.2)
+    sigdata = joint_effects.query("event == @event").merge(
+        gdf.loc[gdf["sentiment"] != 0, ["median", "sentiment", "political"]].rename(
+            columns={"median": "y", "sentiment": "contrast"}
         ),
     )
-    .scale(
-        color=[*config.plotting.color.sentiment],
-        marker={True: "^", False: "v"},
-        pointsize={True: 10, False: 0},
+    for _, row in sigdata.iterrows():
+        if not row["sig"]:
+            continue
+        x = row["contrast"] + 0.5 * (-1 + 2 * row["political"])
+        xy = (x, row["y"])
+        starkw = {
+            "marker": "*",
+            "edgecolor": "black",
+            "color": "red",
+            "s": 100,
+            "zorder": 100,
+        }
+        ax.scatter([x], [row["y"]], **starkw)
+    poldata = joint_political_effects.query("event == @event").merge(
+        joint_means.groupby(["event", "sentiment"])["median"].mean().reset_index(name="y")
     )
-    .on(ax)
-    .plot()
-)
-ax.set_yscale("log")
-ax.set_xticks(
-    (pal := config.categorical.event),
-    labels=[event_map[t].title() for t in pal],
-)
-ax.set_xlabel("Event", fontsize="xx-large")
-ax.set_ylabel(target.capitalize(), fontsize="xx-large")
-# Custom legend for sentiment
-handles = [
-    mpl.lines.Line2D(
-        [],
-        [],
-        color=c,
-        marker="o",
-        linestyle="",
-        markersize=8,
-        label=sentiment_map[i].title(),
+    for _, row in poldata.iterrows():
+        if not row["sig"]:
+            continue
+        kw = {
+            **starkw,
+            "marker": "^" if row["up"] else "v",
+            "color": "black",
+            "s": 50,
+        }
+        ax.scatter([row["sentiment"]], [row["y"]], **kw)
+    ax.set_yscale("log")
+    ax.set_title(f"{event_map[event].title()}", fontsize="x-large")
+    ax.set_xlabel(None)
+    ax.set_ylabel(None)
+    ax.set_xticks(
+        config.categorical["sentiment"],
+        labels=[sentiment_map[t].title() for t in config.categorical["sentiment"]],
     )
-    for c, i in zip(
-        config.plotting.color.sentiment, config.categorical.sentiment, strict=True
-    )
-]
-ax.legend(
-    title="Sentiment",
-    handles=handles,
-    frameon=True,
-)
-
-ax = axes[1]
-(
-    so.Plot(event_by_sentiment_effects, x="sentiment", y="median", color="contrast")
-    .add(
-        so.Range(**config.plotting.objects.range),
-        so.Dodge(),
-        so.Shift(x=0.12),
-        ymin="lower",
-        ymax="upper",
-    )
-    .add(so.Dot(**config.plotting.objects.dot), so.Dodge())
-    .add(
-        so.Dot(edgecolor="black", color="red", artist_kws={"zorder": 100}),
-        # so.Shift(x=-.1),
-        so.Dodge(),
-        marker="up",
-        pointsize="sig",
-        y="median",
-        data=event_by_sentiment_effects.assign(
-            median=lambda df: df["median"] * (0.8 + df["up"] * 0.4)
-        ),
-    )
-    .scale(
-        color=[*config.plotting.color.event],
-        marker={True: "^", False: "v"},
-        pointsize={True: 10, False: 0},
-    )
-    .on(ax)
-    .plot()
-)
-ax.axhline(1, ls="--", color=config.plotting.color.palette.gray, zorder=-99)
-ax.set_yscale("log")
-ax.set_ylim(10**-1, 10**1)
-ax.set_xticks(
-    (pal := config.categorical.sentiment), labels=[sentiment_map[t].title() for t in pal]
-)
-ax.set_xlabel("Sentiment", fontsize="xx-large")
-ax.set_ylabel("Category / average over others", fontsize="xx-large")
-# Custom legend for event
-handles = [
-    mpl.lines.Line2D(
-        [],
-        [],
-        color=c,
-        marker="o",
-        linestyle="",
-        markersize=8,
-        label=event_map[i].title(),
-    )
-    for c, i in zip(config.plotting.color.event, config.categorical.event, strict=True)
-]
-ax.legend(
-    title="Event",
-    handles=handles,
-    frameon=True,
-)
 
 fig.legends.clear()
+fig.suptitle("Event valence", fontsize="xx-large", y=0.95)
+fig.supxlabel("Sentiment valence", fontsize="xx-large", y=0.05)
+fig.supylabel(target.capitalize(), fontsize="xx-large", x=0.02)
 fig.tight_layout()
-fig.savefig(figpath / f"{target}-event-by-sentiment.pdf")
+fig.savefig(figpath / f"{target}-joint-rates.pdf")
 
 # %% ---------------------------------------------------------------------------------
