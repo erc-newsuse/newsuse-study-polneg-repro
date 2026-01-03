@@ -55,7 +55,8 @@ def plot_ecdf(data: pd.DataFrame, x: str, ax: mpl.axes.Axes, **kwargs: Any) -> N
     ax.set_xlabel(x.capitalize())
     if is_first_axis:
         ax.set_ylabel(r"$\mathbb{P}(X > x)$")
-        ax.get_legend().set_frame_on(False)
+        if legend := ax.get_legend():
+            legend.set_frame_on(False)
     else:
         ax.set_ylabel(None)
 
@@ -72,14 +73,25 @@ for x in ["event", "sentiment", "valence"]:
     )
 
     for ax, metric in zip(axes[0].flat, config.engagement, strict=True):
-        plot_ecdf(data, metric, ax, hue="political")
+        plot_ecdf(data, metric, ax, hue="political", legend=False)
         ax.set_title(metric.capitalize())
         ax.set_xlabel(None)
         ax.set_ylabel(None)
         if ax is axes[0, 0]:
             ax.set_ylabel(r"$\mathbb{P}(X > x)$")
-        if ax is axes[0, 1]:
-            ax.set_xlabel("Engagement")
+        # if ax is axes[0, 1]:
+        #     ax.set_xlabel("Engagement")
+        # Add custom legend for political
+        if ax is axes.flatten()[0]:
+            handles = [
+                mpl.lines.Line2D([], [], color=color, label=label)
+                for label, color in zip(
+                    config.categorical.political,
+                    config.plotting.color.political,
+                    strict=True,
+                )
+            ]
+            ax.legend(handles=handles, title=None, frameon=False, fontsize="small")
 
     for ax, metric in zip(axes[1].flat, config.engagement, strict=True):
         sns.boxplot(
@@ -92,7 +104,7 @@ for x in ["event", "sentiment", "valence"]:
             fliersize=1,
             legend=False,
         )
-        ax.set_ylim(1, data[metric].max() * 10**1.5)
+        ax.set_ylim(0, data[metric].max() * 10**1.5)
         ax.set_yscale("symlog")
         ax.set_xlabel(None)
         ax.set_ylabel(None)
@@ -102,7 +114,7 @@ for x in ["event", "sentiment", "valence"]:
             ax.set_xlabel(x.capitalize())
 
     fig.tight_layout()
-    fig.savefig(figpath / f"ecdf-{x}.pdf")
+    fig.savefig(figpath / f"ecdf-{x}.png")
 
 # %% ---------------------------------------------------------------------------------
 
@@ -125,8 +137,8 @@ for x in ["event", "sentiment", "valence"]:
                 ax.set_ylabel(None)
                 if ax is axes[0, 0]:
                     ax.set_ylabel(r"$\mathbb{P}(X > x)$")
-                if ax is axes[0, 1]:
-                    ax.set_xlabel("Engagement")
+                # if ax is axes[0, 1]:
+                #     ax.set_xlabel("Engagement")
 
             for ax, metric in zip(axes[1].flat, config.engagement, strict=True):
                 sns.boxplot(
@@ -139,7 +151,7 @@ for x in ["event", "sentiment", "valence"]:
                     fliersize=1,
                     legend=False,
                 )
-                ax.set_ylim(1, data[metric].max() * 10**1.5)
+                ax.set_ylim(0, data[metric].max() * 10**1.5)
                 ax.set_yscale("symlog")
                 ax.set_xlabel(None)
                 ax.set_ylabel(None)
@@ -151,6 +163,6 @@ for x in ["event", "sentiment", "valence"]:
             fig.tight_layout()
             title = "non-political" if political == "other" else "political"
             fig.suptitle(f"{title.title()}", y=1.03, x=0.02, ha="left")
-            fig.savefig(figpath / f"ecdf-{x}-{by}-political-{political}.pdf")
+            fig.savefig(figpath / f"ecdf-{x}-{by}-political-{political}.png")
 
 # %% ---------------------------------------------------------------------------------
