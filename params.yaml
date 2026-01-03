@@ -99,7 +99,7 @@ glmm:
     default: &glmm_valence_default
       <<: *glmm_defaults
       sample:
-        n: 500_000
+        n: 1_000_000
         random_state: 2226487
       predictors:
         fixed:
