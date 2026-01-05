@@ -247,7 +247,7 @@ store_model_metadata(
     model,
     formula=formula_str,
     family=opts.model.get("family", "hurdle_negativebinomial"),
-    target=target,
+    response=target,
 )
 
 # %% ---------------------------------------------------------------------------------

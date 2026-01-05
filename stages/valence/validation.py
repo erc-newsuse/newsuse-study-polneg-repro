@@ -19,12 +19,8 @@ target = os.environ.get("TARGET")
 if target is None:
     target = input("Enter target (event): ").strip() or "event"
 
-by = os.environ.get("BY")
-if by is None:
-    by = input("Enter grouping variable: ").strip() or ""
-
 opts = config.glmm.valence.targets[target]
-support = config.categorical[target]
+support = config.categorical[opts.response]
 
 figpath = paths.figures / "valence" / "validation" / target
 figpath.mkdir(parents=True, exist_ok=True)
@@ -32,22 +28,22 @@ figpath.mkdir(parents=True, exist_ok=True)
 labels = {
     "country": config.categorical.country,
     "political": dict(enumerate(config.categorical.political)),
-    target: config.categorical[target],
+    target: config.categorical[opts.response],
 }
-if by:
-    labels[by] = config.categorical[by]
 
 alpha = 1 - az.rcParams["stats.ci_prob"]
 
 # %% ---------------------------------------------------------------------------------
 
-fname = f"{target}.nc" if not by else f"{target}-{by}.nc"
-idata = az.from_netcdf(paths.glmm / "valence" / fname)
-idata = index_idata(idata, ["key", *opts.predictors.fixed, *opts.predictors.groups])
+idata = az.from_netcdf(paths.glmm / "valence" / f"{target}.nc")
+idata = index_idata(idata, ["key", *opts.common, *opts.group])
 model = rebuild_model(idata)
 
 terms_rx = {
-    "fixed": [r"^threshold$", r"^(political)?:?(country)?$"],
+    "fixed": [
+        r"^threshold$",
+        r"^(political)?:?(country)?:?(event)?$",
+    ],
     "group (sd)": [r"\|.*_sigma$"],
     "group": [r"\|(outlet|country:year:month)$"],
 }
@@ -188,7 +184,7 @@ def plot_ppc(
 
 # %% ---------------------------------------------------------------------------------
 
-bys = ["country"] if not by else [by]
+bys = ["country"]
 for _by in bys:
     fig, axes = plt.subplots(
         ncols=(ncols := len(labels[_by])),
@@ -215,8 +211,8 @@ for _by in bys:
 # %% ---------------------------------------------------------------------------------
 
 fig, ax = plt.subplots(figsize=(7, 3))
-az.plot_bpv(idata, ax=ax, var_names=[target], kind="u_value")
-ax.set_title(rf"{target.capitalize()}: $u$-values")
+az.plot_bpv(idata, ax=ax, var_names=[opts.response], kind="u_value")
+ax.set_title(rf"{opts.response.capitalize()}: $u$-values")
 ax.set_ylim(0.8, 1.2)
 fig.tight_layout()
 fig.savefig(figpath / f"{target}-bpv.pdf")

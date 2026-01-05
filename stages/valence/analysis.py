@@ -19,12 +19,12 @@ mpl.rcParams.update(config.plotting.params)
 so.Plot.config.theme.update(config.plotting.params)
 
 # Configuration
-target = os.environ.get("TARGET")
-if target is None:
-    target = input("Enter target (event): ").strip() or "event"
+TARGET = os.environ.get("TARGET")
+if TARGET is None:
+    TARGET = input("Enter target (event): ").strip() or "event"
 
-opts = config.glmm.valence.targets[target]
-support = np.asarray([*config.categorical[target]])
+opts = config.glmm.valence.targets[TARGET]
+support = np.asarray([*config.categorical[TARGET]])
 
 figpath = paths.figures / "valence"
 figpath.mkdir(parents=True, exist_ok=True)
@@ -32,7 +32,7 @@ figpath.mkdir(parents=True, exist_ok=True)
 countries_map = config.categorical.country
 political_map = dict(enumerate(config.categorical.political))
 
-if target == "valence":
+if TARGET == "valence":
     target_map = {x: x for x in config.categorical.valence}
 else:
     target_map = {
@@ -41,17 +41,55 @@ else:
         1: "positive",
     }
 
-predictors_fixed = [*opts.predictors.fixed]
-predictors_groups = [*opts.predictors.groups]
+predictors_fixed = [*opts.common]
+predictors_groups = [*opts.group]
 
 # %% Load inference data -------------------------------------------------------------
 
-idata = az.from_netcdf(paths.glmm / "valence" / f"{target}.nc")
+idata = az.from_netcdf(paths.glmm / "valence" / f"{TARGET}.nc")
 model = rebuild_model(idata)
 
 # %% ---------------------------------------------------------------------------------
 
-idata = index_idata(idata, ["key", *sum(opts.predictors.values(), start=[])])
+print("Prepare posterior expectations group in inference data...")
+if (group := "posterior_epred") in idata.groups():
+    del idata["posterior_epred"]
+
+grid = model.data[predictors_fixed].drop_duplicates(ignore_index=True)
+grid = (
+    # Make dummy values for group effects
+    # to allow independent sampling of group-level effects
+    # for proper marginalization
+    grid.loc[grid.index.repeat(opts.epred.samples_per_simple_effect)]
+    .groupby(level=0)
+    .apply(
+        lambda df: df.assign(
+            **{
+                n: str(df.name) + "_" + np.arange(len(df)).astype(str)
+                for n in predictors_groups
+            }
+        )
+    )
+    .reset_index(drop=True)
+)
+
+epred = (
+    model.predict(idata, data=grid, inplace=False, **opts.epred.predict)
+    .posterior["p"]
+    .assign_coords({n: ("__obs__", c.to_numpy()) for n, c in grid.items()})
+    .rename({f"{TARGET}_dim": TARGET})
+    .groupby(predictors_fixed)
+    .mean()
+    .stack(__obs__=tuple(predictors_fixed))
+    .transpose("chain", "draw", "__obs__", TARGET)
+    .reset_index("__obs__")
+)
+
+idata.add_groups(**{group: epred.to_dataset()})
+
+# %% ---------------------------------------------------------------------------------
+
+idata = index_idata(idata, ["key", *opts.common, *opts.group])
 # Extract posterior expected probabilities
 epred = az.extract(idata, group="posterior_epred")
 # Get probabilities as xarray DataArray
@@ -60,13 +98,13 @@ probs = epred.p.to_dataframe()["p"]
 # %% Compute posterior expected class probabilities ----------------------------------
 
 probs_country = (
-    probs.groupby(["country", "political", target]).apply(eti).unstack(-1).reset_index()
+    probs.groupby(["country", "political", TARGET]).apply(eti).unstack(-1).reset_index()
 )
 
 probs_overall = (
-    probs.groupby(["political", target, "chain", "draw"])
+    probs.groupby(["political", TARGET, "chain", "draw"])
     .mean()
-    .groupby(["political", target])
+    .groupby(["political", TARGET])
     .apply(eti)
     .unstack(-1)
     .reset_index()
@@ -80,7 +118,7 @@ posterior = pd.concat([probs_country, probs_overall], ignore_index=True).fillna(
 
 political_diffs = (
     probs.pipe(logit)
-    .groupby(["country", target, "chain", "draw"])
+    .groupby(["country", TARGET, "chain", "draw"])
     .diff()
     .dropna()
     .droplevel("political")
@@ -88,7 +126,7 @@ political_diffs = (
 
 political_country = (
     political_diffs.pipe(np.exp)
-    .groupby(["country", target])
+    .groupby(["country", TARGET])
     .apply(eti)
     .unstack(-1)
     .reset_index()
@@ -99,10 +137,10 @@ political_country = (
 )
 
 political_overall = (
-    political_diffs.groupby([target, "chain", "draw"])
+    political_diffs.groupby([TARGET, "chain", "draw"])
     .mean()
     .pipe(np.exp)
-    .groupby(target)
+    .groupby(TARGET)
     .apply(eti)
     .unstack(-1)
     .reset_index()
@@ -121,7 +159,7 @@ political_posterior = pd.concat(
 neutral_diffs = (
     probs.pipe(logit)
     .groupby(["country", "political", "chain", "draw"])
-    .apply(contr_ref, ref="0", level=target)
+    .apply(contr_ref, ref="0", level=TARGET)
 )
 
 neutral_country = (
@@ -163,7 +201,7 @@ for ax, country in zip(axes, country_order, strict=True):
     gdf = posterior.query("country == @country")
     range_kw = config.plotting.objects.range
     (
-        so.Plot(gdf, x=target, y="median", color="political")
+        so.Plot(gdf, x=TARGET, y="median", color="political")
         .add(so.Dot(**config.plotting.objects.dot), so.Dodge())
         .add(so.Range(**range_kw), so.Dodge(), ymin="lower", ymax="upper")
         .scale(color=[*config.plotting.color.political])
@@ -182,15 +220,15 @@ for ax, country in zip(axes, country_order, strict=True):
     )
     # Mark political significant differences
     sigs = (
-        gdf.groupby(["country", target])["median"]
+        gdf.groupby(["country", TARGET])["median"]
         .mean()
         .reset_index(name="y")
-        .merge(political_posterior[["country", target, "sig", "up"]])
+        .merge(political_posterior[["country", TARGET, "sig", "up"]])
         .dropna()
         .query("sig")
     )
     for _, row in sigs.iterrows():
-        x = np.where(support == int(row[target]))[0][0]
+        x = np.where(support == int(row[TARGET]))[0][0]
         ax.plot(
             x,
             row["y"],
@@ -201,18 +239,18 @@ for ax, country in zip(axes, country_order, strict=True):
         )
     # Mark difference vs neutral
     sigs = (
-        gdf[["country", "political", target, "median"]]
+        gdf[["country", "political", TARGET, "median"]]
         .rename(columns={"median": "y"})
         .merge(
             neutral_posterior[["country", "political", "contrast", "sig"]].rename(
-                columns={"contrast": target}
+                columns={"contrast": TARGET}
             )
         )
         .dropna()
         .query("sig")
     )
     for _, row in sigs.iterrows():
-        x = np.where(support == int(row[target]))[0][0]
+        x = np.where(support == int(row[TARGET]))[0][0]
         ax.plot(
             x + 0.4 * (-1 + row["political"] * 2),
             row["y"],
@@ -226,13 +264,13 @@ fig.legends.clear()
 ax = axes[0]
 ax.set_ylabel("Posterior class proportions", fontsize=18)
 fig.suptitle(
-    f"{('overall' if target == 'valence' else target).capitalize()} valence",
+    f"{('overall' if TARGET == 'valence' else TARGET).capitalize()} valence",
     fontsize=28,
     x=0.00,
     ha="left",
 )
 fig.tight_layout()
-fig.savefig(figpath / f"{target}-posterior.pdf")
+fig.savefig(figpath / f"{TARGET}-posterior.pdf")
 
 # %% ---------------------------------------------------------------------------------
 

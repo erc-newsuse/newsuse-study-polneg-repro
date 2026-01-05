@@ -21,19 +21,18 @@ az.rcParams.update(config.arviz)
 TARGET = os.environ.get("TARGET")
 if TARGET is None:
     TARGET = input("Enter target name (event): ").strip() or "event"
-MODEL = os.environ.get("MODEL")
-if MODEL is None:
-    MODEL = input("Enter model type (base): ").strip() or "base"
 
 opts = config.glmm.valence.targets[TARGET]
-opts["model"] = opts.model[MODEL]
-support = np.asarray([*config.categorical[TARGET]])
+support = np.asarray([*config.categorical[opts.response]])
+
 
 dirpath = paths.glmm / "valence"
 dirpath.mkdir(parents=True, exist_ok=True)
 
-predictors_fixed = opts.model.common
-predictors_groups = [*opts.model.groups]
+predictors_fixed = [*opts.common]
+predictors_groups = [*opts.group]
+
+rng = np.random.default_rng(opts.seed)
 
 # %% ---------------------------------------------------------------------------------
 
@@ -44,47 +43,44 @@ data = (
             df["country"], categories=[*config.categorical.country]
         ),
         outlet=lambda df: pd.Categorical(df["outlet"]),
-        **{
-            TARGET: lambda df: pd.Categorical(
-                df[TARGET],
-                categories=[*config.categorical[TARGET]],
-                ordered=True,
-            )
-        },
-    )[["key", TARGET, *predictors_fixed, *predictors_groups]]
+    )[["key", opts.response, *predictors_fixed, *predictors_groups]]
     .dropna(ignore_index=True)
     .convert_dtypes(dtype_backend="numpy_nullable")
 )
 
-# if (col := "month") in data:
-#     data[col] = pd.Categorical(data[col])
+for col in ["event", "sentiment"]:
+    if col in data.columns:
+        data[col] = pd.Categorical(
+            data[col],
+            categories=[*config.categorical[col]],
+            ordered=True,
+        )
 
 # %% ---------------------------------------------------------------------------------
 
 if sample := opts.get("sample"):
-    print(f"Subsampling data for model fitting to {sample.n} observations...")
-    model_data = data.sample(**sample, ignore_index=True)
+    print(f"Subsampling data for model fitting to {sample} observations...")
+    model_data = data.sample(n=sample, random_state=rng, ignore_index=True)
 else:
     model_data = data
 
-
 # %% ---------------------------------------------------------------------------------
 
-print(f"Building GLMM for '{TARGET}' using 'bambi'...")
-formula = opts.model.formula.format(target=TARGET)
+print(f"Building GLMM for '{opts.response}' using 'bambi'...")
+formula = opts.formula.format(response=opts.response)
 formula = formula.replace("\n", " ").strip()
 print("Model formula:", formula)
 
 model = bmb.Model(
     formula=formula,
     data=model_data,
-    family=opts.model.family,
-    noncentered=opts.model.noncentered,
+    family=opts.family,
+    noncentered=opts.noncentered,
 )
 
 # %% ---------------------------------------------------------------------------------
 
-print(f"Fitting GLMM for '{TARGET}' using '{opts.fit.inference_method}'...")
+print(f"Fitting GLMM for '{opts.response}' using '{opts.fit.inference_method}'...")
 idata = model.fit(**OmegaConf.to_object(opts.fit))
 
 # %% ---------------------------------------------------------------------------------
@@ -94,8 +90,10 @@ if (group := "observed_data") in idata.groups():
     del idata["observed_data"]
 
 observed = xr.Dataset(
-    {TARGET: ("__obs__", model.data[TARGET].to_numpy())},
-    coords={n: ("__obs__", c.to_numpy()) for n, c in model.data.items() if n != TARGET},
+    {opts.response: ("__obs__", model.data[opts.response].to_numpy())},
+    coords={
+        n: ("__obs__", c.to_numpy()) for n, c in model.data.items() if n != opts.response
+    },
 )
 idata.add_groups(**{group: observed})
 
@@ -111,54 +109,17 @@ ppd = (
         idata.isel(draw=slice(0, kwargs.pop("draws"))),
         data=model.data,
         inplace=False,
+        random_seed=rng,
         **kwargs,
     )
     .posterior_predictive.drop_vars("__obs__")
     .assign_coords(
-        {n: ("__obs__", c.to_numpy()) for n, c in model.data.items() if n != TARGET}
+        {n: ("__obs__", c.to_numpy()) for n, c in model.data.items() if n != opts.response}
     )
 )
-ppd[TARGET].values += min(support)  # adjust for 0-indexing
+ppd[opts.response].values += min(support)  # adjust for 0-indexing
 
 idata.add_groups(**{group: ppd})
-
-# %% ---------------------------------------------------------------------------------
-
-print("Prepare posterior expectations group in inference data...")
-if (group := "posterior_epred") in idata.groups():
-    del idata["posterior_epred"]
-
-grid = model.data[predictors_fixed].drop_duplicates(ignore_index=True)
-grid = (
-    # Make dummy values for group effects
-    # to allow independent sampling of group-level effects
-    # for proper marginalization
-    grid.loc[grid.index.repeat(opts.epred.samples_per_simple_effect)]
-    .groupby(level=0)
-    .apply(
-        lambda df: df.assign(
-            **{
-                n: str(df.name) + "_" + np.arange(len(df)).astype(str)
-                for n in predictors_groups
-            }
-        )
-    )
-    .reset_index(drop=True)
-)
-
-epred = (
-    model.predict(idata, data=grid, inplace=False, **opts.epred.predict)
-    .posterior["p"]
-    .assign_coords({n: ("__obs__", c.to_numpy()) for n, c in grid.items()})
-    .rename({f"{TARGET}_dim": TARGET})
-    .groupby(predictors_fixed)
-    .mean()
-    .stack(__obs__=tuple(predictors_fixed))
-    .transpose("chain", "draw", "__obs__", TARGET)
-    .reset_index("__obs__")
-)
-
-idata.add_groups(**{group: epred.to_dataset()})
 
 # %% ---------------------------------------------------------------------------------
 
@@ -174,27 +135,28 @@ cat_probs = (
         idata.isel(draw=slice(0, opts.ppd.draws)),
         data=model.data,
         inplace=False,
+        random_seed=rng,
         **opts.epred.predict,
     )
     .posterior["p"]
-    .rename({f"{TARGET}_dim": TARGET})
+    .rename({f"{opts.response}_dim": opts.response})
 )
 
 # Use observed category codes from model data
-obs_codes = model.data[TARGET].cat.codes.to_numpy()
+obs_codes = model.data[opts.response].cat.codes.to_numpy()
 
 # Log-likelihood: log(p_observed)
-obs_probs = cat_probs.isel({TARGET: xr.DataArray(obs_codes, dims="__obs__")})
+obs_probs = cat_probs.isel({opts.response: xr.DataArray(obs_codes, dims="__obs__")})
 loglik = (
     np.log(np.clip(obs_probs, 1e-10, 1.0))
-    .drop_vars(TARGET)  # drop the scalar coordinate to avoid name conflict
+    .drop_vars(opts.response)  # drop the scalar coordinate to avoid name conflict
     .assign_coords(
-        {n: ("__obs__", c.to_numpy()) for n, c in model.data.items() if n != TARGET}
+        {n: ("__obs__", c.to_numpy()) for n, c in model.data.items() if n != opts.response}
     )
     .reset_index("__obs__")
 )
 
-idata.add_groups(**{group: loglik.to_dataset(name=TARGET)})
+idata.add_groups(**{group: loglik.to_dataset(name=opts.response)})
 
 # %% ---------------------------------------------------------------------------------
 
@@ -203,14 +165,13 @@ store_model_metadata(
     idata,
     model,
     formula=formula,
-    family=opts.model.get("family", "categorical"),
-    target=TARGET,
+    family=opts.get("family", "cumulative"),
+    response=opts.response,
 )
 
 # %% ---------------------------------------------------------------------------------
 
 print("Saving model inference data as NetCDF file...")
-name = f"{TARGET}.nc"
-idata.to_netcdf(dirpath / name)
+idata.to_netcdf(dirpath / f"{TARGET}.nc")
 
 # %% ---------------------------------------------------------------------------------

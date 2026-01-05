@@ -74,6 +74,7 @@ dataset:
 
 glmm:
   defaults: &glmm_defaults
+    seed: 0
     fit: &glmm_fit
       draws: 2000
       tune: 2000
@@ -98,150 +99,79 @@ glmm:
   valence:
     default: &glmm_valence_default
       <<: *glmm_defaults
-      sample:
-        n: 250_000
-        random_state: 2226487
-      model: &glmm_valence_model
-        base: &glmm_valence_model_base
-          formula:
-            >
-            {target} ~ 0
-              + political * country
-              + (1 + political | outlet)
-              + (1 + political | country:year:month)
-          common:
-            - political
-            - country
-          groups:
-            - outlet
-            - year
-            - month
-          family: cumulative
-          noncentered: true
-      fit: &glmm_valence_fit
+      sample: 1_000_000
+      seed: 1
+      formula: >
+        {response} ~ 0
+          + political * country
+          + (1 + political | outlet)
+          + (1 + political | country:year:month)
+      family: cumulative
+      noncentered: true
+      common:
+        - political
+        - country
+      group:
+        - outlet
+        - year
+        - month
+      fit:
         <<: *glmm_fit
     targets:
       event:
+        response: event
         <<: *glmm_valence_default
-        fit:
-          <<: *glmm_valence_fit
-          random_seed: 3991777
-        ppd:
-          <<: *glmm_ppd
-          random_seed: 2578
-        epred:
-          <<: *glmm_epred
-          predict:
-            <<: *glmm_epred_predict
-            random_seed: 773410
+        seed: 543
       sentiment:
+        response: sentiment
         <<: *glmm_valence_default
-        model:
-          <<: *glmm_valence_model
-          structural:
-            <<: *glmm_valence_model_base
-            formula:
-              >
-              {target} ~ 0
-                + political * country * event
-                + (1 + political | outlet)
-            common:
-              - political
-              - country
-              - event
-            group:
-              - outlet
-        fit:
-          <<: *glmm_valence_fit
-          random_seed: 11378303
-        ppd:
-          <<: *glmm_ppd
-          random_seed: 5116
-        epred:
-          <<: *glmm_epred
-          predict:
-            <<: *glmm_epred_predict
-            random_seed: 777
+        seed: 17
+      structural:
+        response: sentiment
+        <<: *glmm_valence_default
+        sample: 500_000
+        seed: 303
+        formula: >
+          {response} ~ 0
+            + event * political * country
+            + (1 + political | outlet)
+        common:
+          - event
+          - political
+          - country
+        group:
+          - outlet
   engagement:
     default: &glmm_engagement_default
       <<: *glmm_defaults
-      sample:
-        n: 100_000
-        random_state: 6939487
-      predictors:
-        fixed:
-          - political
-          - country
-          - event
-          - sentiment
-        groups:
-          - outlet
-          - weekend
-          - year
-          - month
+      sample: 250_000
+      common:
+        - political
+        - country
+        - event
+        - sentiment
+      group:
+        - outlet
+        - weekend
+        - year
+        - month
       formula:
-        base:
         - >
-          {target} ~ 1
+          {response} ~ 1
             + event * sentiment
             + political * event * country + political * sentiment * country
             + (1 | outlet) + (1 | country:year:month)
         - >
           alpha ~ country + (1 | outlet)
-        extended:
-        - >
-          {target} ~ 1
-            + event * sentiment
-            + political * event * {by} + political * sentiment * {by} + country
-            + (1 | outlet) + (1 | country:year:month)
-        - >
-          alpha ~ country + (1 | outlet)
       model:
-        family: negativebinomial
-      fit: &glmm_engagement_fit
-        <<: *glmm_fit
-      epred: &glmm_engagement_epred
-        <<: *glmm_epred
+      family: negativebinomial
     targets:
       reactions:
-        <<: *glmm_engagement_default
-        fit:
-          <<: *glmm_engagement_fit
-          random_seed: 2042
-        ppd:
-          <<: *glmm_ppd
-          random_seed: 3094857
-        epred:
-          <<: *glmm_engagement_epred
-          predict:
-            <<: *glmm_epred_predict
-            random_seed: 4093857
+        response: reactions
       comments:
-        <<: *glmm_engagement_default
-        fit:
-          <<: *glmm_engagement_fit
-          random_seed: 30912
-        ppd:
-          <<: *glmm_ppd
-          random_seed: 409
-        epred:
-          <<: *glmm_engagement_epred
-          predict:
-            <<: *glmm_epred_predict
-            random_seed: 20394447
+        response: comments
       shares:
-        <<: *glmm_engagement_default
-        fit:
-          <<: *glmm_engagement_fit
-          random_seed: 40918
-        ppd:
-          <<: *glmm_ppd
-          random_seed: 51447
-        epred:
-          <<: *glmm_engagement_epred
-          predict:
-            <<: *glmm_epred_predict
-            random_seed: 676447
+        response: shares
 
 classification:
   political:

@@ -30,7 +30,7 @@ def store_model_metadata(
     *,
     formula: str | None = None,
     family: str | None = None,
-    target: str | None = None,
+    response: str | None = None,
 ) -> az.InferenceData:
     """Store Bambi model metadata in InferenceData attributes.
 
@@ -48,8 +48,8 @@ def store_model_metadata(
         Model formula string. If None, extracted from `model.formula`.
     family
         Model family name. If None, extracted from `model.family.name`.
-    target
-        Target variable name.
+    response
+        Response variable name.
         If None, extracted from `model.response_component.response_term.name`.
 
     Returns
@@ -86,9 +86,9 @@ def store_model_metadata(
     idata.attrs["family"] = family
 
     # Store target variable name
-    if target is None:
-        target = model.response_component.response_term.name
-    idata.attrs["target"] = target
+    if response is None:
+        response = model.response_component.response_term.name
+    idata.attrs["response"] = response
 
     return idata
 
