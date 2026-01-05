@@ -11,7 +11,7 @@ import xarray as xr
 from newsuse.data import DataFrame  # noqa
 
 from project import config, paths
-from project.bayes import eti, index_idata, rebuild_model
+from project.bayes import contr_ref, eti, index_idata, rebuild_model
 
 xr.set_options(**config.xarray)
 az.rcParams.update(config.arviz)
@@ -47,25 +47,6 @@ sentiment_map = {
 
 predictors_fixed = [*opts.predictors.fixed]
 predictors_groups = [*opts.predictors.groups]
-
-# %% Contrast functions --------------------------------------------------------------
-
-
-def contr_effect(s: pd.Series, level: int | str = 0) -> pd.Series:
-    index = s.index.get_level_values(level)
-    x = s.to_numpy()
-    contr = x - (x.sum() - x) / (x.size - 1)
-    contr = pd.Series(contr, index=pd.Series(index, name="contrast"))
-    return contr
-
-
-def contr_ref(s: pd.Series, ref: int | str, level: int | str) -> pd.Series:
-    index = s.index.get_level_values(level)
-    x = s.to_numpy()
-    contr = x[index != ref] - x[index == ref]
-    contr = pd.Series(contr, index=pd.Series(index[index != ref], name="contrast"))
-    return contr
-
 
 # %% Load inference data -------------------------------------------------------------
 

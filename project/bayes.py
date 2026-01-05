@@ -14,6 +14,8 @@ __all__ = (
     "store_model_metadata",
     "hdi",
     "eti",
+    "contr_effect",
+    "contr_ref",
 )
 
 DataCoordsT = Mapping[str, np.ndarray | tuple[str, np.ndarray]]
@@ -183,3 +185,21 @@ def index_idata(idata: az.InferenceData, xindex: Sequence[Hashable]) -> az.Infer
         ds = ds.set_xindex(xs)
         setattr(idata, group, ds)
     return idata
+
+
+def contr_effect(s: pd.Series, level: int | str = 0) -> pd.Series:
+    """Effect coding contrasts."""
+    index = s.index.get_level_values(level)
+    x = s.to_numpy()
+    contr = x - (x.sum() - x) / (x.size - 1)
+    contr = pd.Series(contr, index=pd.Series(index, name="contrast"))
+    return contr
+
+
+def contr_ref(s: pd.Series, ref: int | str, level: int | str) -> pd.Series:
+    """Reference category contrasts."""
+    index = s.index.get_level_values(level)
+    x = s.to_numpy()
+    contr = x[index != ref] - x[index == ref]
+    contr = pd.Series(contr, index=pd.Series(index[index != ref], name="contrast"))
+    return contr
