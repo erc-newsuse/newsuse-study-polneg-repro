@@ -99,30 +99,25 @@ glmm:
     default: &glmm_valence_default
       <<: *glmm_defaults
       sample:
-        n: 1_000_000
+        n: 250_000
         random_state: 2226487
-      predictors:
-        fixed:
-          - political
-          - country
-        groups:
-          - outlet
-          - year
-          - month
-      formula:
-        base: >
-          {target} ~ 0
-            + political * country
-            + (1 + political | outlet)
-            + (1 + political | country:year:month)
-        extended: >
-          {target} ~ 0
-            + political * country * {by}
-            + (1 + political | outlet)
-            + (1 + political | country:year:month)
-      model:
-        family: cumulative
-        noncentered: true
+      model: &glmm_valence_model
+        base: &glmm_valence_model_base
+          formula:
+            >
+            {target} ~ 0
+              + political * country
+              + (1 + political | outlet)
+              + (1 + political | country:year:month)
+          common:
+            - political
+            - country
+          groups:
+            - outlet
+            - year
+            - month
+          family: cumulative
+          noncentered: true
       fit: &glmm_valence_fit
         <<: *glmm_fit
     targets:
@@ -141,6 +136,21 @@ glmm:
             random_seed: 773410
       sentiment:
         <<: *glmm_valence_default
+        model:
+          <<: *glmm_valence_model
+          structural:
+            <<: *glmm_valence_model_base
+            formula:
+              >
+              {target} ~ 0
+                + political * country * event
+                + (1 + political | outlet)
+            common:
+              - political
+              - country
+              - event
+            group:
+              - outlet
         fit:
           <<: *glmm_valence_fit
           random_seed: 11378303
@@ -152,19 +162,6 @@ glmm:
           predict:
             <<: *glmm_epred_predict
             random_seed: 777
-      valence:
-        <<: *glmm_valence_default
-        fit:
-          <<: *glmm_valence_fit
-          random_seed: 2049387
-        ppd:
-          <<: *glmm_ppd
-          random_seed: 40957
-        epred:
-          <<: *glmm_epred
-          predict:
-            <<: *glmm_epred_predict
-            random_seed: 3094857
   engagement:
     default: &glmm_engagement_default
       <<: *glmm_defaults

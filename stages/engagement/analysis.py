@@ -315,7 +315,7 @@ joint_political_effects = (
 
 # %% ---------------------------------------------------------------------------------
 
-fig, axes = plt.subplots(ncols=3, figsize=(9, 3), sharex=True, sharey=True)
+fig, axes = plt.subplots(ncols=3, figsize=(12, 4), sharex=True, sharey=True)
 
 for ax, (event, gdf) in zip(axes.flat, joint_means.groupby("event"), strict=True):
     (
@@ -373,19 +373,19 @@ for ax, (event, gdf) in zip(axes.flat, joint_means.groupby("event"), strict=True
     ax.set_xticks(
         config.categorical["sentiment"],
         labels=[sentiment_map[t].title() for t in config.categorical["sentiment"]],
-        fontsize="large",
+        fontsize="x-large",
     )
 
 fig.legends.clear()
-fig.suptitle("Event valence", fontsize=20, y=0.95)
-fig.supxlabel("Sentiment valence", fontsize=18, y=0.05)
-fig.supylabel(target.capitalize(), fontsize=20, x=0.02)
+fig.suptitle("Event valence", fontsize=24, y=0.95)
+fig.supxlabel("Sentiment valence", fontsize=20, y=0.05)
+fig.supylabel(target.capitalize(), fontsize=24, x=0.02)
 fig.tight_layout()
 fig.savefig(figpath / f"{target}-joint-rates.pdf")
 
 # %% ---------------------------------------------------------------------------------
 
-fig, ax = plt.subplots(figsize=(9, 0.4))
+fig, ax = plt.subplots(figsize=(12, 0.5))
 ax.axis("off")
 
 # Custom legend handles for significance markers

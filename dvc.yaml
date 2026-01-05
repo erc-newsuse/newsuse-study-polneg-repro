@@ -182,20 +182,31 @@ stages:
       - figures/descriptives/${item}:
           persist: true
 
-  valence-glmm:
-    matrix:
-      by: ["", "-quality", "-ideology"]
-      target: ["event", "sentiment", "valence"]
+  valence-glmm-event:
     cmd:
-    - TARGET=${item.target} BY=${item.by} python stages/valence/glmm.py
+    - TARGET=event MODEL=base python stages/valence/glmm.py
     params:
-    - glmm.valence.targets.${item.target}
+    - glmm.valence.targets.event
     deps:
     - stages/valence/glmm.py
     - data/proc/final.parquet
     outs:
-    - glmm/valence/${item.target}${item.by}.nc:
+    - glmm/valence/event.nc:
         persist: true
+
+  valence-glmm-sentiment:
+    foreach: ["base", "structural"]
+    do:
+      cmd:
+      - TARGET=sentiment MODEL=${item} python stages/valence/glmm.py
+      params:
+      - glmm.valence.targets.sentiment
+      deps:
+      - stages/valence/glmm.py
+      - data/proc/final.parquet
+      outs:
+      - glmm/valence/sentiment-${item}.nc:
+          persist: true
 
   valence-analysis:
     foreach: ["event", "sentiment", "valence"]

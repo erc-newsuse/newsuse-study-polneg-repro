@@ -18,22 +18,22 @@ az.rcParams.update(config.arviz)
 
 # %% ---------------------------------------------------------------------------------
 
-target = os.environ.get("TARGET")
-if target is None:
-    target = input("Enter target name (event): ").strip() or "event"
-by = os.environ.get("BY")
-if by is None:
-    by = input("Enter grouping variable: ").strip() or ""
-by = by.removeprefix("-")
+TARGET = os.environ.get("TARGET")
+if TARGET is None:
+    TARGET = input("Enter target name (event): ").strip() or "event"
+MODEL = os.environ.get("MODEL")
+if MODEL is None:
+    MODEL = input("Enter model type (base): ").strip() or "base"
 
-opts = config.glmm.valence.targets[target]
-support = np.asarray([*config.categorical[target]])
+opts = config.glmm.valence.targets[TARGET]
+opts["model"] = opts.model[MODEL]
+support = np.asarray([*config.categorical[TARGET]])
 
 dirpath = paths.glmm / "valence"
 dirpath.mkdir(parents=True, exist_ok=True)
 
-predictors_fixed = [*opts.predictors.fixed, *([by] if by else [])]
-predictors_groups = [*opts.predictors.groups]
+predictors_fixed = opts.model.common
+predictors_groups = [*opts.model.groups]
 
 # %% ---------------------------------------------------------------------------------
 
@@ -45,13 +45,13 @@ data = (
         ),
         outlet=lambda df: pd.Categorical(df["outlet"]),
         **{
-            target: lambda df: pd.Categorical(
-                df[target],
-                categories=[*config.categorical[target]],
+            TARGET: lambda df: pd.Categorical(
+                df[TARGET],
+                categories=[*config.categorical[TARGET]],
                 ordered=True,
             )
         },
-    )[["key", target, *predictors_fixed, *predictors_groups]]
+    )[["key", TARGET, *predictors_fixed, *predictors_groups]]
     .dropna(ignore_index=True)
     .convert_dtypes(dtype_backend="numpy_nullable")
 )
@@ -63,8 +63,6 @@ data = (
 
 if sample := opts.get("sample"):
     print(f"Subsampling data for model fitting to {sample.n} observations...")
-    if by:
-        sample.update(n=sample["n"] // 2)
     model_data = data.sample(**sample, ignore_index=True)
 else:
     model_data = data
@@ -72,23 +70,21 @@ else:
 
 # %% ---------------------------------------------------------------------------------
 
-print(f"Building GLMM for '{target}' using 'bambi'...")
-if by:
-    formula = opts.formula.extended.format(target=target, by=by)
-else:
-    formula = opts.formula.base.format(target=target)
+print(f"Building GLMM for '{TARGET}' using 'bambi'...")
+formula = opts.model.formula.format(target=TARGET)
 formula = formula.replace("\n", " ").strip()
 print("Model formula:", formula)
 
 model = bmb.Model(
     formula=formula,
     data=model_data,
-    **opts.model,
+    family=opts.model.family,
+    noncentered=opts.model.noncentered,
 )
 
 # %% ---------------------------------------------------------------------------------
 
-print(f"Fitting GLMM for '{target}' using '{opts.fit.inference_method}'...")
+print(f"Fitting GLMM for '{TARGET}' using '{opts.fit.inference_method}'...")
 idata = model.fit(**OmegaConf.to_object(opts.fit))
 
 # %% ---------------------------------------------------------------------------------
@@ -98,8 +94,8 @@ if (group := "observed_data") in idata.groups():
     del idata["observed_data"]
 
 observed = xr.Dataset(
-    {target: ("__obs__", model.data[target].to_numpy())},
-    coords={n: ("__obs__", c.to_numpy()) for n, c in model.data.items() if n != target},
+    {TARGET: ("__obs__", model.data[TARGET].to_numpy())},
+    coords={n: ("__obs__", c.to_numpy()) for n, c in model.data.items() if n != TARGET},
 )
 idata.add_groups(**{group: observed})
 
@@ -119,10 +115,10 @@ ppd = (
     )
     .posterior_predictive.drop_vars("__obs__")
     .assign_coords(
-        {n: ("__obs__", c.to_numpy()) for n, c in model.data.items() if n != target}
+        {n: ("__obs__", c.to_numpy()) for n, c in model.data.items() if n != TARGET}
     )
 )
-ppd[target].values += min(support)  # adjust for 0-indexing
+ppd[TARGET].values += min(support)  # adjust for 0-indexing
 
 idata.add_groups(**{group: ppd})
 
@@ -154,11 +150,11 @@ epred = (
     model.predict(idata, data=grid, inplace=False, **opts.epred.predict)
     .posterior["p"]
     .assign_coords({n: ("__obs__", c.to_numpy()) for n, c in grid.items()})
-    .rename({f"{target}_dim": target})
+    .rename({f"{TARGET}_dim": TARGET})
     .groupby(predictors_fixed)
     .mean()
     .stack(__obs__=tuple(predictors_fixed))
-    .transpose("chain", "draw", "__obs__", target)
+    .transpose("chain", "draw", "__obs__", TARGET)
     .reset_index("__obs__")
 )
 
@@ -181,24 +177,24 @@ cat_probs = (
         **opts.epred.predict,
     )
     .posterior["p"]
-    .rename({f"{target}_dim": target})
+    .rename({f"{TARGET}_dim": TARGET})
 )
 
 # Use observed category codes from model data
-obs_codes = model.data[target].cat.codes.to_numpy()
+obs_codes = model.data[TARGET].cat.codes.to_numpy()
 
 # Log-likelihood: log(p_observed)
-obs_probs = cat_probs.isel({target: xr.DataArray(obs_codes, dims="__obs__")})
+obs_probs = cat_probs.isel({TARGET: xr.DataArray(obs_codes, dims="__obs__")})
 loglik = (
     np.log(np.clip(obs_probs, 1e-10, 1.0))
-    .drop_vars(target)  # drop the scalar coordinate to avoid name conflict
+    .drop_vars(TARGET)  # drop the scalar coordinate to avoid name conflict
     .assign_coords(
-        {n: ("__obs__", c.to_numpy()) for n, c in model.data.items() if n != target}
+        {n: ("__obs__", c.to_numpy()) for n, c in model.data.items() if n != TARGET}
     )
     .reset_index("__obs__")
 )
 
-idata.add_groups(**{group: loglik.to_dataset(name=target)})
+idata.add_groups(**{group: loglik.to_dataset(name=TARGET)})
 
 # %% ---------------------------------------------------------------------------------
 
@@ -208,13 +204,13 @@ store_model_metadata(
     model,
     formula=formula,
     family=opts.model.get("family", "categorical"),
-    target=target,
+    target=TARGET,
 )
 
 # %% ---------------------------------------------------------------------------------
 
 print("Saving model inference data as NetCDF file...")
-name = f"{target}.nc" if not by else f"{target}-{by}.nc"
+name = f"{TARGET}.nc"
 idata.to_netcdf(dirpath / name)
 
 # %% ---------------------------------------------------------------------------------
