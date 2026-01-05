@@ -112,7 +112,7 @@ for ax in axes.flat:
     ax.set_xticks(support - support.min(), labels=valence)
 
 title = "Combined valence" if target == "valence" else f"{target.capitalize()} valence"
-fig.suptitle(title, fontsize="xx-large", x=0.0, y=0.95, ha="left")
+fig.suptitle(title, fontsize=32, x=0.0, y=0.95, ha="left")
 fig.tight_layout()
 fig.savefig(figpath / f"{target}-frequencies.pdf")
 
