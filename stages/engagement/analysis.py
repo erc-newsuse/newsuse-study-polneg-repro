@@ -238,7 +238,7 @@ for ax, (valence, gdf) in zip(axes, valence_means.groupby("valence"), strict=Tru
         }
         ax.scatter([row["value"]], [row["y"]], **kw)
     ax.set_yscale("log")
-    ax.set_title(f"{valence.capitalize()} valence", fontsize="xx-large")
+    ax.set_title(f"{valence.capitalize()} valence", fontsize=20)
     ax.set_xlabel(None)
     ax.set_ylabel(None)
     ax.set_xticks(
@@ -247,9 +247,10 @@ for ax, (valence, gdf) in zip(axes, valence_means.groupby("valence"), strict=Tru
             (event_map if valence == "event" else sentiment_map)[t].title()
             for t in config.categorical[valence]
         ],
+        fontsize="x-large",
     )
 
-axes[0].set_ylabel(target.capitalize(), fontsize="xx-large")
+axes[0].set_ylabel(target.capitalize(), fontsize=20)
 fig.legends.clear()
 
 # Custom legend handles for political
@@ -267,33 +268,6 @@ handles_political = [
         config.plotting.color.political, config.categorical.political, strict=True
     )
 ]
-# Custom legend handles for significance markers
-handles_sig = [
-    mpl.lines.Line2D(
-        [],
-        [],
-        color=c,
-        marker=m,
-        markeredgecolor="black",
-        linestyle="",
-        markersize=8,
-        label=label,
-    )
-    for c, m, label in [
-        ("red", "*", "different than neutral"),
-        ("black", "^", "political higher"),
-        ("black", "v", "political lower"),
-    ]
-]
-# Make legend at the bottom of the figure
-fig.legend(
-    handles=(handles := [*handles_political, *handles_sig]),
-    loc="lower center",
-    ncol=len(handles),
-    frameon=False,
-    bbox_to_anchor=(0.5, -0.1),
-    handletextpad=0.05,
-)
 fig.tight_layout()
 fig.savefig(figpath / f"{target}-rates.pdf")
 
@@ -393,19 +367,55 @@ for ax, (event, gdf) in zip(axes.flat, joint_means.groupby("event"), strict=True
         }
         ax.scatter([row["sentiment"]], [row["y"]], **kw)
     ax.set_yscale("log")
-    ax.set_title(f"{event_map[event].title()}", fontsize="x-large")
+    ax.set_title(f"{event_map[event].title()}", fontsize=18)
     ax.set_xlabel(None)
     ax.set_ylabel(None)
     ax.set_xticks(
         config.categorical["sentiment"],
         labels=[sentiment_map[t].title() for t in config.categorical["sentiment"]],
+        fontsize="large",
     )
 
 fig.legends.clear()
-fig.suptitle("Event valence", fontsize="xx-large", y=0.95)
-fig.supxlabel("Sentiment valence", fontsize="xx-large", y=0.05)
-fig.supylabel(target.capitalize(), fontsize="xx-large", x=0.02)
+fig.suptitle("Event valence", fontsize=20, y=0.95)
+fig.supxlabel("Sentiment valence", fontsize=18, y=0.05)
+fig.supylabel(target.capitalize(), fontsize=20, x=0.02)
 fig.tight_layout()
 fig.savefig(figpath / f"{target}-joint-rates.pdf")
+
+# %% ---------------------------------------------------------------------------------
+
+fig, ax = plt.subplots(figsize=(9, 0.4))
+ax.axis("off")
+
+# Custom legend handles for significance markers
+handles_sig = [
+    mpl.lines.Line2D(
+        [],
+        [],
+        color=c,
+        marker=m,
+        markeredgecolor="black",
+        linestyle="",
+        markersize=8,
+        label=label,
+    )
+    for c, m, label in [
+        ("red", "*", "different than neutral"),
+        ("black", "^", "political higher"),
+        ("black", "v", "political lower"),
+    ]
+]
+# Make legend at the bottom of the figure
+fig.legend(
+    handles=(handles := [*handles_political, *handles_sig]),
+    loc="center",
+    ncol=len(handles),
+    frameon=False,
+    bbox_to_anchor=(0.5, 0.5),
+    handletextpad=0.05,
+)
+fig.tight_layout()
+fig.savefig(figpath / "engagement-legend.pdf")
 
 # %% ---------------------------------------------------------------------------------
