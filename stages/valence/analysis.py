@@ -24,7 +24,7 @@ if TARGET is None:
     TARGET = input("Enter target (event): ").strip() or "event"
 
 opts = config.glmm.valence.targets[TARGET]
-support = np.asarray([*config.categorical[TARGET]])
+support = np.asarray([*config.categorical[opts.response]])
 
 figpath = paths.figures / "valence"
 figpath.mkdir(parents=True, exist_ok=True)
@@ -77,11 +77,11 @@ epred = (
     model.predict(idata, data=grid, inplace=False, **opts.epred.predict)
     .posterior["p"]
     .assign_coords({n: ("__obs__", c.to_numpy()) for n, c in grid.items()})
-    .rename({f"{TARGET}_dim": TARGET})
+    .rename({f"{opts.response}_dim": opts.response})
     .groupby(predictors_fixed)
     .mean()
     .stack(__obs__=tuple(predictors_fixed))
-    .transpose("chain", "draw", "__obs__", TARGET)
+    .transpose("chain", "draw", "__obs__", opts.response)
     .reset_index("__obs__")
 )
 

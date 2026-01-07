@@ -476,3 +476,6 @@ plotting:
     range:
       color: black
       linewidth: 2
+    line:
+      linestyle: dashed
+      linewidth: 2
