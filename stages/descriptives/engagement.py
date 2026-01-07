@@ -21,9 +21,7 @@ targets = ["event", "sentiment", "valence"]
 quality = ["low", "medium", "high"]
 ideology = ["left", "center", "right"]
 
-domain = "engagement"
-
-figpath = paths.figures / "descriptives" / domain
+figpath = paths.figures / "descriptives"
 figpath.mkdir(parents=True, exist_ok=True)
 
 # %% ---------------------------------------------------------------------------------
@@ -88,41 +86,12 @@ fig.savefig(figpath / "engagement-ecdf.pdf")
 
 # %% ---------------------------------------------------------------------------------
 
-fig, axes = plt.subplots(ncols=3, figsize=(7, 2), sharex=True, sharey=True)
-for ax, metric in zip(axes.flat, config.engagement, strict=True):
-    sns.boxplot(
-        data=data,
-        x="country",
-        y=metric,
-        hue="political",
-        ax=ax,
-        palette=config.plotting.color.political,
-        fliersize=1,
-        legend=False,
-    )
-    ax.set_ylim(0, data[metric].max() * 10**1.5)
-    ax.set_yscale("symlog")
-    ax.set_title(metric.capitalize())
-    ax.set_xlabel(None)
-    ax.set_ylabel(None)
-    ax.set_xticks(
-        [*config.categorical.country],
-        [*map(str.upper, config.categorical.country)],
-    )
-    if ax is axes[0]:
-        ax.set_ylabel("Engagement")
-
-fig.tight_layout()
-fig.savefig(figpath / "engagement-country.png")
-
-# %% ---------------------------------------------------------------------------------
-
-for valence in ["event", "sentiment"]:
+for by in ["country", "event", "sentiment"]:
     fig, axes = plt.subplots(ncols=3, figsize=(7, 2), sharex=True, sharey=True)
     for ax, metric in zip(axes.flat, config.engagement, strict=True):
         sns.boxplot(
             data=data,
-            x=valence,
+            x=by,
             y=metric,
             hue="political",
             ax=ax,
@@ -132,64 +101,22 @@ for valence in ["event", "sentiment"]:
         )
         ax.set_ylim(0, data[metric].max() * 10**1.5)
         ax.set_yscale("symlog")
-        # ax.set_title(metric.capitalize())
+        ax.set_title(metric.capitalize())
         ax.set_xlabel(None)
         ax.set_ylabel(None)
+        if by == "country":
+            xticks = [*config.categorical[by]]
+            xtlabs = [*map(str.upper, config.categorical[by])]
+        else:
+            xticks = np.asarray([*config.categorical[by]]) + 1
+            xtlabs = [*map(str.capitalize, config.categorical[by].values())]
+        ax.set_xticks(xticks, xtlabs)
         if ax is axes[0]:
             ax.set_ylabel("Engagement")
-        if ax is axes[1]:
-            ax.set_xlabel(f"{valence.capitalize()}")
-        ax.set_xticklabels(["negative", "neutral", "positive"])
+        ax.tick_params(axis="y", labelsize="small")
+
+    fig.supxlabel(by.capitalize(), fontsize="large", y=0.1)
     fig.tight_layout()
-    fig.savefig(figpath / f"engagement-{valence}.png")
-
-# %% ---------------------------------------------------------------------------------
-
-for x in ["event", "sentiment", "valence"]:
-    for by in ["quality", "ideology"]:
-        for political_value, political in enumerate(config.categorical.political):
-            fig, axes = plt.subplots(
-                ncols=len(config.engagement),
-                nrows=2,
-                figsize=(4 * 4 / 3, 4),
-                sharex="row",
-                sharey="row",
-            )
-            df = data.query(f"political == {political_value}")
-            palette = config.plotting.color.get(by)
-            for ax, metric in zip(axes[0].flat, config.engagement, strict=True):
-                plot_ecdf(df, metric, ax, hue=by, palette=palette)
-                ax.set_title(metric.capitalize())
-                ax.set_xlabel(None)
-                ax.set_ylabel(None)
-                if ax is axes[0, 0]:
-                    ax.set_ylabel(r"$\mathbb{P}(X > x)$")
-                # if ax is axes[0, 1]:
-                #     ax.set_xlabel("Engagement")
-
-            for ax, metric in zip(axes[1].flat, config.engagement, strict=True):
-                sns.boxplot(
-                    data=df,
-                    x=x,
-                    y=metric,
-                    hue=by,
-                    ax=ax,
-                    palette=palette,
-                    fliersize=1,
-                    legend=False,
-                )
-                ax.set_ylim(0, data[metric].max() * 10**1.5)
-                ax.set_yscale("symlog")
-                ax.set_xlabel(None)
-                ax.set_ylabel(None)
-                if ax is axes[1, 0]:
-                    ax.set_ylabel("Engagement")
-                if ax is axes[1, 1]:
-                    ax.set_xlabel(x.capitalize())
-
-            fig.tight_layout()
-            title = "non-political" if political == "other" else "political"
-            fig.suptitle(f"{title.title()}", y=1.03, x=0.02, ha="left")
-            fig.savefig(figpath / f"ecdf-{x}-{by}-political-{political}.png")
+    fig.savefig(figpath / f"engagement-{by}.png")
 
 # %% ---------------------------------------------------------------------------------

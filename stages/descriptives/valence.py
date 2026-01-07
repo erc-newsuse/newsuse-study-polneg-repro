@@ -30,9 +30,7 @@ valence = (
     else ["negative", "neutral", "positive"]
 )
 
-domain = "valence"
-
-figpath = paths.figures / "descriptives" / domain
+figpath = paths.figures / "descriptives"
 figpath.mkdir(parents=True, exist_ok=True)
 
 

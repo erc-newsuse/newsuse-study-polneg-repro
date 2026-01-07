@@ -38,9 +38,9 @@ categorical:
   quality: ["low", "medium", "high"]
   ideology: ["left", "center", "right"]
   political: ["non-political", "political"]
-  event: [-1, 0, 1]
-  sentiment: [-1, 0, 1]
-  valence: [-2, -1, 0, 1, 2]
+  event: {-1: "negative", 0: "neutral", 1: "positive"}
+  sentiment: {-1: "negative", 0: "neutral", 1: "positive"}
+  valence: {-2: "very negative", -1: "negative", 0: "neutral", 1: "positive", 2: "very positive"}
 
 engagement:
   - reactions
