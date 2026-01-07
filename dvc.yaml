@@ -178,53 +178,31 @@ stages:
       deps:
       - stages/descriptives/${item}.py
       - data/proc/final.parquet
-      outs:
-      - figures/descriptives/${item}:
-          persist: true
 
-  valence-glmm:
+  glmm-valence:
     foreach: ["event", "sentiment", "structural"]
     do:
       cmd:
-      - TARGET=${item} python stages/valence/glmm.py
+      - TARGET=${item} python stages/glmm/valence.py
       params:
       - glmm.valence.targets.${item}
       deps:
-      - stages/valence/glmm.py
+      - stages/glmm/valence.py
       - data/proc/final.parquet
       outs:
       - glmm/valence/${item}.nc:
           persist: true
 
-  valence-analysis:
-    foreach: ["event", "sentiment", "valence"]
+  glmm-engagement:
+    foreach: ["reactions", "comments", "shares"]
     do:
       cmd:
-      - TARGET=${item} python stages/valence/validation.py
-      - TARGET=${item} python stages/valence/analysis.py
+      - TARGET=${item} python stages/glmm/engagement.py
       params:
-      - glmm.valence.targets.${item}.analysis
+      - glmm.engagement.targets.${item}
       deps:
-      - stages/valence/validation.py
-      - stages/valence/analysis.py
-      - glmm/valence/${item}.nc
+      - stages/glmm/engagement.py
+      - data/proc/final.parquet
       outs:
-      - figures/valence/${item}:
+      - glmm/engagement/${item}.nc:
           persist: true
-      - figures/valence/validation/${item}:
-          persist: true
-
-  engagement-glmm:
-    matrix:
-      by: ["", "-quality", "-ideology"]
-      target: ["reactions", "comments", "shares"]
-    cmd:
-    - TARGET=${item.target} BY=${item.by} python stages/engagement/glmm.py
-    params:
-    - glmm.engagement.targets.${item.target}
-    deps:
-    - stages/engagement/glmm.py
-    - data/proc/final.parquet
-    outs:
-    - glmm/engagement/${item.target}${item.by}.nc:
-        persist: true
