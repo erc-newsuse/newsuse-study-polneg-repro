@@ -328,5 +328,4 @@ fig.legend(
 fig.tight_layout()
 fig.savefig(figpath / "valence-legend.pdf")
 
-
 # %% ---------------------------------------------------------------------------------

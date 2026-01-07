@@ -168,10 +168,13 @@ glmm:
     targets:
       reactions:
         response: reactions
+        <<: *glmm_engagement_default
       comments:
         response: comments
+        <<: *glmm_engagement_default
       shares:
         response: shares
+        <<: *glmm_engagement_default
 
 classification:
   political:

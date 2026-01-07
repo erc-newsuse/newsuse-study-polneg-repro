@@ -143,8 +143,8 @@ valence_effects = (
 # %% ----------------------------------------------------------------------------------
 
 fig, axes = plt.subplots(
-    ncols=3,
-    figsize=(10, 4),
+    nrows=3,
+    figsize=(10 / 3, 8),
     sharex=True,
     sharey=True,
 )
@@ -212,7 +212,7 @@ for ax, (event, df) in zip(axes, posterior.groupby("event"), strict=True):
             zorder=10,
         )
     # Set titles and labels
-    ax.set_title(target_map[event].capitalize(), fontsize="x-large")
+    ax.set_title(f"{target_map[event].capitalize()} event", fontsize="x-large")
     ax.set_xlabel(None)
     ax.set_ylabel(None)
     ax.set_xticks(
@@ -222,8 +222,7 @@ for ax, (event, df) in zip(axes, posterior.groupby("event"), strict=True):
     )
 
 fig.legends.clear()
-fig.suptitle("Event valence", fontsize="xx-large", x=0.535, y=0.95)
-fig.supxlabel("Sentiment valence", fontsize="xx-large", x=0.535, y=0.05)
+fig.supxlabel("Sentiment valence", fontsize="xx-large", x=0.6)
 fig.supylabel("Posterior class probability", fontsize="xx-large")
 fig.tight_layout()
 fig.savefig(figpath / "sentiment-structural.pdf")
