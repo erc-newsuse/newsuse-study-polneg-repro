@@ -101,7 +101,7 @@ idata.add_groups(**{group: observed})
 
 print("Prepare posterior predictive group in inference data...")
 if (group := "posterior_predictive") in idata.groups():
-    del idata["posterior_predictive"]
+    del idata[group]
 
 kwargs = OmegaConf.to_object(opts.ppd)
 ppd = (

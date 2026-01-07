@@ -21,6 +21,7 @@ paths:
   ml:               "ml"
   glmm:             "glmm"
   figures:          "figures"
+  tables:           "tables"
   prompts:          "@ml/prompts"
   gpt:              "@proc/gpt/"
   annotations:      "annotations"
@@ -471,7 +472,7 @@ plotting:
     lines.markeredgewidth: 1
   objects:
     dot:
-      pointsize: 10
+      pointsize: 8
       edgecolor: black
       edgewidth: 1
       artist_kws:

@@ -1,0 +1,325 @@
+# %% ---------------------------------------------------------------------------------
+
+from types import SimpleNamespace
+
+import arviz as az
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn.objects as so
+import xarray as xr
+from scipy.special import expit, logit
+
+from project import config, paths
+from project.bayes import contr_ref, eti, rebuild_model
+
+xr.set_options(**config.xarray)
+az.rcParams.update(config.arviz)
+mpl.rcParams.update(config.plotting.params)
+so.Plot.config.theme.update(config.plotting.params)
+
+# Configuration
+opts = config.glmm.valence.targets["event"]
+support = np.asarray([*config.categorical["valence"]])
+
+analysis_name = "structural"
+
+figpath = paths.figures / analysis_name
+tabpath = paths.tables / analysis_name
+figpath.mkdir(parents=True, exist_ok=True)
+tabpath.mkdir(parents=True, exist_ok=True)
+
+countries_map = config.categorical.country
+political_map = dict(enumerate(config.categorical.political))
+
+predictors_fixed = [*opts.common]
+predictors_groups = [*opts.group]
+
+rng = np.random.default_rng(opts.seed + 1717)
+
+use_groups = ["posterior"]
+
+# %% ---------------------------------------------------------------------------------
+
+event = SimpleNamespace()
+event.idata = az.from_netcdf(paths.glmm / "valence" / "event.nc")
+event.model = rebuild_model(event.idata)
+
+for group in event.idata.groups():
+    if group not in use_groups:
+        del event.idata[group]
+
+# %% ---------------------------------------------------------------------------------
+
+grid = (
+    # Generate a grid of 1000 values per political-country combination
+    # with randomly sampled random effects
+    # We use the observed group levels to keep correlations
+    # between event and sentiment random effects
+    event.model.data.drop(columns=["key", "__obs__", "event"])
+    .drop_duplicates(ignore_index=True)
+    .groupby(["political", "country"], observed=True)
+    .apply(
+        lambda df: df.sample(n=500, random_state=rng, replace=True), include_groups=False
+    )
+    .droplevel(-1)
+    .reset_index()
+)
+
+ppd = {**opts.ppd, "draws": 10}
+event.ppd = (
+    event.model.predict(
+        event.idata.isel(draw=slice(ppd.pop("draws"))),
+        data=grid,
+        inplace=False,
+        **ppd,
+    )
+    .posterior_predictive.pipe(lambda x: x - 1)
+    .drop_vars("__obs__")
+    .assign_coords({n: ("__obs__", c.to_numpy()) for n, c in grid.items()})
+    .to_dataframe()
+    .droplevel("__obs__")
+    .reset_index()
+    .rename(columns={"chain": "chain_event", "draw": "draw_event"})
+)
+
+# %% ---------------------------------------------------------------------------------
+
+sentiment = SimpleNamespace()
+sentiment.idata = az.from_netcdf(paths.glmm / "valence" / "structural.nc")
+sentiment.model = rebuild_model(sentiment.idata)
+
+for group in sentiment.idata.groups():
+    if group not in use_groups:
+        del sentiment.idata[group]
+
+# %% ---------------------------------------------------------------------------------
+
+ppd = {**opts.ppd, "draws": 10}
+sentiment.ppd = (
+    sentiment.model.predict(
+        sentiment.idata.isel(draw=slice(ppd.pop("draws"))),
+        data=event.ppd,
+        inplace=False,
+        **ppd,
+    )
+    .posterior_predictive.pipe(lambda x: x - 1)
+    .drop_vars("__obs__")
+    .assign_coords({n: ("__obs__", c.to_numpy()) for n, c in event.ppd.items()})
+    .to_dataframe()
+    .droplevel("__obs__")
+    .reset_index()
+    .rename(columns={"chain": "chain_sentiment", "draw": "draw_sentiment"})
+)
+
+# %% ---------------------------------------------------------------------------------
+
+data = sentiment.ppd.assign(
+    valence=lambda df: df[["event", "sentiment"]].sum(axis=1),
+    sample=lambda df: (
+        df["chain_event"].astype(str)
+        + "_"
+        + df["draw_event"].astype(str)
+        + "_"
+        + df["chain_sentiment"].astype(str)
+        + "_"
+        + df["draw_sentiment"].astype(str)
+    ),
+).drop(columns=["chain_event", "draw_event", "chain_sentiment", "draw_sentiment"])
+
+probs = (
+    data.groupby(["political", "country", "sample"])["valence"]
+    .value_counts(normalize=True)
+    .sort_index()
+)
+
+probs_overall = (
+    probs.pipe(logit)
+    .groupby(["political", "valence", "sample"])
+    .mean()
+    .pipe(expit)
+    .swaplevel(-2, -1)
+    .sort_index()
+)
+
+# %% Compute posterior expected class probabilities ----------------------------------
+
+posterior_country = (
+    probs.groupby(["country", "political", "valence"]).apply(eti).unstack(-1).reset_index()
+)
+
+posterior_overall = (
+    probs_overall.groupby(["political", "valence"]).apply(eti).unstack(-1).reset_index()
+)
+
+posterior = pd.concat([posterior_country, posterior_overall], ignore_index=True).fillna(
+    {"country": "overall"}
+)
+
+# %% Political effects ---------------------------------------------------------------
+
+political_diffs = (
+    probs.pipe(logit)
+    .groupby(["country", "valence", "sample"])
+    .diff()
+    .dropna()
+    .droplevel("political")
+)
+
+political_diffs_overall = (
+    probs_overall.pipe(logit)
+    .groupby(["valence", "sample"])
+    .diff()
+    .dropna()
+    .droplevel("political")
+)
+
+political_country = (
+    political_diffs.pipe(np.exp)
+    .groupby(["country", "valence"])
+    .apply(eti)
+    .unstack(-1)
+    .reset_index()
+    .assign(
+        sig=lambda df: df[["lower", "upper"]].sub(1).pipe(np.sign).prod(axis=1).eq(1),
+        up=lambda df: df["median"] > 1,
+    )
+)
+
+political_overall = (
+    political_diffs_overall.pipe(np.exp)
+    .groupby(["valence"])
+    .apply(eti)
+    .unstack(-1)
+    .reset_index()
+    .assign(
+        sig=lambda df: df[["lower", "upper"]].sub(1).pipe(np.sign).prod(axis=1).eq(1),
+        up=lambda df: df["median"] > 1,
+    )
+)
+
+political_posterior = pd.concat(
+    [political_country, political_overall], ignore_index=True
+).fillna({"country": "overall"})
+
+# %% Valence effects vs neutral ------------------------------------------------------
+
+valence_diffs = (
+    probs.pipe(logit)
+    .groupby(["country", "political", "sample"])
+    .apply(contr_ref, ref=0, level="valence")
+)
+
+valence_diffs_overall = (
+    probs_overall.pipe(logit)
+    .groupby(["political", "sample"])
+    .apply(contr_ref, ref=0, level="valence")
+)
+
+valence_country = (
+    valence_diffs.pipe(np.exp)
+    .groupby(["country", "political", "contrast"])
+    .apply(eti)
+    .unstack(-1)
+    .reset_index()
+    .assign(
+        sig=lambda df: df[["lower", "upper"]].sub(1).pipe(np.sign).prod(axis=1).eq(1),
+        up=lambda df: df["median"] > 1,
+    )
+)
+
+valence_overall = (
+    valence_diffs_overall.pipe(np.exp)
+    .groupby(["political", "contrast"])
+    .apply(eti)
+    .unstack(-1)
+    .reset_index()
+    .assign(
+        sig=lambda df: df[["lower", "upper"]].sub(1).pipe(np.sign).prod(axis=1).eq(1),
+        up=lambda df: df["median"] > 1,
+    )
+)
+
+valence_posterior = pd.concat([valence_country, valence_overall], ignore_index=True).fillna(
+    {"country": "overall"}
+)
+
+# %% Plot posterior expectations -----------------------------------------------------
+
+country_order = ["overall", *config.categorical.country]
+fig, axes = plt.subplots(ncols=len(country_order), figsize=(21, 3.5), sharey=True)
+
+for ax, country in zip(axes, country_order, strict=True):
+    gdf = posterior.query("country == @country")
+    range_kw = config.plotting.objects.range
+    (
+        so.Plot(gdf, x="valence", y="median", color="political")
+        .add(so.Dot(**{**config.plotting.objects.dot, "pointsize": 8}), so.Dodge())
+        .add(so.Range(**range_kw), so.Dodge(), ymin="lower", ymax="upper")
+        .scale(color=[*config.plotting.color.political])
+        .on(ax)
+        .plot()
+    )
+    title = country.title() if country == "overall" else countries_map[country]
+    ax.set_title(title, fontsize=24)
+    ax.set_xlabel(None)
+    ax.set_ylabel(None)
+    # ax.set_ylim(0, 1)
+    # Format x-axis as integers
+    ax.xaxis.set_major_locator(mpl.ticker.FixedLocator(support))
+    # Mark political significant differences
+    sigs = (
+        gdf.groupby(["country", "valence"])["median"]
+        .mean()
+        .reset_index(name="y")
+        .merge(political_posterior[["country", "valence", "sig", "up"]])
+        .dropna()
+        .query("sig")
+    )
+    for _, row in sigs.iterrows():
+        x = np.where(support == int(row["valence"]))[0][0] - 2
+        ax.plot(
+            x,
+            row["y"],
+            marker="^" if row["up"] else "v",
+            color="black",
+            markersize=12,
+            zorder=10,
+        )
+    # Mark difference vs neutral
+    sigs = (
+        gdf[["country", "political", "valence", "median"]]
+        .rename(columns={"median": "y"})
+        .merge(
+            valence_posterior[["country", "political", "contrast", "sig"]].rename(
+                columns={"contrast": "valence"}
+            )
+        )
+        .dropna()
+        .query("sig")
+    )
+    for _, row in sigs.iterrows():
+        x = np.where(support == int(row["valence"]))[0][0] - 2
+        ax.plot(
+            x + 0.4 * (-1 + row["political"] * 2),
+            row["y"],
+            marker="*",
+            color="red",
+            markersize=12,
+            zorder=10,
+        )
+
+fig.legends.clear()
+ax = axes[0]
+ax.set_ylabel("Posterior class proportions", fontsize=18)
+fig.suptitle(
+    "Valence",
+    fontsize=28,
+    x=0.00,
+    ha="left",
+)
+fig.tight_layout()
+fig.savefig(figpath / "valence-posterior.pdf")
+
+# %% ---------------------------------------------------------------------------------
