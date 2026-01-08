@@ -1,6 +1,7 @@
 # %% ---------------------------------------------------------------------------------
 
 import os
+import re
 
 import arviz as az
 import matplotlib as mpl
@@ -38,10 +39,12 @@ alpha = 1 - az.rcParams["stats.ci_prob"]
 idata = az.from_netcdf(paths.glmm / "valence" / f"{target}.nc")
 model = rebuild_model(idata)
 
+# %% ---------------------------------------------------------------------------------
+
 terms_rx = {
     "fixed": [
         r"^threshold$",
-        r"^(political)?:?(country)?:?(event)?$",
+        r"^(event)?:?(political)?:?(country)?$",
     ],
     "group (sd)": [r"\|.*_sigma$"],
     "group": [r"\|(outlet|country:year:month)$"],
@@ -50,6 +53,14 @@ terms_opts = {
     "var_names": sum([v for k, v in terms_rx.items() if k != "group"], []),
     "filter_vars": "regex",
 }
+
+terms_fixed = sorted(
+    [
+        t
+        for t in idata.posterior.data_vars
+        if any(re.match(rx, t) for rx in terms_rx["fixed"])
+    ]
+)
 
 # %% ---------------------------------------------------------------------------------
 
@@ -119,11 +130,11 @@ bad.head(len(bad))
 fig, axes = plt.subplots(
     figsize=(figsize := (24, 8)),
     nrows=2,
-    ncols=8,
+    ncols=len(terms_fixed),
 )
 axes = az.plot_trace(
     idata,
-    **terms_opts,
+    var_names=terms_fixed,
     combined=True,
     figsize=figsize,
     legend=False,
@@ -132,20 +143,13 @@ axes = az.plot_trace(
 fig = axes.flatten()[0].figure
 fig.tight_layout()
 
-# for ax in axes[:, 0].flat:
-#     if legend := ax.get_legend():
-#         legend.set_title(None)
-# for ax in axes[:, 1].flat:
-#     if legend := ax.get_legend():
-#         legend.remove()
-
 fig.savefig(figpath / f"{target}-trace.pdf")
 
 # %% ---------------------------------------------------------------------------------
 
 axes = az.plot_ess(
     idata,
-    **terms_opts,
+    var_names=terms_fixed,
     figsize=(15, 15),
 )
 ylabel = axes[0, 0].get_ylabel()
