@@ -130,7 +130,7 @@ glmm:
       structural:
         response: sentiment
         <<: *glmm_valence_default
-        sample: 250_000
+        sample: 1_000_000
         seed: 303
         formula: >
           {response} ~ 0
