@@ -4513,3 +4513,57 @@ stages:
       hash: md5
       md5: 65cef33883971dda193df57a66c7cc42
       size: 978964782
+  glmm-valence@structural:
+    cmd:
+    - TARGET=structural python stages/glmm/valence.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/glmm/valence.py
+      hash: md5
+      md5: 9b9db6beef7d25d213c625cd77340d81
+      size: 5583
+    params:
+      params.yaml:
+        glmm.valence.targets.structural:
+          seed: 303
+          fit:
+            draws: 2000
+            tune: 2000
+            chains: 4
+            cores: 4
+            target_accept: 0.99
+            progress_bar: true
+            inference_method: nutpie
+            nuts_sampler_kwargs:
+              backend: jax
+          ppd:
+            draws: 100
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+          epred:
+            samples_per_simple_effect: 100
+            predict:
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
+          sample: 250000
+          formula: "{response} ~ 0\n  + event * political * country\n  + (1 + political
+            * event | outlet)\n"
+          family: cumulative
+          noncentered: true
+          common:
+          - event
+          - political
+          - country
+          group:
+          - outlet
+          response: sentiment
+    outs:
+    - path: glmm/valence/structural.nc
+      hash: md5
+      md5: 015bc125421ecbefbe406bcb16c865d5
+      size: 581871672

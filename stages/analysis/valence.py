@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import seaborn.objects as so
 import xarray as xr
+from newsuse.data import DataFrame
 from scipy.special import logit
 
 from project import config, paths
@@ -109,7 +110,7 @@ political_overall = (
     )
 )
 
-political_posterior = pd.concat(
+posterior_political = pd.concat(
     [political_country, political_overall], ignore_index=True
 ).fillna({"country": "overall"})
 
@@ -147,7 +148,7 @@ neutral_overall = (
     )
 )
 
-neutral_posterior = pd.concat([neutral_country, neutral_overall], ignore_index=True).fillna(
+posterior_valence = pd.concat([neutral_country, neutral_overall], ignore_index=True).fillna(
     {"country": "overall"}
 )
 
@@ -187,7 +188,7 @@ for ax, country in zip(axes, country_order, strict=True):
         gdf.groupby(["country", TARGET])["median"]
         .mean()
         .reset_index(name="y")
-        .merge(political_posterior[["country", TARGET, "sig", "up"]])
+        .merge(posterior_political[["country", TARGET, "sig", "up"]])
         .dropna()
         .query("sig")
     )
@@ -206,7 +207,7 @@ for ax, country in zip(axes, country_order, strict=True):
         gdf[["country", "political", TARGET, "median"]]
         .rename(columns={"median": "y"})
         .merge(
-            neutral_posterior[["country", "political", "contrast", "sig"]].rename(
+            posterior_valence[["country", "political", "contrast", "sig"]].rename(
                 columns={"contrast": TARGET}
             )
         )
@@ -291,5 +292,16 @@ fig.legend(
 )
 fig.tight_layout()
 fig.savefig(figpath / "valence-legend.pdf")
+
+# %% Save tables ---------------------------------------------------------------------
+
+tables = {
+    "posterior": posterior,
+    "political": posterior_political,
+    "valence": posterior_valence,
+}
+
+for name, table in tables.items():
+    DataFrame(table).to_(tabpath / f"{TARGET}-{name}.tsv", index=False)
 
 # %% ---------------------------------------------------------------------------------

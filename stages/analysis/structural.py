@@ -1,6 +1,5 @@
 # %% ---------------------------------------------------------------------------------
 
-
 import arviz as az
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -8,6 +7,7 @@ import numpy as np
 import pandas as pd
 import seaborn.objects as so
 import xarray as xr
+from newsuse.data import DataFrame
 from scipy.special import expit, logit
 
 from project import config, paths
@@ -85,9 +85,9 @@ posterior_overall = (
     probs_overall.groupby(["political", "valence"]).apply(eti).unstack(-1).reset_index()
 )
 
-posterior = pd.concat([posterior_country, posterior_overall], ignore_index=True).fillna(
-    {"country": "overall"}
-)
+sentiment_posterior = pd.concat(
+    [posterior_country, posterior_overall], ignore_index=True
+).fillna({"country": "overall"})
 
 # %% Political effects ---------------------------------------------------------------
 
@@ -131,7 +131,7 @@ political_overall = (
     )
 )
 
-political_posterior = pd.concat(
+sentiment_political = pd.concat(
     [political_country, political_overall], ignore_index=True
 ).fillna({"country": "overall"})
 
@@ -173,7 +173,7 @@ valence_overall = (
     )
 )
 
-valence_posterior = pd.concat([valence_country, valence_overall], ignore_index=True).fillna(
+sentiment_valence = pd.concat([valence_country, valence_overall], ignore_index=True).fillna(
     {"country": "overall"}
 )
 
@@ -183,7 +183,7 @@ country_order = ["overall", *config.categorical.country]
 fig, axes = plt.subplots(ncols=len(country_order), figsize=(21, 3.5), sharey=True)
 
 for ax, country in zip(axes, country_order, strict=True):
-    gdf = posterior.query("country == @country")
+    gdf = sentiment_posterior.query("country == @country")
     range_kw = config.plotting.objects.range
     (
         so.Plot(gdf, x="valence", y="median", color="political")
@@ -213,7 +213,7 @@ for ax, country in zip(axes, country_order, strict=True):
         gdf.groupby(["country", "valence"])["median"]
         .mean()
         .reset_index(name="y")
-        .merge(political_posterior[["country", "valence", "sig", "up"]])
+        .merge(sentiment_political[["country", "valence", "sig", "up"]])
         .dropna()
         .query("sig")
     )
@@ -232,7 +232,7 @@ for ax, country in zip(axes, country_order, strict=True):
         gdf[["country", "political", "valence", "median"]]
         .rename(columns={"median": "y"})
         .merge(
-            valence_posterior[["country", "political", "contrast", "sig"]].rename(
+            sentiment_valence[["country", "political", "contrast", "sig"]].rename(
                 columns={"contrast": "valence"}
             )
         )
@@ -261,5 +261,16 @@ fig.suptitle(
 )
 fig.tight_layout()
 fig.savefig(figpath / "valence-posterior.pdf")
+
+# %% Save tables ---------------------------------------------------------------------
+
+tables = {
+    "posterior": sentiment_posterior,
+    "political": sentiment_political,
+    "valence": sentiment_valence,
+}
+
+for name, table in tables.items():
+    DataFrame(table).to_(tabpath / f"valence-{name}.tsv", index=False)
 
 # %% ---------------------------------------------------------------------------------

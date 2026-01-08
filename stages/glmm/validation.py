@@ -9,7 +9,7 @@ import pandas as pd
 import xarray as xr
 
 from project import config, paths
-from project.bayes import index_idata, rebuild_model
+from project.bayes import rebuild_model
 
 xr.set_options(**config.xarray)
 az.rcParams.update(config.arviz)
@@ -36,7 +36,6 @@ alpha = 1 - az.rcParams["stats.ci_prob"]
 # %% ---------------------------------------------------------------------------------
 
 idata = az.from_netcdf(paths.glmm / "valence" / f"{target}.nc")
-idata = index_idata(idata, ["key", *opts.common, *opts.group])
 model = rebuild_model(idata)
 
 terms_rx = {
