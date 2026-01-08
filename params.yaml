@@ -130,12 +130,12 @@ glmm:
       structural:
         response: sentiment
         <<: *glmm_valence_default
-        sample: 500_000
+        sample: 250_000
         seed: 303
         formula: >
           {response} ~ 0
             + event * political * country
-            + (1 + political | outlet)
+            + (1 + political * event | outlet)
         common:
           - event
           - political
