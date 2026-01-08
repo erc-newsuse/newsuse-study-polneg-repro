@@ -11,7 +11,7 @@ import xarray as xr
 from scipy.special import logit
 
 from project import config, paths
-from project.bayes import contr_ref, eti, index_idata, rebuild_model
+from project.bayes import contr_ref, eti
 
 xr.set_options(**config.xarray)
 az.rcParams.update(config.arviz)
@@ -26,74 +26,33 @@ if TARGET is None:
 opts = config.glmm.valence.targets[TARGET]
 support = np.asarray([*config.categorical[opts.response]])
 
-figpath = paths.figures / "valence"
+analysis_name = "valence"
+
+figpath = paths.figures / analysis_name
+tabpath = paths.tables / analysis_name
 figpath.mkdir(parents=True, exist_ok=True)
+tabpath.mkdir(parents=True, exist_ok=True)
 
 countries_map = config.categorical.country
 political_map = dict(enumerate(config.categorical.political))
-
-if TARGET == "valence":
-    target_map = {x: x for x in config.categorical.valence}
-else:
-    target_map = {
-        -1: "negative",
-        0: "neutral",
-        1: "positive",
-    }
 
 predictors_fixed = [*opts.common]
 predictors_groups = [*opts.group]
 
 # %% Load inference data -------------------------------------------------------------
 
-idata = az.from_netcdf(paths.glmm / "valence" / f"{TARGET}.nc")
-model = rebuild_model(idata)
+ppd = xr.open_dataset(paths.glmm / "ppd.nc")[TARGET]
 
 # %% ---------------------------------------------------------------------------------
 
-print("Prepare posterior expectations group in inference data...")
-if (group := "posterior_epred") in idata.groups():
-    del idata["posterior_epred"]
-
-grid = model.data[predictors_fixed].drop_duplicates(ignore_index=True)
-grid = (
-    # Make dummy values for group effects
-    # to allow independent sampling of group-level effects
-    # for proper marginalization
-    grid.loc[grid.index.repeat(opts.epred.samples_per_simple_effect)]
-    .groupby(level=0)
-    .apply(
-        lambda df: df.assign(
-            **{
-                n: str(df.name) + "_" + np.arange(len(df)).astype(str)
-                for n in predictors_groups
-            }
-        )
-    )
-    .reset_index(drop=True)
+probs = (
+    ppd.to_dataframe()
+    .reset_index()
+    .rename(columns={f"sample_{TARGET}": "sample"})
+    .groupby(predictors_fixed + ["sample"])[TARGET]
+    .value_counts(normalize=True)
+    .sort_index()
 )
-
-epred = (
-    model.predict(idata, data=grid, inplace=False, **opts.epred.predict)
-    .posterior["p"]
-    .assign_coords({n: ("__obs__", c.to_numpy()) for n, c in grid.items()})
-    .rename({f"{opts.response}_dim": opts.response})
-    .groupby(predictors_fixed)
-    .mean()
-    .stack(__obs__=tuple(predictors_fixed))
-    .transpose("chain", "draw", "__obs__", opts.response)
-    .reset_index("__obs__")
-)
-
-idata.add_groups(**{group: epred.to_dataset()})
-
-# %% ---------------------------------------------------------------------------------
-
-idata = index_idata(idata, ["key", *opts.common, *opts.group])
-# Extract posterior expected probabilities
-epred = az.extract(idata, group="posterior_epred")
-# Get probabilities as xarray DataArray
-probs = epred.p.to_dataframe()["p"]
 
 # %% Compute posterior expected class probabilities ----------------------------------
 
@@ -102,7 +61,7 @@ probs_country = (
 )
 
 probs_overall = (
-    probs.groupby(["political", TARGET, "chain", "draw"])
+    probs.groupby(["political", TARGET, "sample"])
     .mean()
     .groupby(["political", TARGET])
     .apply(eti)
@@ -118,7 +77,7 @@ posterior = pd.concat([probs_country, probs_overall], ignore_index=True).fillna(
 
 political_diffs = (
     probs.pipe(logit)
-    .groupby(["country", TARGET, "chain", "draw"])
+    .groupby(["country", TARGET, "sample"])
     .diff()
     .dropna()
     .droplevel("political")
@@ -137,7 +96,7 @@ political_country = (
 )
 
 political_overall = (
-    political_diffs.groupby([TARGET, "chain", "draw"])
+    political_diffs.groupby([TARGET, "sample"])
     .mean()
     .pipe(np.exp)
     .groupby(TARGET)
@@ -158,8 +117,8 @@ political_posterior = pd.concat(
 
 neutral_diffs = (
     probs.pipe(logit)
-    .groupby(["country", "political", "chain", "draw"])
-    .apply(contr_ref, ref="0", level=TARGET)
+    .groupby(["country", "political", "sample"])
+    .apply(contr_ref, ref=0, level=TARGET)
 )
 
 neutral_country = (
@@ -175,7 +134,7 @@ neutral_country = (
 )
 
 neutral_overall = (
-    neutral_diffs.groupby(["political", "contrast", "chain", "draw"])
+    neutral_diffs.groupby(["political", "contrast", "sample"])
     .mean()
     .pipe(np.exp)
     .groupby(["political", "contrast"])
@@ -213,11 +172,16 @@ for ax, country in zip(axes, country_order, strict=True):
     ax.set_xlabel(None)
     ax.set_ylabel(None)
     ax.set_ylim(0, 1)
-    ax.set_xticks(
-        support - support.min(),
-        labels=[str(target_map[t]).title() for t in support],
-        fontsize="x-large",
-    )
+    ax.set_xticks(support)
+    # Mark regions with colors
+    for boundary in [*config.categorical[TARGET]][:-1]:
+        ax.axvline(
+            x=boundary + 0.5,
+            color="gray",
+            linestyle="--",
+            linewidth=1,
+            zorder=-1,
+        )
     # Mark political significant differences
     sigs = (
         gdf.groupby(["country", TARGET])["median"]
@@ -228,7 +192,7 @@ for ax, country in zip(axes, country_order, strict=True):
         .query("sig")
     )
     for _, row in sigs.iterrows():
-        x = np.where(support == int(row[TARGET]))[0][0]
+        x = np.where(support == int(row[TARGET]))[0][0] - 1
         ax.plot(
             x,
             row["y"],
@@ -250,7 +214,7 @@ for ax, country in zip(axes, country_order, strict=True):
         .query("sig")
     )
     for _, row in sigs.iterrows():
-        x = np.where(support == int(row[TARGET]))[0][0]
+        x = np.where(support == int(row[TARGET]))[0][0] - 1
         ax.plot(
             x + 0.4 * (-1 + row["political"] * 2),
             row["y"],

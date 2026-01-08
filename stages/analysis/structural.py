@@ -1,6 +1,5 @@
 # %% ---------------------------------------------------------------------------------
 
-from types import SimpleNamespace
 
 import arviz as az
 import matplotlib as mpl
@@ -12,7 +11,7 @@ import xarray as xr
 from scipy.special import expit, logit
 
 from project import config, paths
-from project.bayes import contr_ref, eti, rebuild_model
+from project.bayes import contr_ref, eti
 
 xr.set_options(**config.xarray)
 az.rcParams.update(config.arviz)
@@ -36,100 +35,33 @@ political_map = dict(enumerate(config.categorical.political))
 predictors_fixed = [*opts.common]
 predictors_groups = [*opts.group]
 
-rng = np.random.default_rng(opts.seed + 1717)
+# %% ---------------------------------------------------------------------------------
 
-use_groups = ["posterior"]
+ppd = xr.load_dataset(paths.glmm / "ppd.nc")
 
 # %% ---------------------------------------------------------------------------------
 
-event = SimpleNamespace()
-event.idata = az.from_netcdf(paths.glmm / "valence" / "event.nc")
-event.model = rebuild_model(event.idata)
-
-for group in event.idata.groups():
-    if group not in use_groups:
-        del event.idata[group]
-
-# %% ---------------------------------------------------------------------------------
-
-grid = (
-    # Generate a grid of 1000 values per political-country combination
-    # with randomly sampled random effects
-    # We use the observed group levels to keep correlations
-    # between event and sentiment random effects
-    event.model.data.drop(columns=["key", "__obs__", "event"])
-    .drop_duplicates(ignore_index=True)
-    .groupby(["political", "country"], observed=True)
-    .apply(
-        lambda df: df.sample(n=500, random_state=rng, replace=True), include_groups=False
-    )
-    .droplevel(-1)
-    .reset_index()
-)
-
-ppd = {**opts.ppd, "draws": 10}
-event.ppd = (
-    event.model.predict(
-        event.idata.isel(draw=slice(ppd.pop("draws"))),
-        data=grid,
-        inplace=False,
-        **ppd,
-    )
-    .posterior_predictive.pipe(lambda x: x - 1)
-    .drop_vars("__obs__")
-    .assign_coords({n: ("__obs__", c.to_numpy()) for n, c in grid.items()})
+sentiment = (
+    ppd.drop_vars(["sentiment", "sample_sentiment"])
+    .rename_vars({"sentiment_structural": "sentiment"})
     .to_dataframe()
-    .droplevel("__obs__")
     .reset_index()
-    .rename(columns={"chain": "chain_event", "draw": "draw_event"})
-)
-
-# %% ---------------------------------------------------------------------------------
-
-sentiment = SimpleNamespace()
-sentiment.idata = az.from_netcdf(paths.glmm / "valence" / "structural.nc")
-sentiment.model = rebuild_model(sentiment.idata)
-
-for group in sentiment.idata.groups():
-    if group not in use_groups:
-        del sentiment.idata[group]
-
-# %% ---------------------------------------------------------------------------------
-
-ppd = {**opts.ppd, "draws": 10}
-sentiment.ppd = (
-    sentiment.model.predict(
-        sentiment.idata.isel(draw=slice(ppd.pop("draws"))),
-        data=event.ppd,
-        inplace=False,
-        **ppd,
+    .assign(
+        sample=lambda df: (
+            df.pop("sample_event").astype(str)
+            + "_"
+            + df.pop("sample_structural").astype(str)
+        ),
+        valence=lambda df: df[["event", "sentiment"]].sum(axis=1),
     )
-    .posterior_predictive.pipe(lambda x: x - 1)
-    .drop_vars("__obs__")
-    .assign_coords({n: ("__obs__", c.to_numpy()) for n, c in event.ppd.items()})
-    .to_dataframe()
-    .droplevel("__obs__")
+    .set_index("sample")
     .reset_index()
-    .rename(columns={"chain": "chain_sentiment", "draw": "draw_sentiment"})
 )
 
 # %% ---------------------------------------------------------------------------------
-
-data = sentiment.ppd.assign(
-    valence=lambda df: df[["event", "sentiment"]].sum(axis=1),
-    sample=lambda df: (
-        df["chain_event"].astype(str)
-        + "_"
-        + df["draw_event"].astype(str)
-        + "_"
-        + df["chain_sentiment"].astype(str)
-        + "_"
-        + df["draw_sentiment"].astype(str)
-    ),
-).drop(columns=["chain_event", "draw_event", "chain_sentiment", "draw_sentiment"])
 
 probs = (
-    data.groupby(["political", "country", "sample"])["valence"]
+    sentiment.groupby(["political", "country", "sample"])["valence"]
     .value_counts(normalize=True)
     .sort_index()
 )
@@ -265,7 +197,15 @@ for ax, country in zip(axes, country_order, strict=True):
     ax.set_title(title, fontsize=24)
     ax.set_xlabel(None)
     ax.set_ylabel(None)
-    # ax.set_ylim(0, 1)
+    # Mark regions with colors
+    for boundary in [*config.categorical.valence][:-1]:
+        ax.axvline(
+            x=boundary + 0.5,
+            color="gray",
+            linestyle="--",
+            linewidth=1,
+            zorder=-1,
+        )
     # Format x-axis as integers
     ax.xaxis.set_major_locator(mpl.ticker.FixedLocator(support))
     # Mark political significant differences

@@ -81,7 +81,7 @@ model = bmb.Model(
 # %% ---------------------------------------------------------------------------------
 
 print(f"Fitting GLMM for '{opts.response}' using '{opts.fit.inference_method}'...")
-idata = model.fit(**OmegaConf.to_object(opts.fit))
+idata = model.fit(**OmegaConf.to_object(opts.fit), random_seed=rng)
 
 # %% ---------------------------------------------------------------------------------
 

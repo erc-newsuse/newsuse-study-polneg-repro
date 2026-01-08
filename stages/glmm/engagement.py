@@ -17,6 +17,7 @@ from project.bayes import store_model_metadata
 xr.set_options(**config.xarray)
 az.rcParams.update(config.arviz)
 
+
 # %% ---------------------------------------------------------------------------------
 
 target = os.environ.get("TARGET")
@@ -34,6 +35,8 @@ dirpath.mkdir(parents=True, exist_ok=True)
 
 predictors_fixed = [*opts.predictors.fixed, *([by] if by else [])]
 predictors_groups = [*opts.predictors.groups]
+
+rng = np.random.default_rng(opts.seed + 303)
 
 # %% ---------------------------------------------------------------------------------
 
@@ -101,7 +104,7 @@ model = bmb.Model(
 # %% ---------------------------------------------------------------------------------
 
 print(f"Fitting GLMM for '{target}' using '{opts.fit.inference_method}'...")
-idata = model.fit(**OmegaConf.to_object(opts.fit))
+idata = model.fit(**OmegaConf.to_object(opts.fit), random_seed=rng)
 
 # %% ---------------------------------------------------------------------------------
 
@@ -128,6 +131,7 @@ ppd = (
         idata.isel(draw=slice(0, ppd_draws)),
         data=model.data,
         inplace=False,
+        random_seed=rng,
         **ppd_kwargs,
     )
     .posterior_predictive.drop_vars("__obs__")
@@ -137,46 +141,6 @@ ppd = (
 )
 
 idata.add_groups(**{group: ppd})
-
-# %% ---------------------------------------------------------------------------------
-
-print("Prepare posterior expectations group in inference data...")
-if (group := "posterior_epred") in idata.groups():
-    del idata["posterior_epred"]
-
-# Create grid for simple effects (fixed effects only)
-grid = model.data[predictors_fixed].drop_duplicates(ignore_index=True)
-grid = (
-    # Make dummy values for group effects
-    # to allow independent sampling of group-level effects
-    # for proper marginalization
-    grid.loc[grid.index.repeat(opts.epred.samples_per_simple_effect)]
-    .groupby(level=0)
-    .apply(
-        lambda df: df.assign(
-            **{
-                n: str(df.name) + "_" + np.arange(len(df)).astype(str)
-                for n in predictors_groups
-            }
-        )
-    )
-    .reset_index(drop=True)
-)
-
-epred_kwargs = OmegaConf.to_object(opts.epred.predict)
-epred = (
-    model.predict(idata, data=grid, inplace=False, **epred_kwargs)
-    .posterior["mu"]
-    .assign_coords({n: ("__obs__", c.to_numpy()) for n, c in grid.items()})
-    .groupby(predictors_fixed)
-    .mean()
-    .stack(__obs__=tuple(predictors_fixed))
-    .transpose("chain", "draw", "__obs__")
-    .reset_index("__obs__")
-    .dropna("__obs__")
-)
-
-idata.add_groups(**{group: epred.to_dataset()})
 
 # %% ---------------------------------------------------------------------------------
 
@@ -192,6 +156,7 @@ epred_for_ll = model.predict(
     kind="response_params",
     include_group_specific=True,
     sample_new_groups=True,
+    random_seed=rng,
 )
 
 # Get model parameters from posterior
