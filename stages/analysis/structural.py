@@ -22,10 +22,8 @@ so.Plot.config.theme.update(config.plotting.params)
 opts = config.glmm.valence.targets["event"]
 support = np.asarray([*config.categorical["valence"]])
 
-analysis_name = "structural"
-
-figpath = paths.figures / analysis_name
-tabpath = paths.tables / analysis_name
+figpath = paths.figures
+tabpath = paths.tables
 figpath.mkdir(parents=True, exist_ok=True)
 tabpath.mkdir(parents=True, exist_ok=True)
 
@@ -254,13 +252,13 @@ fig.legends.clear()
 ax = axes[0]
 ax.set_ylabel("Posterior class proportions", fontsize=18)
 fig.suptitle(
-    "Valence",
+    "Joint valence",
     fontsize=28,
     x=0.00,
     ha="left",
 )
 fig.tight_layout()
-fig.savefig(figpath / "valence-posterior.pdf")
+fig.savefig(figpath / "valence" / "valence-posterior.pdf")
 
 # %% Save tables ---------------------------------------------------------------------
 
@@ -271,6 +269,6 @@ tables = {
 }
 
 for name, table in tables.items():
-    DataFrame(table).to_(tabpath / f"valence-{name}.tsv", index=False)
+    DataFrame(table).to_(tabpath / "valence" / f"valence-{name}.tsv", index=False)
 
 # %% ---------------------------------------------------------------------------------
