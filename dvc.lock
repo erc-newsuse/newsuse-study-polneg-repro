@@ -4524,23 +4524,25 @@ stages:
       size: 382132909
     - path: stages/glmm/valence_by.py
       hash: md5
-      md5: 54955bd53e28eed9c3296ba434e0c7db
-      size: 5750
+      md5: c0b495c0b5ae70d86bd1b6a24372ea85
+      size: 5971
     params:
       params.yaml:
         glmm.valence.by:
           sample: 100000
+          target_accept: 0.9
           seed: 2
           formula: "{response} ~ 0\n  + political * country * {by}\n  + (1 + political
             * {by} | outlet)\n  + (1 + political * {by} | country:year:month)\n"
         glmm.valence.targets.event:
           seed: 543
+          noncentered: true
           fit:
             draws: 2000
             tune: 2000
             chains: 4
             cores: 4
-            target_accept: 0.99
+            target_accept: 0.95
             progress_bar: true
             inference_method: nutpie
             nuts_sampler_kwargs:
@@ -4560,7 +4562,6 @@ stages:
           formula: "{response} ~ 0\n  + political * country\n  + (1 + political |
             outlet)\n  + (1 + political | country:year:month)\n"
           family: cumulative
-          noncentered: true
           common:
           - political
           - country
@@ -4572,8 +4573,8 @@ stages:
     outs:
     - path: glmm/valence/event-quality.nc
       hash: md5
-      md5: ca859537bcf5a8712239d20fdca525a9
-      size: 863653368
+      md5: d28b543a9e43ae02e28765193bb22ec5
+      size: 863539553
   glmm-valence-by@event-ideology:
     cmd: TARGET=event BY=ideology python stages/glmm/valence_by.py
     deps:
@@ -4583,23 +4584,25 @@ stages:
       size: 382132909
     - path: stages/glmm/valence_by.py
       hash: md5
-      md5: 54955bd53e28eed9c3296ba434e0c7db
-      size: 5750
+      md5: c0b495c0b5ae70d86bd1b6a24372ea85
+      size: 5971
     params:
       params.yaml:
         glmm.valence.by:
           sample: 100000
+          target_accept: 0.9
           seed: 2
           formula: "{response} ~ 0\n  + political * country * {by}\n  + (1 + political
             * {by} | outlet)\n  + (1 + political * {by} | country:year:month)\n"
         glmm.valence.targets.event:
           seed: 543
+          noncentered: true
           fit:
             draws: 2000
             tune: 2000
             chains: 4
             cores: 4
-            target_accept: 0.99
+            target_accept: 0.95
             progress_bar: true
             inference_method: nutpie
             nuts_sampler_kwargs:
@@ -4619,7 +4622,6 @@ stages:
           formula: "{response} ~ 0\n  + political * country\n  + (1 + political |
             outlet)\n  + (1 + political | country:year:month)\n"
           family: cumulative
-          noncentered: true
           common:
           - political
           - country
@@ -4631,8 +4633,8 @@ stages:
     outs:
     - path: glmm/valence/event-ideology.nc
       hash: md5
-      md5: 06d48fc0cca01b420adeb0a21f25b911
-      size: 863571755
+      md5: c56793b78995edcd817cd797097dc339
+      size: 863624205
   glmm-valence-by@sentiment-quality:
     cmd: TARGET=sentiment BY=quality python stages/glmm/valence_by.py
     deps:
@@ -4642,23 +4644,25 @@ stages:
       size: 382132909
     - path: stages/glmm/valence_by.py
       hash: md5
-      md5: 54955bd53e28eed9c3296ba434e0c7db
-      size: 5750
+      md5: c0b495c0b5ae70d86bd1b6a24372ea85
+      size: 5971
     params:
       params.yaml:
         glmm.valence.by:
           sample: 100000
+          target_accept: 0.9
           seed: 2
           formula: "{response} ~ 0\n  + political * country * {by}\n  + (1 + political
             * {by} | outlet)\n  + (1 + political * {by} | country:year:month)\n"
         glmm.valence.targets.sentiment:
           seed: 17
+          noncentered: true
           fit:
             draws: 2000
             tune: 2000
             chains: 4
             cores: 4
-            target_accept: 0.99
+            target_accept: 0.95
             progress_bar: true
             inference_method: nutpie
             nuts_sampler_kwargs:
@@ -4678,7 +4682,6 @@ stages:
           formula: "{response} ~ 0\n  + political * country\n  + (1 + political |
             outlet)\n  + (1 + political | country:year:month)\n"
           family: cumulative
-          noncentered: true
           common:
           - political
           - country
@@ -4690,8 +4693,8 @@ stages:
     outs:
     - path: glmm/valence/sentiment-quality.nc
       hash: md5
-      md5: b4b25a5414aa25e4d77e48c2746f16d6
-      size: 864069992
+      md5: 87af3533885a4f3e121c9f57ace028cb
+      size: 863988377
   glmm-valence-by@sentiment-ideology:
     cmd: TARGET=sentiment BY=ideology python stages/glmm/valence_by.py
     deps:
@@ -4701,23 +4704,25 @@ stages:
       size: 382132909
     - path: stages/glmm/valence_by.py
       hash: md5
-      md5: 54955bd53e28eed9c3296ba434e0c7db
-      size: 5750
+      md5: c0b495c0b5ae70d86bd1b6a24372ea85
+      size: 5971
     params:
       params.yaml:
         glmm.valence.by:
           sample: 100000
+          target_accept: 0.9
           seed: 2
           formula: "{response} ~ 0\n  + political * country * {by}\n  + (1 + political
             * {by} | outlet)\n  + (1 + political * {by} | country:year:month)\n"
         glmm.valence.targets.sentiment:
           seed: 17
+          noncentered: true
           fit:
             draws: 2000
             tune: 2000
             chains: 4
             cores: 4
-            target_accept: 0.99
+            target_accept: 0.95
             progress_bar: true
             inference_method: nutpie
             nuts_sampler_kwargs:
@@ -4737,7 +4742,6 @@ stages:
           formula: "{response} ~ 0\n  + political * country\n  + (1 + political |
             outlet)\n  + (1 + political | country:year:month)\n"
           family: cumulative
-          noncentered: true
           common:
           - political
           - country
@@ -4749,5 +4753,5 @@ stages:
     outs:
     - path: glmm/valence/sentiment-ideology.nc
       hash: md5
-      md5: a656b2a22586cb0cc0736c6341e008a9
-      size: 863953927
+      md5: 9306c1aa1221ff9843f2317ce1995efb
+      size: 863977310

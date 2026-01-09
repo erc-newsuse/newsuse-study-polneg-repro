@@ -1,0 +1,5 @@
+outs:
+- md5: 481ed33d0efc7effa6cd20313dbbd253
+  size: 41557082
+  hash: md5
+  path: perspective.parquet
