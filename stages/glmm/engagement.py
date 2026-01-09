@@ -20,20 +20,20 @@ az.rcParams.update(config.arviz)
 
 # %% ---------------------------------------------------------------------------------
 
-target = os.environ.get("TARGET")
-if target is None:
-    target = input("Enter target name (reactions): ").strip() or "reactions"
-by = os.environ.get("BY")
-if by is None:
-    by = input("Enter grouping variable: ").strip() or ""
-by = by.removeprefix("-")
+TARGET = os.environ.get("TARGET")
+if TARGET is None:
+    TARGET = input("Enter target name (reactions): ").strip() or "reactions"
+BY = os.environ.get("BY")
+if BY is None:
+    BY = input("Enter grouping variable: ").strip() or ""
+BY = BY.removeprefix("-")
 
-opts = config.glmm.engagement.targets[target]
+opts = config.glmm.engagement.targets[TARGET]
 
 dirpath = paths.glmm / "engagement"
 dirpath.mkdir(parents=True, exist_ok=True)
 
-predictors_fixed = [*opts.predictors.fixed, *([by] if by else [])]
+predictors_fixed = [*opts.predictors.fixed, *([BY] if BY else [])]
 predictors_groups = [*opts.predictors.groups]
 
 rng = np.random.default_rng(opts.seed + 303)
@@ -46,7 +46,6 @@ data = (
         country=lambda df: pd.Categorical(
             df["country"], categories=[*config.categorical.country]
         ),
-        outlet=lambda df: pd.Categorical(df["outlet"]),
         event=lambda df: pd.Categorical(
             df["event"],
             categories=[*config.categorical.event],
@@ -57,21 +56,7 @@ data = (
             categories=[*config.categorical.sentiment],
             ordered=True,
         ),
-        valence=lambda df: pd.Categorical(
-            df["valence"],
-            categories=[*config.categorical.valence],
-            ordered=True,
-        ),
-        quality=lambda df: pd.Categorical(
-            df["quality"],
-            categories=[*config.categorical.quality],
-            ordered=True,
-        ),
-        ideology=lambda df: pd.Categorical(
-            df["ideology"],
-            categories=[*config.categorical.ideology],
-        ),
-    )[["key", target, *predictors_fixed, *predictors_groups]]
+    )[["key", TARGET, *predictors_fixed, *predictors_groups]]
     .dropna(ignore_index=True)
     .convert_dtypes(dtype_backend="numpy_nullable")
 )
@@ -86,11 +71,11 @@ else:
 
 # %% ---------------------------------------------------------------------------------
 
-print(f"Building GLMM for '{target}' using 'bambi'...")
-formula_list = opts.formula.extended if by else opts.formula.base
+print(f"Building GLMM for '{TARGET}' using 'bambi'...")
+formula_list = opts.formula.extended if BY else opts.formula.base
 # Only the first formula (conditional mean) uses target/by interpolation
 formula_strings = [
-    formula_list[0].format(target=target, by=by).strip().replace("\n", " "),
+    formula_list[0].format(target=TARGET, by=BY).strip().replace("\n", " "),
     *[f.strip().replace("\n", " ") for f in formula_list[1:]],
 ]
 formula = bmb.Formula(*formula_strings)
@@ -103,7 +88,7 @@ model = bmb.Model(
 
 # %% ---------------------------------------------------------------------------------
 
-print(f"Fitting GLMM for '{target}' using '{opts.fit.inference_method}'...")
+print(f"Fitting GLMM for '{TARGET}' using '{opts.fit.inference_method}'...")
 idata = model.fit(**OmegaConf.to_object(opts.fit), random_seed=rng)
 
 # %% ---------------------------------------------------------------------------------
@@ -113,8 +98,8 @@ if (group := "observed_data") in idata.groups():
     del idata["observed_data"]
 
 observed = xr.Dataset(
-    {target: ("__obs__", model.data[target].to_numpy())},
-    coords={n: ("__obs__", c.to_numpy()) for n, c in model.data.items() if n != target},
+    {TARGET: ("__obs__", model.data[TARGET].to_numpy())},
+    coords={n: ("__obs__", c.to_numpy()) for n, c in model.data.items() if n != TARGET},
 )
 idata.add_groups(**{group: observed})
 
@@ -136,7 +121,7 @@ ppd = (
     )
     .posterior_predictive.drop_vars("__obs__")
     .assign_coords(
-        {n: ("__obs__", c.to_numpy()) for n, c in model.data.items() if n != target}
+        {n: ("__obs__", c.to_numpy()) for n, c in model.data.items() if n != TARGET}
     )
 )
 
@@ -165,7 +150,7 @@ mu = posterior["mu"].values  # Expected count (chain, draw, obs)
 alpha = posterior["alpha"].values  # Dispersion parameter
 
 # Get observed values
-y = model.data[target].to_numpy()
+y = model.data[TARGET].to_numpy()
 
 # Negative binomial PMF using PyMC/Bambi parameterization:
 # Mean = mu, Variance = mu + mu^2/alpha
@@ -197,10 +182,10 @@ loglik = xr.DataArray(
         "draw": idata.posterior.draw[:ppd_draws],
     },
 ).assign_coords(
-    {col: ("__obs__", c.to_numpy()) for col, c in model.data.items() if col != target}
+    {col: ("__obs__", c.to_numpy()) for col, c in model.data.items() if col != TARGET}
 )
 
-idata.add_groups(**{group: loglik.to_dataset(name=target)})
+idata.add_groups(**{group: loglik.to_dataset(name=TARGET)})
 
 # %% ---------------------------------------------------------------------------------
 
@@ -211,14 +196,14 @@ store_model_metadata(
     idata,
     model,
     formula=formula_str,
-    family=opts.model.get("family", "hurdle_negativebinomial"),
-    response=target,
+    family=opts.get("family", "negativebinomial"),
+    response=TARGET,
 )
 
 # %% ---------------------------------------------------------------------------------
 
 print("Saving model inference data as NetCDF file...")
-name = f"{target}.nc" if not by else f"{target}-{by}.nc"
+name = f"{TARGET}.nc" if not BY else f"{TARGET}-{BY}.nc"
 idata.to_netcdf(dirpath / name)
 
 # %% ---------------------------------------------------------------------------------

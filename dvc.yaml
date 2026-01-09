@@ -221,3 +221,18 @@ stages:
       outs:
       - glmm/engagement/${item}.nc:
           persist: true
+
+  glmm-engagement-by:
+    matrix:
+      target: ["reactions", "comments", "shares"]
+      by: ["quality", "ideology"]
+    cmd: TARGET=${item.target} BY=${item.by} python stages/glmm/engagement_by.py
+    params:
+      - glmm.engagement.targets.${item.target}
+      - glmm.engagement.by
+    deps:
+    - stages/glmm/engagement_by.py
+    - data/proc/final.parquet
+    outs:
+      - glmm/engagement/${item.target}-${item.by}.nc:
+          persist: true

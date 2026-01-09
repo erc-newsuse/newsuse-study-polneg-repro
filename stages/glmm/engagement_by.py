@@ -9,6 +9,7 @@ import pandas as pd
 import xarray as xr
 from newsuse.data import DataFrame
 from omegaconf import OmegaConf
+from scipy.special import gammaln
 
 from project import config, paths
 from project.bayes import store_model_metadata
@@ -20,16 +21,15 @@ az.rcParams.update(config.arviz)
 
 TARGET = os.environ.get("TARGET")
 if TARGET is None:
-    TARGET = input("Enter target name (event): ").strip() or "event"
+    TARGET = input("Enter target name (reactions): ").strip() or "reactions"
 BY = os.environ.get("BY")
 if BY is None:
     BY = input("Enter grouping variable (quality): ").strip() or "quality"
 
-opts = config.glmm.valence.targets[TARGET]
-opts.update(config.glmm.valence.by)
-support = np.asarray([*config.categorical[opts.response]])
+opts = config.glmm.engagement.targets[TARGET]
+opts.update(config.glmm.engagement.by)
 
-dirpath = paths.glmm / "valence"
+dirpath = paths.glmm / "engagement"
 dirpath.mkdir(parents=True, exist_ok=True)
 
 predictors_fixed = [*opts.common, BY]
@@ -45,26 +45,27 @@ data = (
         country=lambda df: pd.Categorical(
             df["country"], categories=[*config.categorical.country]
         ),
-        outlet=lambda df: pd.Categorical(df["outlet"]),
+        event=lambda df: pd.Categorical(
+            df["event"],
+            categories=[*config.categorical.event],
+            ordered=True,
+        ),
+        sentiment=lambda df: pd.Categorical(
+            df["sentiment"],
+            categories=[*config.categorical.sentiment],
+            ordered=True,
+        ),
         **{
-            opts.response: lambda df: pd.Categorical(
-                df[opts.response],
-                categories=[*config.categorical[opts.response]],
+            BY: lambda df: pd.Categorical(
+                df[BY],
+                categories=[*config.categorical[BY]],
                 ordered=True,
             )
         },
-    )[["key", opts.response, *predictors_fixed, *predictors_groups]]
+    )[["key", TARGET, *predictors_fixed, *predictors_groups]]
     .dropna(ignore_index=True)
     .convert_dtypes(dtype_backend="numpy_nullable")
 )
-
-for col in ["event", "sentiment"]:
-    if col in data.columns:
-        data[col] = pd.Categorical(
-            data[col],
-            categories=[*config.categorical[col]],
-            ordered=True,
-        )
 
 # %% ---------------------------------------------------------------------------------
 
@@ -76,11 +77,15 @@ else:
 
 # %% ---------------------------------------------------------------------------------
 
-print(f"Building GLMM for '{opts.response}' using 'bambi'...")
-formula = opts.formula.format(response=opts.response, by=BY)
-formula = formula.replace("\n", " ").strip()
+print(f"Building GLMM for '{TARGET}' using 'bambi'...")
+# Only the first formula (conditional mean) uses target/by interpolation
+formula = bmb.Formula(
+    *(
+        frm.format(response=opts.response, by=BY).replace("\n", " ").strip()
+        for frm in opts.formula
+    )
+)
 print("Model formula:", formula)
-
 model = bmb.Model(
     formula=formula,
     data=model_data,
@@ -100,10 +105,8 @@ if (group := "observed_data") in idata.groups():
     del idata["observed_data"]
 
 observed = xr.Dataset(
-    {opts.response: ("__obs__", model.data[opts.response].to_numpy())},
-    coords={
-        n: ("__obs__", c.to_numpy()) for n, c in model.data.items() if n != opts.response
-    },
+    {TARGET: ("__obs__", model.data[TARGET].to_numpy())},
+    coords={n: ("__obs__", c.to_numpy()) for n, c in model.data.items() if n != TARGET},
 )
 idata.add_groups(**{group: observed})
 
@@ -111,23 +114,23 @@ idata.add_groups(**{group: observed})
 
 print("Prepare posterior predictive group in inference data...")
 if (group := "posterior_predictive") in idata.groups():
-    del idata[group]
+    del idata["posterior_predictive"]
 
-kwargs = OmegaConf.to_object(opts.ppd)
+ppd_kwargs = OmegaConf.to_object(opts.ppd)
+ppd_draws = ppd_kwargs.pop("draws")
 ppd = (
     model.predict(
-        idata.isel(draw=slice(0, kwargs.pop("draws"))),
+        idata.isel(draw=slice(0, ppd_draws)),
         data=model.data,
         inplace=False,
         random_seed=rng,
-        **kwargs,
+        **ppd_kwargs,
     )
     .posterior_predictive.drop_vars("__obs__")
     .assign_coords(
-        {n: ("__obs__", c.to_numpy()) for n, c in model.data.items() if n != opts.response}
+        {n: ("__obs__", c.to_numpy()) for n, c in model.data.items() if n != TARGET}
     )
 )
-ppd[opts.response].values += min(support)  # adjust for 0-indexing
 
 idata.add_groups(**{group: ppd})
 
@@ -137,48 +140,72 @@ print("Prepare log-likelihood group in inference data...")
 if (group := "log_likelihood") in idata.groups():
     del idata["log_likelihood"]
 
-# Get category probabilities from posterior predictions
-# NOTE: For cumulative family with kind="response_params", bambi returns
-# category probabilities P(Y=k) directly, NOT cumulative probabilities P(Y<=k)
-cat_probs = (
-    model.predict(
-        idata.isel(draw=slice(0, opts.ppd.draws)),
-        data=model.data,
-        inplace=False,
-        random_seed=rng,
-        **opts.epred.predict,
-    )
-    .posterior["p"]
-    .rename({f"{opts.response}_dim": opts.response})
+# Get response parameters for log-likelihood computation
+epred_for_ll = model.predict(
+    idata.isel(draw=slice(0, ppd_draws)),
+    data=model.data,
+    inplace=False,
+    kind="response_params",
+    include_group_specific=True,
+    sample_new_groups=True,
+    random_seed=rng,
 )
 
-# Use observed category codes from model data
-obs_codes = model.data[opts.response].cat.codes.to_numpy()
+# Get model parameters from posterior
+posterior = epred_for_ll.posterior
+mu = posterior["mu"].values  # Expected count (chain, draw, obs)
+alpha = posterior["alpha"].values  # Dispersion parameter
 
-# Log-likelihood: log(p_observed)
-obs_probs = cat_probs.isel({opts.response: xr.DataArray(obs_codes, dims="__obs__")})
-loglik = (
-    np.log(np.clip(obs_probs, 1e-10, 1.0))
-    .drop_vars(opts.response)  # drop the scalar coordinate to avoid name conflict
-    .assign_coords(
-        {n: ("__obs__", c.to_numpy()) for n, c in model.data.items() if n != opts.response}
+# Get observed values
+y = model.data[TARGET].to_numpy()
+
+# Negative binomial PMF using PyMC/Bambi parameterization:
+# Mean = mu, Variance = mu + mu^2/alpha
+# PMF: binom(x + alpha - 1, x) * (alpha/(mu+alpha))^alpha * (mu/(mu+alpha))^x
+# where n = alpha (not 1/alpha), p = alpha/(mu+alpha)
+
+
+def negbin_logpmf(y, mu, alpha):
+    """Log PMF of negative binomial distribution (PyMC parameterization)."""
+    p = alpha / (mu + alpha)  # Success probability
+    q = mu / (mu + alpha)  # Failure probability (1 - p)
+    return (
+        gammaln(y + alpha)
+        - gammaln(y + 1)
+        - gammaln(alpha)
+        + alpha * np.log(p)
+        + y * np.log(q)
     )
-    .reset_index("__obs__")
+
+
+# Compute log-likelihood for all observations
+loglik_vals = negbin_logpmf(y, mu, alpha)
+
+loglik = xr.DataArray(
+    loglik_vals,
+    dims=["chain", "draw", "__obs__"],
+    coords={
+        "chain": idata.posterior.chain,
+        "draw": idata.posterior.draw[:ppd_draws],
+    },
+).assign_coords(
+    {col: ("__obs__", c.to_numpy()) for col, c in model.data.items() if col != TARGET}
 )
 
-idata.add_groups(**{group: loglik.to_dataset(name=opts.response)})
+idata.add_groups(**{group: loglik.to_dataset(name=TARGET)})
 
 # %% ---------------------------------------------------------------------------------
 
 print("Storing model metadata in inference data...")
+# Join formula strings for storage
+formula_str = " ; ".join(opts.formula)
 store_model_metadata(
     idata,
     model,
-    formula=formula,
-    family=opts.get("family", "cumulative"),
-    response=opts.response,
+    formula=formula_str,
+    family=opts.get("family", "negativebinomial"),
+    response=TARGET,
 )
-
 # %% ---------------------------------------------------------------------------------
 
 print("Saving model inference data as NetCDF file...")

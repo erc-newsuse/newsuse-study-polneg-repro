@@ -76,24 +76,25 @@ dataset:
 glmm:
   defaults: &glmm_defaults
     seed: 0
+    noncentered: false
     fit: &glmm_fit
       draws: 2000
       tune: 2000
       chains: 4
       cores: 4
-      target_accept: 0.99
+      target_accept: 0.95
       progress_bar: true
       inference_method: nutpie
       nuts_sampler_kwargs:
         backend: jax
-    ppd: &glmm_ppd
+    ppd:
       draws: 100
       sample_new_groups: true
       include_group_specific: true
       kind: response
-    epred: &glmm_epred
+    epred:
       samples_per_simple_effect: 100
-      predict: &glmm_epred_predict
+      predict:
         include_group_specific: true
         sample_new_groups: true
         kind: response_params
@@ -120,6 +121,7 @@ glmm:
         <<: *glmm_fit
     by:
       sample: 100_000
+      target_accept: 0.9
       seed: 2
       formula: >
         {response} ~ 0
@@ -173,8 +175,20 @@ glmm:
             + (1 | outlet) + (1 | country:year:month)
         - >
           alpha ~ country + (1 | outlet)
-      model:
       family: negativebinomial
+    by:
+      sample: 100_000
+      target_accept: 0.9
+      seed: 17
+      formula:
+        - >
+          {response} ~ 1
+            + event * sentiment * political * {by}
+            + (1  | outlet)
+            + country
+            + (1 | country:year:month)
+        - >
+          alpha ~ country + (1 | outlet)
     targets:
       reactions:
         response: reactions

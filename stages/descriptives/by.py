@@ -203,7 +203,7 @@ for valence in targets_valence:
             fig.supxlabel(valence.capitalize(), fontsize="xx-large", y=0.05)
             fig.supylabel(target.capitalize(), fontsize="xx-large", x=0.0)
             fig.tight_layout()
-            fig.savefig(figpath / f"{target}-{valence}-{by}.pdf")
+            fig.savefig(figpath / f"{target}-{valence}-{by}.png")
 
 # %% ---------------------------------------------------------------------------------
 
@@ -263,6 +263,6 @@ for valence in targets_valence:
             fig.supxlabel(valence.capitalize(), fontsize="xx-large", y=0.05)
             fig.supylabel(target.capitalize(), fontsize="xx-large", x=0.0)
             fig.tight_layout()
-            fig.savefig(figpath / f"{target}-{valence}-{by}-political.pdf")
+            fig.savefig(figpath / f"{target}-{valence}-{by}-political.png")
 
 # %% ---------------------------------------------------------------------------------
