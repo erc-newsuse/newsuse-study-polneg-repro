@@ -193,6 +193,21 @@ stages:
       - glmm/valence/${item}.nc:
           persist: true
 
+  glmm-valence-by:
+    matrix:
+      target: ["event", "sentiment"]
+      by: ["quality", "ideology"]
+    cmd: TARGET=${item.target} BY=${item.by} python stages/glmm/valence_by.py
+    params:
+      - glmm.valence.targets.${item.target}
+      - glmm.valence.by
+    deps:
+    - stages/glmm/valence_by.py
+    - data/proc/final.parquet
+    outs:
+      - glmm/valence_by/${item.target}-${item.by}.nc:
+          persist: true
+
   glmm-engagement:
     foreach: ["reactions", "comments", "shares"]
     do:

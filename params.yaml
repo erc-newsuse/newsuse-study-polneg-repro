@@ -118,6 +118,14 @@ glmm:
         - month
       fit:
         <<: *glmm_fit
+    by:
+      sample: 100_000
+      seed: 2
+      formula: >
+        {response} ~ 0
+          + political * country * {by}
+          + (1 + political * {by} | outlet)
+          + (1 + political * {by} | country:year:month)
     targets:
       event:
         response: event
@@ -142,6 +150,7 @@ glmm:
           - country
         group:
           - outlet
+
   engagement:
     default: &glmm_engagement_default
       <<: *glmm_defaults
