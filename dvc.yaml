@@ -205,7 +205,7 @@ stages:
     - stages/glmm/valence_by.py
     - data/proc/final.parquet
     outs:
-      - glmm/valence_by/${item.target}-${item.by}.nc:
+      - glmm/valence/${item.target}-${item.by}.nc:
           persist: true
 
   glmm-engagement:
