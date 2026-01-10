@@ -206,6 +206,7 @@ store_model_metadata(
     family=opts.get("family", "negativebinomial"),
     response=TARGET,
 )
+
 # %% ---------------------------------------------------------------------------------
 
 print("Saving model inference data as NetCDF file...")

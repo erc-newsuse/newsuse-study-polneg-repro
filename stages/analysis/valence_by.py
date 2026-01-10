@@ -26,7 +26,7 @@ figpath.mkdir(parents=True, exist_ok=True)
 tabpath.mkdir(parents=True, exist_ok=True)
 
 terms = {
-    "var_names": [r"^(political)?:?(country)?:?(quality)?$"],
+    "var_names": [r":(quality|ideology)?$"],
     "filter_vars": "regex",
 }
 

@@ -156,7 +156,7 @@ glmm:
   engagement:
     default: &glmm_engagement_default
       <<: *glmm_defaults
-      sample: 250_000
+      sample: 100_000
       common:
         - political
         - country
@@ -170,11 +170,11 @@ glmm:
       formula:
         - >
           {response} ~ 1
-            + event * sentiment
-            + political * event * country + political * sentiment * country
-            + (1 | outlet) + (1 | country:year:month)
+            + event * sentiment * political
+            + country
+            + (1 + event * sentiment * political | outlet) + (1 | country:year:month)
         - >
-          alpha ~ country + (1 | outlet)
+          alpha ~ (1 | outlet)
       family: negativebinomial
     by:
       sample: 100_000

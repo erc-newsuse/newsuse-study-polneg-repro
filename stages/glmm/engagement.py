@@ -23,20 +23,16 @@ az.rcParams.update(config.arviz)
 TARGET = os.environ.get("TARGET")
 if TARGET is None:
     TARGET = input("Enter target name (reactions): ").strip() or "reactions"
-BY = os.environ.get("BY")
-if BY is None:
-    BY = input("Enter grouping variable: ").strip() or ""
-BY = BY.removeprefix("-")
 
 opts = config.glmm.engagement.targets[TARGET]
 
 dirpath = paths.glmm / "engagement"
 dirpath.mkdir(parents=True, exist_ok=True)
 
-predictors_fixed = [*opts.predictors.fixed, *([BY] if BY else [])]
-predictors_groups = [*opts.predictors.groups]
+predictors_fixed = [*opts.common]
+predictors_groups = [*opts.group]
 
-rng = np.random.default_rng(opts.seed + 303)
+rng = np.random.default_rng(opts.seed + 30317)
 
 # %% ---------------------------------------------------------------------------------
 
@@ -64,26 +60,24 @@ data = (
 # %% ---------------------------------------------------------------------------------
 
 if sample := opts.get("sample"):
-    print(f"Subsampling data for model fitting to {sample.n} observations...")
-    model_data = data.sample(**sample, ignore_index=True)
+    print(f"Subsampling data for model fitting to {sample} observations...")
+    model_data = data.sample(n=sample, random_state=rng, ignore_index=True)
 else:
     model_data = data
 
 # %% ---------------------------------------------------------------------------------
 
 print(f"Building GLMM for '{TARGET}' using 'bambi'...")
-formula_list = opts.formula.extended if BY else opts.formula.base
 # Only the first formula (conditional mean) uses target/by interpolation
-formula_strings = [
-    formula_list[0].format(target=TARGET, by=BY).strip().replace("\n", " "),
-    *[f.strip().replace("\n", " ") for f in formula_list[1:]],
-]
-formula = bmb.Formula(*formula_strings)
+formula = bmb.Formula(
+    *(frm.format(response=opts.response).replace("\n", " ").strip() for frm in opts.formula)
+)
 print("Model formula:", formula)
 model = bmb.Model(
     formula=formula,
     data=model_data,
-    **opts.model,
+    family=opts.family,
+    noncentered=opts.noncentered,
 )
 
 # %% ---------------------------------------------------------------------------------
@@ -191,7 +185,7 @@ idata.add_groups(**{group: loglik.to_dataset(name=TARGET)})
 
 print("Storing model metadata in inference data...")
 # Join formula strings for storage
-formula_str = " ; ".join(formula_strings)
+formula_str = " ; ".join(opts.formula)
 store_model_metadata(
     idata,
     model,
@@ -203,7 +197,6 @@ store_model_metadata(
 # %% ---------------------------------------------------------------------------------
 
 print("Saving model inference data as NetCDF file...")
-name = f"{TARGET}.nc" if not BY else f"{TARGET}-{BY}.nc"
-idata.to_netcdf(dirpath / name)
+idata.to_netcdf(dirpath / f"{TARGET}.nc")
 
 # %% ---------------------------------------------------------------------------------
