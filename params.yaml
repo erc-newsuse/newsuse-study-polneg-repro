@@ -184,11 +184,10 @@ glmm:
         - >
           {response} ~ 1
             + event * sentiment * political * {by}
-            + (1  | outlet)
             + country
-            + (1 | country:year:month)
+            + (1 + event * sentiment * political | outlet) + (1 | country:year:month)
         - >
-          alpha ~ country + (1 | outlet)
+          alpha ~ (1 | outlet)
     targets:
       reactions:
         response: reactions
