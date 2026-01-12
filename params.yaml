@@ -156,7 +156,7 @@ glmm:
   engagement:
     default: &glmm_engagement_default
       <<: *glmm_defaults
-      sample: 100_000
+      sample: 1_000_000
       common:
         - political
         - country

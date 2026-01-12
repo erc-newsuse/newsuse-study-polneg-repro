@@ -96,7 +96,8 @@ def bold_row(row: pd.Series, *, threshold: float = 1.01) -> list[str]:
 
 # Print 'stat' nicely in LaTeX format
 print(
-    stats.rename(
+    stats.pipe(lambda df: df[~df.index.duplicated(keep="first")])
+    .rename(
         columns={
             "mean": "Mean",
             "sd": "SD",

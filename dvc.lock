@@ -4477,12 +4477,13 @@ stages:
       params.yaml:
         glmm.valence.targets.structural:
           seed: 303
+          noncentered: true
           fit:
             draws: 2000
             tune: 2000
             chains: 4
             cores: 4
-            target_accept: 0.99
+            target_accept: 0.95
             progress_bar: true
             inference_method: nutpie
             nuts_sampler_kwargs:
@@ -4498,11 +4499,10 @@ stages:
               include_group_specific: true
               sample_new_groups: true
               kind: response_params
-          sample: 250000
+          sample: 1000000
           formula: "{response} ~ 0\n  + event * political * country\n  + (1 + political
             * event | outlet)\n"
           family: cumulative
-          noncentered: true
           common:
           - event
           - political
@@ -4513,8 +4513,8 @@ stages:
     outs:
     - path: glmm/valence/structural.nc
       hash: md5
-      md5: 015bc125421ecbefbe406bcb16c865d5
-      size: 581871672
+      md5: b3704e693d8bddd15f7396a2206e6a95
+      size: 1876347968
   glmm-valence-by@event-quality:
     cmd: TARGET=event BY=quality python stages/glmm/valence_by.py
     deps:
