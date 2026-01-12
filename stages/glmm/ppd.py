@@ -1,5 +1,6 @@
 # %% ---------------------------------------------------------------------------------
 
+import gc
 from types import SimpleNamespace
 
 import arviz as az
@@ -37,7 +38,7 @@ predictors_groups = [*opts.group]
 rng = np.random.default_rng(opts.seed + 1717)
 
 use_groups = ["posterior"]
-opts.ppd.draws = 10
+opts.ppd.draws = 5
 
 # %% ---------------------------------------------------------------------------------
 
@@ -157,6 +158,43 @@ dset = {
     "sentiment": build_da(sentiment.ppd, "sentiment"),
     "sentiment_structural": build_da(structural.ppd, "sentiment"),
 }
+
+# %% ---------------------------------------------------------------------------------
+
+del event
+del sentiment
+gc.collect()
+
+# %% ---------------------------------------------------------------------------------
+
+for response in config.engagement:
+    idata = az.from_netcdf(paths.glmm / "engagement" / f"{response}.nc")
+    idata.attrs["formula"] = idata.attrs["formula"].format(response=response)
+    model = rebuild_model(idata)
+    for group in idata.groups():
+        if group not in use_groups:
+            del idata[group]
+    kwargs = {**opts.ppd}
+    ppd = (
+        model.predict(
+            idata.isel(draw=slice(kwargs.pop("draws"))),
+            data=structural.ppd,
+            inplace=False,
+            random_seed=rng,
+            **kwargs,
+        )
+        .posterior_predictive.drop_vars("__obs__")
+        .assign_coords({n: ("__obs__", c.to_numpy()) for n, c in structural.ppd.items()})
+        .to_dataframe()
+        .reset_index()
+        .assign(sample=lambda df: df.pop("draw") + df.pop("chain") * opts.ppd.draws)
+        .rename(columns={"sample": f"sample_{response}"})
+        .pipe(build_da, target=response)
+    )
+    dset[response] = ppd
+
+
+# %% ---------------------------------------------------------------------------------
 
 dset = xr.Dataset(dset)
 
