@@ -200,6 +200,9 @@ def contr_ref(s: pd.Series, ref: int | str, level: int | str) -> pd.Series:
     """Reference category contrasts."""
     index = s.index.get_level_values(level)
     x = s.to_numpy()
-    contr = x[index != ref] - x[index == ref]
-    contr = pd.Series(contr, index=pd.Series(index[index != ref], name="contrast"))
-    return contr
+    mask = index == ref
+    if not mask.any():
+        index = pd.Series([], dtype=index.dtype, name="contrast")
+        return pd.Series([], dtype=s.dtype, index=index)
+    contr = x[~mask] - x[mask]
+    return pd.Series(contr, index=pd.Series(index[~mask], name="contrast"))

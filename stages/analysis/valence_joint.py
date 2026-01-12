@@ -7,7 +7,6 @@ import numpy as np
 import pandas as pd
 import seaborn.objects as so
 import xarray as xr
-from newsuse.data import DataFrame
 from scipy.special import expit, logit
 
 from project import config, paths
@@ -22,8 +21,8 @@ so.Plot.config.theme.update(config.plotting.params)
 opts = config.glmm.valence.targets["event"]
 support = np.asarray([*config.categorical["valence"]])
 
-figpath = paths.figures
-tabpath = paths.tables
+figpath = paths.figures / "valence"
+tabpath = paths.tables / "valence"
 figpath.mkdir(parents=True, exist_ok=True)
 tabpath.mkdir(parents=True, exist_ok=True)
 
@@ -40,7 +39,7 @@ ppd = xr.load_dataset(paths.glmm / "ppd.nc")
 # %% ---------------------------------------------------------------------------------
 
 sentiment = (
-    ppd.drop_vars(["sentiment", "sample_sentiment"])
+    ppd[["event", "sentiment_structural"]]
     .rename_vars({"sentiment_structural": "sentiment"})
     .to_dataframe()
     .reset_index()
@@ -56,7 +55,8 @@ sentiment = (
     .reset_index()
 )
 
-# %% ---------------------------------------------------------------------------------
+
+# %% JOINT VALENCE ANALYSIS ----------------------------------------------------------
 
 probs = (
     sentiment.groupby(["political", "country", "sample"])["valence"]
@@ -258,17 +258,20 @@ fig.suptitle(
     ha="left",
 )
 fig.tight_layout()
-fig.savefig(figpath / "valence" / "valence-posterior.pdf")
+fig.savefig(figpath / "valence-posterior.pdf")
 
-# %% Save tables ---------------------------------------------------------------------
+# %%
 
-tables = {
-    "posterior": sentiment_posterior,
-    "political": sentiment_political,
-    "valence": sentiment_valence,
-}
+# %% SENTIMENT BY EVENT ANALYSIS -----------------------------------------------------
 
-for name, table in tables.items():
-    DataFrame(table).to_(tabpath / "valence" / f"valence-{name}.tsv", index=False)
+probs = (
+    sentiment.groupby(["political", "event", "sample"])["sentiment"]
+    .value_counts(normalize=True)
+    .sort_index()
+)
+
+posterior = (
+    probs.groupby(["political", "event", "sentiment"]).apply(eti).unstack(-1).reset_index()
+)
 
 # %% ---------------------------------------------------------------------------------
