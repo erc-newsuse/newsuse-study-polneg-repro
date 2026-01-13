@@ -45,7 +45,7 @@ def bold_row(row: pd.Series) -> list[str]:
 meta = {
     "event": "valence",
     "sentiment": "valence",
-    "valence": "structural",
+    "valence": "valence",
 }
 
 valence_tables = {}

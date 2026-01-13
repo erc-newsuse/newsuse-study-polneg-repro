@@ -42,114 +42,85 @@ predictors_groups = [*opts.group]
 
 # %% Load inference data -------------------------------------------------------------
 
-ppd = xr.open_dataset(paths.glmm / "ppd.nc")[TARGET]
+ppd = xr.open_dataset(paths.glmm / "ppd.nc")[opts.response]
 
 # %% ---------------------------------------------------------------------------------
 
 probs = (
-    ppd.to_dataframe()
-    .reset_index()
-    .rename(columns={f"sample_{TARGET}": "sample"})
-    .groupby(predictors_fixed + ["sample"])[TARGET]
-    .value_counts(normalize=True)
-    .sort_index()
+    pd.concat(
+        [
+            df := (
+                ppd.to_dataframe()
+                .reset_index()
+                .rename(columns={f"sample_{opts.response}": "sample"})
+                .groupby(predictors_fixed + ["sample"])[opts.response]
+                .value_counts(normalize=True)
+                .sort_index()
+                .reset_index()
+            ),
+            df.groupby(["political", opts.response, "sample"])["proportion"]
+            .mean()
+            .reset_index(),
+        ],
+        ignore_index=True,
+    )
+    .fillna({"country": "overall"})
+    .set_index(predictors_fixed + ["sample", opts.response])["proportion"]
 )
 
 # %% Compute posterior expected class probabilities ----------------------------------
 
-probs_country = (
-    probs.groupby(["country", "political", TARGET]).apply(eti).unstack(-1).reset_index()
-)
-
-probs_overall = (
-    probs.groupby(["political", TARGET, "sample"])
-    .mean()
-    .groupby(["political", TARGET])
+posterior = (
+    probs.groupby([*predictors_fixed, opts.response])
     .apply(eti)
     .unstack(-1)
     .reset_index()
+    .assign(
+        country=lambda df: pd.Categorical(
+            df["country"],
+            categories=["overall", *config.categorical.country],
+        ),
+    )
 )
 
-posterior = pd.concat([probs_country, probs_overall], ignore_index=True).fillna(
-    {"country": "overall"}
-)
-
-# %% Political effects ---------------------------------------------------------------
-
-political_diffs = (
+posterior_political = (
     probs.pipe(logit)
-    .groupby(["country", TARGET, "sample"])
+    .groupby(["country", opts.response, "sample"])
     .diff()
     .dropna()
     .droplevel("political")
-)
-
-political_country = (
-    political_diffs.pipe(np.exp)
-    .groupby(["country", TARGET])
-    .apply(eti)
-    .unstack(-1)
-    .reset_index()
-    .assign(
-        sig=lambda df: df[["lower", "upper"]].sub(1).pipe(np.sign).prod(axis=1).eq(1),
-        up=lambda df: df["median"] > 1,
-    )
-)
-
-political_overall = (
-    political_diffs.groupby([TARGET, "sample"])
-    .mean()
     .pipe(np.exp)
-    .groupby(TARGET)
+    .groupby(["country", opts.response])
     .apply(eti)
     .unstack(-1)
     .reset_index()
     .assign(
+        country=lambda df: pd.Categorical(
+            df["country"],
+            categories=["overall", *config.categorical.country],
+        ),
         sig=lambda df: df[["lower", "upper"]].sub(1).pipe(np.sign).prod(axis=1).eq(1),
         up=lambda df: df["median"] > 1,
     )
 )
 
-posterior_political = pd.concat(
-    [political_country, political_overall], ignore_index=True
-).fillna({"country": "overall"})
-
-# %% Valence effects vs neutral ------------------------------------------------------
-
-neutral_diffs = (
+posterior_valence = (
     probs.pipe(logit)
     .groupby(["country", "political", "sample"])
-    .apply(contr_ref, ref=0, level=TARGET)
-)
-
-neutral_country = (
-    neutral_diffs.pipe(np.exp)
+    .apply(contr_ref, ref=0, level=opts.response)
+    .pipe(np.exp)
     .groupby(["country", "political", "contrast"])
     .apply(eti)
     .unstack(-1)
     .reset_index()
     .assign(
+        country=lambda df: pd.Categorical(
+            df["country"],
+            categories=["overall", *config.categorical.country],
+        ),
         sig=lambda df: df[["lower", "upper"]].sub(1).pipe(np.sign).prod(axis=1).eq(1),
         up=lambda df: df["median"] > 1,
     )
-)
-
-neutral_overall = (
-    neutral_diffs.groupby(["political", "contrast", "sample"])
-    .mean()
-    .pipe(np.exp)
-    .groupby(["political", "contrast"])
-    .apply(eti)
-    .unstack(-1)
-    .reset_index()
-    .assign(
-        sig=lambda df: df[["lower", "upper"]].sub(1).pipe(np.sign).prod(axis=1).eq(1),
-        up=lambda df: df["median"] > 1,
-    )
-)
-
-posterior_valence = pd.concat([neutral_country, neutral_overall], ignore_index=True).fillna(
-    {"country": "overall"}
 )
 
 # %% Plot posterior expectations -----------------------------------------------------
@@ -161,7 +132,7 @@ for ax, country in zip(axes, country_order, strict=True):
     gdf = posterior.query("country == @country")
     range_kw = config.plotting.objects.range
     (
-        so.Plot(gdf, x=TARGET, y="median", color="political")
+        so.Plot(gdf, x=opts.response, y="median", color="political")
         .add(so.Dot(**config.plotting.objects.dot), so.Dodge())
         .add(so.Range(**range_kw), so.Dodge(), ymin="lower", ymax="upper")
         .scale(color=[*config.plotting.color.political])
@@ -173,9 +144,13 @@ for ax, country in zip(axes, country_order, strict=True):
     ax.set_xlabel(None)
     ax.set_ylabel(None)
     ax.set_ylim(0, 1)
-    ax.set_xticks(support)
+    ax.set_xticks(
+        support,
+        [*map(str.capitalize, config.categorical[opts.response].values())],
+        fontsize="x-large",
+    )
     # Mark regions with colors
-    for boundary in [*config.categorical[TARGET]][:-1]:
+    for boundary in [*config.categorical[opts.response]][:-1]:
         ax.axvline(
             x=boundary + 0.5,
             color="gray",
@@ -185,37 +160,37 @@ for ax, country in zip(axes, country_order, strict=True):
         )
     # Mark political significant differences
     sigs = (
-        gdf.groupby(["country", TARGET])["median"]
+        gdf.groupby(["country", opts.response], observed=True)["median"]
         .mean()
         .reset_index(name="y")
-        .merge(posterior_political[["country", TARGET, "sig", "up"]])
+        .merge(posterior_political[["country", opts.response, "sig", "up"]])
         .dropna()
         .query("sig")
     )
     for _, row in sigs.iterrows():
-        x = np.where(support == int(row[TARGET]))[0][0] - 1
+        x = np.where(support == int(row[opts.response]))[0][0] - 1
         ax.plot(
             x,
             row["y"],
             marker="^" if row["up"] else "v",
             color="black",
-            markersize=12,
+            markersize=10,
             zorder=10,
         )
     # Mark difference vs neutral
     sigs = (
-        gdf[["country", "political", TARGET, "median"]]
+        gdf[["country", "political", opts.response, "median"]]
         .rename(columns={"median": "y"})
         .merge(
             posterior_valence[["country", "political", "contrast", "sig"]].rename(
-                columns={"contrast": TARGET}
+                columns={"contrast": opts.response}
             )
         )
         .dropna()
         .query("sig")
     )
     for _, row in sigs.iterrows():
-        x = np.where(support == int(row[TARGET]))[0][0] - 1
+        x = np.where(support == int(row[opts.response]))[0][0] - 1
         ax.plot(
             x + 0.4 * (-1 + row["political"] * 2),
             row["y"],
@@ -233,13 +208,13 @@ fig.suptitle(
         "event": "Event valence",
         "sentiment": "Sentiment",
         "valence": "Joint valence",
-    }[TARGET],
+    }[opts.response],
     fontsize=28,
     x=0.00,
     ha="left",
 )
 fig.tight_layout()
-fig.savefig(figpath / f"{TARGET}-posterior.pdf")
+fig.savefig(figpath / f"{opts.response}-posterior.pdf")
 
 # %% ---------------------------------------------------------------------------------
 
@@ -306,6 +281,6 @@ tables = {
 }
 
 for name, table in tables.items():
-    DataFrame(table).to_(tabpath / f"{TARGET}-{name}.tsv", index=False)
+    DataFrame(table).to_(tabpath / f"{opts.response}-{name}.tsv", index=False)
 
 # %% ---------------------------------------------------------------------------------
