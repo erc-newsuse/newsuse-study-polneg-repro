@@ -207,7 +207,7 @@ ax.set_ylim(10**-1, 10**1)
 ax.xaxis.set_ticks(config.categorical.event)
 ax.set_xlabel(None)
 ax.set_ylabel(None)
-ax.set_title("Political / non-political", fontsize="x-large")
+ax.set_title("political / non-political", fontsize="x-large")
 
 # Negative sentiment effects
 for ax, sentiment in zip(axes[1:], [-1, 1], strict=True):
@@ -237,7 +237,7 @@ for ax, sentiment in zip(axes[1:], [-1, 1], strict=True):
     ax.xaxis.set_ticks(config.categorical.event)
     ax.set_xlabel(None)
     ax.set_ylabel(None)
-    focal = "Positive" if sentiment == 1 else "Negative"
+    focal = "positive" if sentiment == 1 else "negative"
     ax.set_title(
         f"{focal} / neutral",
         fontsize="x-large",
@@ -261,7 +261,14 @@ for ax in axes.flat:
 
 ax = axes[1]
 handles = [
-    mpl.lines.Line2D([], [], color=color, marker="o", linestyle="", label=political)
+    mpl.lines.Line2D(
+        [],
+        [],
+        color=color,
+        marker="o",
+        linestyle="",
+        label=political,
+    )
     for political, color in zip(
         config.categorical.political, config.plotting.color.political, strict=True
     )
@@ -270,15 +277,22 @@ legend = ax.legend(
     handles=handles,
     frameon=True,
     title_fontsize="large",
-    loc="lower center",
+    loc="best",
 )
 
 fig.legends.clear()
 # Add custom legend for 'sentiment
 handles = [
-    mpl.lines.Line2D([], [], color=color, marker="o", linestyle="", label=sentiment)
+    mpl.lines.Line2D(
+        [],
+        [],
+        color=color,
+        marker="o",
+        linestyle="",
+        label=sentiment.capitalize(),
+    )
     for sentiment, color in zip(
-        config.categorical.sentiment, config.plotting.color.sentiment, strict=True
+        config.categorical.sentiment.values(), config.plotting.color.sentiment, strict=True
     )
 ]
 legend = fig.legend(
@@ -505,8 +519,8 @@ handles = [
 # )
 
 fig.legends.clear()
-fig.suptitle("Sentiment", fontsize="xx-large", x=0.53, y=0.925)
-fig.supxlabel("Event valence", fontsize="xx-large", x=0.53, y=0.05)
+fig.suptitle("Event valence", fontsize="xx-large", x=0.53, y=0.925)
+fig.supxlabel("Sentiment", fontsize="xx-large", x=0.53, y=0.05)
 fig.tight_layout()
 fig.savefig(figpath / f"{TARGET}-volume.pdf")
 
@@ -668,15 +682,14 @@ handles = [
         config.categorical.political, config.plotting.color.political, strict=True
     )
 ]
-legend = ax.legend(
-    handles=handles,
-    frameon=False,
-    fontsize="large",
-)
+# legend = ax.legend(
+#     handles=handles,
+#     frameon=False,
+#     fontsize="large",
+# )
 
 fig.legends.clear()
-fig.suptitle("Sentiment", fontsize="xx-large", x=0.525, y=0.925)
-fig.supxlabel("Event valence", fontsize="xx-large", x=0.53, y=0.05)
+fig.supxlabel("Joint valence", fontsize="xx-large", x=0.53, y=0.05)
 fig.tight_layout()
 fig.savefig(figpath / f"{TARGET}-volume-valence.pdf")
 
