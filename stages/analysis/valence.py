@@ -229,7 +229,11 @@ fig.legends.clear()
 ax = axes[0]
 ax.set_ylabel("Posterior class proportions", fontsize=18)
 fig.suptitle(
-    f"{('overall' if TARGET == 'valence' else TARGET).capitalize()} valence",
+    {
+        "event": "Event valence",
+        "sentiment": "Sentiment",
+        "valence": "Joint valence",
+    }[TARGET],
     fontsize=28,
     x=0.00,
     ha="left",

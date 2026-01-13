@@ -156,10 +156,12 @@ glmm:
   engagement:
     default: &glmm_engagement_default
       <<: *glmm_defaults
-      sample: 500_000
-      target_accept: 0.8
-      tune: 1000
-      draws: 1000
+      sample: 1_000_000
+      fit:
+        <<: *glmm_fit
+        tune: 1000
+        draws: 1000
+        target_accept: 0.8
       common:
         - political
         - country
