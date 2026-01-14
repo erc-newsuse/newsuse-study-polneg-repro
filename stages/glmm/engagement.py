@@ -20,16 +20,19 @@ az.rcParams.update(config.arviz)
 
 # %% ---------------------------------------------------------------------------------
 
-TARGET = os.environ.get("TARGET")
-if TARGET is None:
-    TARGET = input("Enter target name (reactions): ").strip() or "reactions"
+TARGET = (
+    os.environ.get("TARGET")
+    or input("Enter target name (reactions): ").strip()
+    or "reactions"
+)
+VALENCE = os.environ.get("VALENCE") or input("Enter valence (event): ").strip() or "event"
 
 opts = config.glmm.engagement.targets[TARGET]
 
 dirpath = paths.glmm / "engagement"
 dirpath.mkdir(parents=True, exist_ok=True)
 
-predictors_fixed = [*opts.common]
+predictors_fixed = [*opts.common, VALENCE]
 predictors_groups = [*opts.group]
 
 rng = np.random.default_rng(opts.seed + 30317)
@@ -70,8 +73,19 @@ else:
 print(f"Building GLMM for '{TARGET}' using 'bambi'...")
 # Only the first formula (conditional mean) uses target/by interpolation
 formula = bmb.Formula(
-    *(frm.format(response=opts.response).replace("\n", " ").strip() for frm in opts.formula)
+    *(
+        frm.format(
+            response=opts.response,
+            valence=VALENCE,
+        )
+        .replace("\n", " ")
+        .strip()
+        for frm in opts.formula
+    )
 )
+
+# %% ---------------------------------------------------------------------------------
+
 print("Model formula:", formula)
 model = bmb.Model(
     formula=formula,
@@ -185,11 +199,10 @@ idata.add_groups(**{group: loglik.to_dataset(name=TARGET)})
 
 print("Storing model metadata in inference data...")
 # Join formula strings for storage
-formula_str = " ; ".join(opts.formula)
 store_model_metadata(
     idata,
     model,
-    formula=formula_str.format(response=opts.response),
+    formula="; ".join(formula.get_all_formulas()),
     family=opts.get("family", "negativebinomial"),
     response=TARGET,
 )
@@ -197,6 +210,6 @@ store_model_metadata(
 # %% ---------------------------------------------------------------------------------
 
 print("Saving model inference data as NetCDF file...")
-idata.to_netcdf(dirpath / f"{TARGET}.nc")
+idata.to_netcdf(dirpath / f"{TARGET}-{VALENCE}.nc")
 
 # %% ---------------------------------------------------------------------------------

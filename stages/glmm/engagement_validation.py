@@ -19,6 +19,7 @@ mpl.rcParams.update(config.plotting.params)
 TARGET = (
     os.environ.get("TARGET") or input("Enter target (reactions): ").strip() or "reactions"
 )
+VALENCE = os.environ.get("VALENCE") or input("Enter valence (event): ").strip() or "event"
 opts = config.glmm.engagement.targets[TARGET]
 
 figpath = paths.figures / "engagement" / "validation" / opts.response
@@ -28,15 +29,14 @@ alpha = 1 - az.rcParams["stats.ci_prob"]
 
 # %% ---------------------------------------------------------------------------------
 
-idata = az.from_netcdf(paths.glmm / "engagement" / f"{opts.response}.nc")
+idata = az.from_netcdf(paths.glmm / "engagement" / f"{TARGET}-{VALENCE}.nc")
 model = rebuild_model(idata)
 
 # %% ---------------------------------------------------------------------------------
 
 terms_rx = {
     "fixed": [
-        r"^threshold$",
-        r"^(event)?:(sentiment)?:?(political)?:?(country)?$",
+        r"^(country)?:?(political)?:?(event|sentiment|valence)?$",
     ],
     "group (sd)": [r"\|.*_sigma$"],
     "group": [r"\|(outlet|country:year:month)$"],
