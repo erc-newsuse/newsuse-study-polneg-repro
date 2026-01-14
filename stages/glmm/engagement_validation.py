@@ -16,27 +16,19 @@ xr.set_options(**config.xarray)
 az.rcParams.update(config.arviz)
 mpl.rcParams.update(config.plotting.params)
 
-target = os.environ.get("TARGET")
-if target is None:
-    target = input("Enter target (event): ").strip() or "event"
+TARGET = (
+    os.environ.get("TARGET") or input("Enter target (reactions): ").strip() or "reactions"
+)
+opts = config.glmm.engagement.targets[TARGET]
 
-opts = config.glmm.valence.targets[target]
-support = config.categorical[opts.response]
-
-figpath = paths.figures / "valence" / "validation" / target
+figpath = paths.figures / "engagement" / "validation" / opts.response
 figpath.mkdir(parents=True, exist_ok=True)
-
-labels = {
-    "country": config.categorical.country,
-    "political": dict(enumerate(config.categorical.political)),
-    target: config.categorical[opts.response],
-}
 
 alpha = 1 - az.rcParams["stats.ci_prob"]
 
 # %% ---------------------------------------------------------------------------------
 
-idata = az.from_netcdf(paths.glmm / "valence" / f"{target}.nc")
+idata = az.from_netcdf(paths.glmm / "engagement" / f"{opts.response}.nc")
 model = rebuild_model(idata)
 
 # %% ---------------------------------------------------------------------------------
@@ -44,7 +36,7 @@ model = rebuild_model(idata)
 terms_rx = {
     "fixed": [
         r"^threshold$",
-        r"^(event)?:?(political)?:?(country)?$",
+        r"^(event)?:(sentiment)?:?(political)?:?(country)?$",
     ],
     "group (sd)": [r"\|.*_sigma$"],
     "group": [r"\|(outlet|country:year:month)$"],
@@ -68,7 +60,7 @@ model.build()
 axes = model.plot_priors()
 fig = axes.flatten()[0].figure
 fig.tight_layout()
-fig.savefig(figpath / f"{target}-priors.pdf")
+fig.savefig(figpath / f"{opts.response}-priors.pdf")
 print(model)
 
 # %% ---------------------------------------------------------------------------------
@@ -144,7 +136,7 @@ axes = az.plot_trace(
 fig = axes.flatten()[0].figure
 fig.tight_layout()
 
-fig.savefig(figpath / f"{target}-trace.pdf")
+fig.savefig(figpath / f"{opts.response}-trace.pdf")
 
 # %% ---------------------------------------------------------------------------------
 
@@ -162,68 +154,68 @@ fig.supxlabel("Quantile", fontsize="xx-large")
 fig.supylabel(ylabel, fontsize="xx-large")
 fig.tight_layout()
 
-fig.savefig(figpath / f"{target}-ess.pdf")
+fig.savefig(figpath / f"{opts.response}-ess.pdf")
 
-# %% ---------------------------------------------------------------------------------
-
-
-def plot_ppc(
-    idata: az.InferenceData,
-    ax: plt.Axes | None = None,
-    **kwargs,
-) -> plt.Axes:
-    """Plot posterior predictive check with mean observed value."""
-    kwargs = {
-        "kind": "cumulative",
-        "legend": False,
-        "mean": False,
-        "num_pp_samples": 10,
-        **kwargs,
-    }
-    az.plot_ppc(idata, ax=ax, **kwargs)
-    ax.set_xlabel(None)
-    ax.set_ylabel(None)
-    return ax
+# # %% ---------------------------------------------------------------------------------
 
 
-# %% ---------------------------------------------------------------------------------
+# def plot_ppc(
+#     idata: az.InferenceData,
+#     ax: plt.Axes | None = None,
+#     **kwargs,
+# ) -> plt.Axes:
+#     """Plot posterior predictive check with mean observed value."""
+#     kwargs = {
+#         "kind": "cumulative",
+#         "legend": False,
+#         "mean": False,
+#         "num_pp_samples": 10,
+#         **kwargs,
+#     }
+#     az.plot_ppc(idata, ax=ax, **kwargs)
+#     ax.set_xlabel(None)
+#     ax.set_ylabel(None)
+#     return ax
 
-bys = ["country"]
-for _by in bys:
-    fig, axes = plt.subplots(
-        ncols=(ncols := len(labels[_by])),
-        nrows=(nrows := 2),
-        figsize=((height := 3) * ncols, height * nrows),
-    )
-    for axrow, political in zip(axes, [0, 1], strict=True):
-        for ax, byval in zip(axrow.flat, labels[_by], strict=True):
-            sel = {_by: byval, "political": political}
-            plot_ppc(idata.sel(**sel), ax=ax)
-            ax.set_xticks(labels[target])
-            ax.set_xlabel(None)
-            ax.set_ylabel(None)
-            if ax in axes[0]:
-                ax.set_title(labels[_by][byval])
-        axrow[0].set_ylabel(
-            "Non-Political" if political == 0 else "Political", fontsize="xx-large"
-        )
-    fig.supxlabel(target.capitalize(), y=0.0, fontsize="xx-large")
-    fig.supylabel(r"$\mathbb{P}(X \leq x)$", x=0.01, y=0.55, fontsize="xx-large")
-    fig.tight_layout()
-    fig.savefig(figpath / f"{target}-ppc-by-{_by}.pdf")
 
-# %% ---------------------------------------------------------------------------------
+# # %% ---------------------------------------------------------------------------------
 
-fig, ax = plt.subplots(figsize=(7, 3))
-az.plot_bpv(idata, ax=ax, var_names=[opts.response], kind="u_value")
-ax.set_title(rf"{opts.response.capitalize()}: $u$-values")
-ax.set_ylim(0.8, 1.2)
-fig.tight_layout()
-fig.savefig(figpath / f"{target}-bpv.pdf")
+# bys = ["country"]
+# for _by in bys:
+#     fig, axes = plt.subplots(
+#         ncols=(ncols := len(labels[_by])),
+#         nrows=(nrows := 2),
+#         figsize=((height := 3) * ncols, height * nrows),
+#     )
+#     for axrow, political in zip(axes, [0, 1], strict=True):
+#         for ax, byval in zip(axrow.flat, labels[_by], strict=True):
+#             sel = {_by: byval, "political": political}
+#             plot_ppc(idata.sel(**sel), ax=ax)
+#             ax.set_xticks(labels[opts.response])
+#             ax.set_xlabel(None)
+#             ax.set_ylabel(None)
+#             if ax in axes[0]:
+#                 ax.set_title(labels[_by][byval])
+#         axrow[0].set_ylabel(
+#             "Non-Political" if political == 0 else "Political", fontsize="xx-large"
+#         )
+#     fig.supxlabel(opts.response.capitalize(), y=0.0, fontsize="xx-large")
+#     fig.supylabel(r"$\mathbb{P}(X \leq x)$", x=0.01, y=0.55, fontsize="xx-large")
+#     fig.tight_layout()
+#     fig.savefig(figpath / f"{opts.response}-ppc-by-{_by}.pdf")
 
-# %% ---------------------------------------------------------------------------------
+# # %% ---------------------------------------------------------------------------------
 
-waic = az.waic(idata)
-print(waic)
+# fig, ax = plt.subplots(figsize=(7, 3))
+# az.plot_bpv(idata, ax=ax, var_names=[opts.response], kind="u_value")
+# ax.set_title(rf"{opts.response.capitalize()}: $u$-values")
+# ax.set_ylim(0.8, 1.2)
+# fig.tight_layout()
+# fig.savefig(figpath / f"{opts.response}-bpv.pdf")
 
-# %% --------------------------------------------------------------------------------
+# # %% ---------------------------------------------------------------------------------
+
+# waic = az.waic(idata)
+# print(waic)
+
+# # %% --------------------------------------------------------------------------------

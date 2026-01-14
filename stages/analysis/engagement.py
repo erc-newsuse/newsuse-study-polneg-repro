@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 import seaborn.objects as so
 import xarray as xr
+from newsuse.data import DataFrame
 
 from project import config, paths
 from project.bayes import contr_ref, eti, rebuild_model
@@ -39,7 +40,7 @@ rng = np.random.default_rng(opts.seed + 6165)
 
 # %% ---------------------------------------------------------------------------------
 
-idata = az.from_netcdf(paths.glmm / "engagement" / f"{TARGET}.nc")
+idata = az.from_netcdf(paths.glmm / "engagement" / f"{opts.response}.nc")
 idata.attrs["formula"] = idata.attrs["formula"].format(response=opts.response)
 model = rebuild_model(idata)
 
@@ -112,7 +113,6 @@ rates = (
         opts.response
     ]
 )
-
 
 # %% ---------------------------------------------------------------------------------
 
@@ -305,11 +305,14 @@ legend = fig.legend(
     bbox_to_anchor=(0.095, 1.02),
 )
 
-fig.suptitle("Sentiment", fontsize="xx-large", x=0.69, y=0.9)
+ax = axes.flatten()[0]
+ax.set_ylabel("Rates ratio", fontsize="x-large")
+
+fig.suptitle("Sentiment", fontsize="xx-large", x=0.70, y=0.9)
 fig.supxlabel("Event valence", fontsize="xx-large", y=0.05)
-fig.supylabel("Odds ratio", fontsize="xx-large", y=0.51)
+fig.supylabel(rf"\textbf{{{opts.response.capitalize()}}}", fontsize="xx-large", y=0.51)
 fig.tight_layout()
-fig.savefig(figpath / f"{TARGET}.pdf")
+fig.savefig(figpath / f"{opts.response}.pdf")
 
 # %% RELATIVE VOLUME ANALYSIS _-------------------------------------------------------
 
@@ -396,11 +399,9 @@ volume_political = (
 )
 
 volume_sentiment = (
-    volumes.groupby(["country", "political", "event", "sample"])
-    .apply(contr_ref, ref=0, level="sentiment")
-    .reset_index("contrast")
-    .rename(columns={"contrast": "sentiment"})
-    .set_index("sentiment", append=True)[opts.response]
+    volumes.droplevel("valence")
+    .pipe(lambda df: df.sub(df.xs(0, level="sentiment")))
+    .drop(index=0, level="sentiment")
     .groupby(["country", "political", "event", "sentiment"])
     .apply(eti)
     .unstack(-1)
@@ -505,7 +506,7 @@ for ax in axes.flat:
         )
 
 ax = axes[0]
-ax.set_ylabel(opts.response.capitalize(), fontsize="xx-large")
+ax.set_ylabel("Relative volume", fontsize="x-large")
 handles = [
     mpl.lines.Line2D([], [], color=color, marker="o", linestyle="", label=political)
     for political, color in zip(
@@ -521,8 +522,189 @@ handles = [
 fig.legends.clear()
 fig.suptitle("Event valence", fontsize="xx-large", x=0.53, y=0.925)
 fig.supxlabel("Sentiment", fontsize="xx-large", x=0.53, y=0.05)
+fig.supylabel(rf"\textbf{{{opts.response.capitalize()}}}", fontsize="xx-large", y=0.51)
 fig.tight_layout()
-fig.savefig(figpath / f"{TARGET}-volume.pdf")
+fig.savefig(figpath / f"{opts.response}-volume.pdf")
+
+# %% EVENT VOLUME --------------------------------------------------------------------
+
+volumes_event = (
+    rates.groupby(["country", "political", "event", "sample"])
+    .sum()
+    .groupby(["country", "political", "sample"])
+    .transform(lambda x: x / x.sum())
+)
+
+assert (
+    volumes_event.groupby(["country", "political", "sample"]).sum().round(6).eq(1).all()
+), "Volumes do not sum to 1."
+
+# %% ---------------------------------------------------------------------------------
+
+volumes_event_posterior = (
+    volumes_event.groupby(["country", "political", "event"])
+    .apply(eti)
+    .unstack(-1)
+    .sort_index()
+    .loc[[*config.categorical.country, "overall"]]
+    .reset_index()
+)
+
+volumes_event_political = (
+    volumes_event.groupby(["country", "event", "sample"])
+    .diff()
+    .dropna()
+    .droplevel("political")
+    .groupby(["country", "event"])
+    .apply(eti)
+    .unstack(-1)
+    .sort_index()
+    .loc[[*config.categorical.country, "overall"]]
+    .reset_index()
+    .assign(
+        sig=lambda df: df[["lower", "upper"]].pipe(np.sign).prod(axis=1).eq(1),
+        up=lambda df: df["median"] > 0,
+    )
+)
+
+volumes_event_effects = (
+    volumes_event.pipe(lambda df: df.sub(df.xs(0, level="event")))
+    .drop(index=0, level="event")
+    .groupby(["country", "political", "event"])
+    .apply(eti)
+    .unstack(-1)
+    .sort_index()
+    .loc[[*config.categorical.country, "overall"]]
+    .reset_index()
+    .assign(
+        sig=lambda df: df[["lower", "upper"]].pipe(np.sign).prod(axis=1).eq(1),
+        up=lambda df: df["median"] > 0,
+    )
+)
+
+# %% ---------------------------------------------------------------------------------
+
+for by_countries in [True, False]:
+    fig, axes = plt.subplots(
+        ncols=(ncols := len(config.categorical.country) + 1 if by_countries else 1),
+        figsize=(ncols * 4, 4) if by_countries else (5, 4),
+        sharex=True,
+        sharey=True,
+    )
+    if not isinstance(axes, np.ndarray):
+        axes = np.array([axes])
+    for ax, (country, df) in zip(
+        axes.flat,
+        volumes_event_posterior.assign(
+            country=lambda df: pd.Categorical(
+                df["country"], categories=["overall", *config.categorical.country]
+            )
+        )
+        .pipe(lambda df: df if by_countries else df.query("country == 'overall'"))  # noqa
+        .groupby("country", observed=True),
+        strict=True,
+    ):
+        (
+            so.Plot(df, x="event", y="median", color="political")
+            .add(so.Line(**config.plotting.objects.line), so.Dodge())
+            .add(
+                so.Range(**config.plotting.objects.range),
+                so.Dodge(),
+                ymin="lower",
+                ymax="upper",
+            )
+            .add(
+                so.Dot(**config.plotting.objects.dot),
+                so.Dodge(),
+            )
+            .scale(
+                color=[*config.plotting.color.political],
+            )
+            .on(ax)
+            .plot()
+        )
+        # Mark political significant differences
+        sigs = (
+            df.groupby(["country", "event"], observed=True)["median"]
+            .mean()
+            .reset_index(name="y")
+            .merge(volumes_event_political)
+            .dropna()
+            .query("sig")
+        )
+        for _, row in sigs.iterrows():
+            ax.plot(
+                *row[["event", "y"]],
+                marker="^" if row["up"] else "v",
+                color="black",
+                markersize=12,
+                zorder=10,
+            )
+        # Mark difference vs neutral
+        sigs = (
+            df[["country", "political", "event", "median"]]
+            .rename(columns={"median": "y"})
+            .merge(volumes_event_effects)
+            .dropna()
+            .query("sig")
+        )
+        for _, row in sigs.iterrows():
+            x = row["event"]
+            ax.plot(
+                x + 0.4 * (-1 + row["political"] * 2),
+                row["y"],
+                marker="*",
+                color="red",
+                markersize=12,
+                zorder=10,
+            )
+        ax.set_title(
+            config.categorical.country.get(country, "Overall"), fontsize="xx-large"
+        )
+        ax.set_xlabel(None)
+        ax.set_ylabel(None)
+        ax.set_xticks(config.categorical.event)
+        ax.set_ylim(-0.05, 1.05)
+        ax.yaxis.set_major_formatter(mpl.ticker.PercentFormatter(xmax=1))
+        ax.set_xticks(
+            config.categorical.event,
+            labels=[*map(str.capitalize, config.categorical.event.values())],
+            fontsize="large",
+        )
+        # Mark boundaries between categories with vertical lines
+        for boundary in [*config.categorical.event][:-1]:
+            ax.axvline(
+                x=boundary + 0.5,
+                color="gray",
+                linestyle="--",
+                linewidth=1,
+                zorder=-1,
+            )
+    ax = axes[0]
+    ax.set_ylabel(
+        "Relative volume",
+        fontsize="x-large",
+    )
+
+    fig.legends.clear()
+
+    fig.supxlabel(
+        "Event valence",
+        fontsize="xx-large",
+        x=0.53 if by_countries else 0.63,
+        y=0.02 if by_countries else 0.05,
+    )
+    fig.supylabel(
+        rf"\textbf{{{opts.response.capitalize()}}}",
+        fontsize="xx-large",
+        x=0.007 if by_countries else 0.04,
+        y=0.55,
+    )
+    fig.tight_layout()
+    name = f"{opts.response}-volume-event"
+    if by_countries:
+        name += "-country"
+    fig.savefig(figpath / f"{name}.pdf")
 
 # %% ---------------------------------------------------------------------------------
 
@@ -567,11 +749,8 @@ volume_valence_political = (
 )
 
 volume_valence_effects = (
-    volumes_valence.groupby(["country", "political", "sample"])
-    .apply(contr_ref, ref=0, level="valence")
-    .reset_index("contrast")
-    .rename(columns={"contrast": "valence"})
-    .set_index("valence", append=True)[opts.response]
+    volumes_valence.pipe(lambda df: df.sub(df.xs(0, level="valence")))
+    .drop(index=0, level="valence")
     .groupby(["country", "political", "valence"])
     .apply(eti)
     .unstack(-1)
@@ -586,111 +765,150 @@ volume_valence_effects = (
 
 # %% ---------------------------------------------------------------------------------
 
-fig, axes = plt.subplots(
-    ncols=(ncols := len(config.categorical.country) + 1),
-    figsize=(ncols * 4, 4),
-    sharex=True,
-    sharey=True,
-)
-
-for ax, (country, df) in zip(
-    axes.flat,
-    volume_valence_posterior.assign(
-        country=lambda df: pd.Categorical(
-            df["country"], categories=["overall", *config.categorical.country]
-        )
-    ).groupby("country", observed=True),
-    strict=True,
-):
-    (
-        so.Plot(df, x="valence", y="median", color="political")
-        .add(so.Line(**config.plotting.objects.line), so.Dodge())
-        .add(
-            so.Range(**config.plotting.objects.range),
-            so.Dodge(),
-            ymin="lower",
-            ymax="upper",
-        )
-        .add(
-            so.Dot(**config.plotting.objects.dot),
-            so.Dodge(),
-        )
-        .scale(
-            color=[*config.plotting.color.political],
-        )
-        .on(ax)
-        .plot()
+for by_countries in [True, False]:
+    fig, axes = plt.subplots(
+        ncols=(ncols := len(config.categorical.country) + 1) if by_countries else 1,
+        figsize=(ncols * 4, 4) if by_countries else (5, 4),
+        sharex=True,
+        sharey=True,
     )
-    # Mark political significant differences
-    sigs = (
-        df.groupby(["country", "valence"], observed=True)["median"]
-        .mean()
-        .reset_index(name="y")
-        .merge(volume_valence_political)
-        .dropna()
-        .query("sig")
-    )
-    for _, row in sigs.iterrows():
-        ax.plot(
-            *row[["valence", "y"]],
-            marker="^" if row["up"] else "v",
-            color="black",
-            markersize=12,
-            zorder=10,
+    if not isinstance(axes, np.ndarray):
+        axes = np.array([axes])
+    for ax, (country, df) in zip(
+        axes.flat,
+        volume_valence_posterior.assign(
+            country=lambda df: pd.Categorical(
+                df["country"], categories=["overall", *config.categorical.country]
+            )
         )
-    # Mark difference vs neutral
-    sigs = (
-        df[["country", "political", "valence", "median"]]
-        .rename(columns={"median": "y"})
-        .merge(volume_valence_effects)
-        .dropna()
-        .query("sig")
-    )
-    for _, row in sigs.iterrows():
-        x = row["valence"]
-        ax.plot(
-            x + 0.4 * (-1 + row["political"] * 2),
-            row["y"],
-            marker="*",
-            color="red",
-            markersize=12,
-            zorder=10,
+        .pipe(lambda df: df if by_countries else df.query("country == 'overall'"))  # noqa
+        .groupby("country", observed=True),
+        strict=True,
+    ):
+        (
+            so.Plot(df, x="valence", y="median", color="political")
+            .add(so.Line(**config.plotting.objects.line), so.Dodge())
+            .add(
+                so.Range(**config.plotting.objects.range),
+                so.Dodge(),
+                ymin="lower",
+                ymax="upper",
+            )
+            .add(
+                so.Dot(**config.plotting.objects.dot),
+                so.Dodge(),
+            )
+            .scale(
+                color=[*config.plotting.color.political],
+            )
+            .on(ax)
+            .plot()
         )
-    ax.set_title(config.categorical.country.get(country, "Overall"), fontsize="xx-large")
-    ax.set_xlabel(None)
-    ax.set_ylabel(None)
-    ax.set_xticks(config.categorical.valence)
-    ax.set_ylim(-0.05, 1.05)
-    ax.yaxis.set_major_formatter(mpl.ticker.PercentFormatter(xmax=1))
-
-# Mark boundaries between categories with vertical lines
-for ax in axes.flat:
-    for boundary in [*config.categorical.valence][:-1]:
-        ax.axvline(
-            x=boundary + 0.5,
-            color="gray",
-            linestyle="--",
-            linewidth=1,
-            zorder=-1,
+        # Mark political significant differences
+        sigs = (
+            df.groupby(["country", "valence"], observed=True)["median"]
+            .mean()
+            .reset_index(name="y")
+            .merge(volume_valence_political)
+            .dropna()
+            .query("sig")
         )
+        for _, row in sigs.iterrows():
+            ax.plot(
+                *row[["valence", "y"]],
+                marker="^" if row["up"] else "v",
+                color="black",
+                markersize=12,
+                zorder=10,
+            )
+        # Mark difference vs neutral
+        sigs = (
+            df[["country", "political", "valence", "median"]]
+            .rename(columns={"median": "y"})
+            .merge(volume_valence_effects)
+            .dropna()
+            .query("sig")
+        )
+        for _, row in sigs.iterrows():
+            x = row["valence"]
+            ax.plot(
+                x + 0.4 * (-1 + row["political"] * 2),
+                row["y"],
+                marker="*",
+                color="red",
+                markersize=12,
+                zorder=10,
+            )
+        ax.set_title(
+            config.categorical.country.get(country, "Overall"), fontsize="xx-large"
+        )
+        ax.set_xlabel(None)
+        ax.set_ylabel(None)
+        ax.set_xticks(config.categorical.valence)
+        ax.set_ylim(-0.05, 1.05)
+        ax.yaxis.set_major_formatter(mpl.ticker.PercentFormatter(xmax=1))
 
-ax = axes[0]
-ax.set_ylabel(opts.response.capitalize(), fontsize="xx-large")
-handles = [
-    mpl.lines.Line2D([], [], color=color, marker="o", linestyle="", label=political)
-    for political, color in zip(
-        config.categorical.political, config.plotting.color.political, strict=True
+    # Mark boundaries between categories with vertical lines
+    for ax in axes.flat:
+        for boundary in [*config.categorical.valence][:-1]:
+            ax.axvline(
+                x=boundary + 0.5,
+                color="gray",
+                linestyle="--",
+                linewidth=1,
+                zorder=-1,
+            )
+
+    ax = axes[0]
+    ax.set_ylabel("Relative volume", fontsize="x-large")
+    handles = [
+        mpl.lines.Line2D([], [], color=color, marker="o", linestyle="", label=political)
+        for political, color in zip(
+            config.categorical.political, config.plotting.color.political, strict=True
+        )
+    ]
+    # legend = ax.legend(
+    #     handles=handles,
+    #     frameon=False,
+    #     fontsize="large",
+    # )
+
+    fig.legends.clear()
+    fig.supxlabel(
+        "Joint valence", fontsize="xx-large", x=0.53 if by_countries else 0.6, y=0.05
     )
-]
-# legend = ax.legend(
-#     handles=handles,
-#     frameon=False,
-#     fontsize="large",
-# )
+    fig.supylabel(
+        rf"\textbf{{{opts.response.capitalize()}}}",
+        fontsize="xx-large",
+        x=0.007 if by_countries else 0.04,
+        y=0.55,
+    )
+    fig.tight_layout()
+    name = f"{opts.response}-volume-valence"
+    if by_countries:
+        name += "-country"
+    fig.savefig(figpath / f"{name}.pdf")
 
-fig.legends.clear()
-fig.supxlabel("Joint valence", fontsize="xx-large", x=0.53, y=0.05)
-fig.tight_layout()
-fig.savefig(figpath / f"{TARGET}-volume-valence.pdf")
+# %% ---------------------------------------------------------------------------------
+
+tables = {
+    "effects": {
+        "posterior": posterior,
+        "political": political_posterior,
+        "sentiment": sentiment_posterior,
+    },
+    "volume": {
+        "posterior": volume_posterior,
+        "political": volume_political,
+        "sentiment": volume_sentiment,
+        "posterior-valence": volume_valence_posterior,
+        "political-valence": volume_valence_political,
+        "sentiment-valence": volume_valence_effects,
+    },
+}
+
+for analysis, tabs in tables.items():
+    for name, tab in tabs.items():
+        DataFrame(tab).to_(tabpath / f"{TARGET}-{analysis}-{name}.tsv", index=False)
 
 # %% ---------------------------------------------------------------------------------

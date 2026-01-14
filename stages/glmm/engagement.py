@@ -189,7 +189,7 @@ formula_str = " ; ".join(opts.formula)
 store_model_metadata(
     idata,
     model,
-    formula=formula_str,
+    formula=formula_str.format(response=opts.response),
     family=opts.get("family", "negativebinomial"),
     response=TARGET,
 )

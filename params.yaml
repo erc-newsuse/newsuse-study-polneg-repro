@@ -156,12 +156,12 @@ glmm:
   engagement:
     default: &glmm_engagement_default
       <<: *glmm_defaults
-      sample: 1_000_000
+      sample: 250_000
       fit:
         <<: *glmm_fit
-        tune: 1000
+        tune: 2000
         draws: 1000
-        target_accept: 0.8
+        target_accept: 0.95
       common:
         - political
         - country
@@ -176,8 +176,7 @@ glmm:
         - >
           {response} ~ 1
             + event * sentiment * political
-            + country
-            + (1 + event * sentiment * political | outlet) + (1 | country:year:month)
+            + (1 + event * sentiment * political | outlet) + (1 | country:year)
         - >
           alpha ~ (1 | outlet)
       family: negativebinomial
@@ -189,8 +188,7 @@ glmm:
         - >
           {response} ~ 1
             + event * sentiment * political * {by}
-            + country
-            + (1 + event * sentiment * political | outlet) + (1 | country:year:month)
+            + (1 + event * sentiment * political | outlet) + (1 | country:year)
         - >
           alpha ~ (1 | outlet)
     targets:
