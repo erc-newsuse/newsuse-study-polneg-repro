@@ -217,6 +217,20 @@ stages:
       - glmm/valence/${item.target}-${item.by}.nc:
           persist: true
 
+  valence-analysis:
+    foreach: ["event", "sentiment"]
+    do:
+      cmd: TARGET=${item} python stages/analysis/valence.py
+      deps:
+      - stages/analysis/valence.py
+      - glmm/ppd.nc
+
+  valence-analysis-joint:
+    cmd: python stages/analysis/valence_joint.py
+    deps:
+    - stages/analysis/valence_joint.py
+    - glmm/ppd.nc
+
   engagement-glmm:
     matrix:
       target: ["reactions", "comments", "shares"]
@@ -264,8 +278,14 @@ stages:
       cmd: TARGET=${item} python stages/analysis/engagement.py
       deps:
       - stages/analysis/engagement.py
-      - glmm/valence/event.nc
-      - glmm/valence/sentiment.nc
-      - glmm/engagement/${item}-event.nc
-      - glmm/engagement/${item}-sentiment.nc
-      - glmm/engagement/${item}-valence.nc
+      - glmm/ppd.nc
+
+  ppd:
+    cmd: python stages/analysis/ppd.py
+    deps:
+    - stages/analysis/ppd.py
+    - glmm/valence
+    - glmm/engagement
+    outs:
+    - data/proc/ppd.nc:
+        persist: true

@@ -200,7 +200,7 @@ for response in config.engagement:
             .to_dataframe()
             .reset_index()
             .assign(sample=lambda df: df.pop("draw") + df.pop("chain") * opts.ppd.draws)
-            .rename(columns={"sample": f"sample_{response}"})
+            .rename(columns={"sample": f"sample_{response}_{valence}"})
             .pipe(build_da, target=response)
         )
         dset[f"{response}_{valence}"] = ppd
