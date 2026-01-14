@@ -19,13 +19,19 @@ az.rcParams.update(config.arviz)
 
 # %% ---------------------------------------------------------------------------------
 
-TARGET = os.environ.get("TARGET")
-if TARGET is None:
-    TARGET = input("Enter target name (reactions): ").strip() or "reactions"
-BY = os.environ.get("BY")
-if BY is None:
-    BY = input("Enter grouping variable (quality): ").strip() or "quality"
-
+TARGET = (
+    os.environ.get("TARGET")
+    or input("Enter target name (reactions): ").strip()
+    or "reactions"
+)
+VALENCE = (
+    os.environ.get("VALENCE") or input("Enter valence (valence): ").strip() or "valence"
+)
+BY = (
+    os.environ.get("BY")
+    or input("Enter grouping variable (quality): ").strip()
+    or "quality"
+)
 opts = config.glmm.engagement.targets[TARGET]
 opts.update(config.glmm.engagement.by)
 
@@ -81,7 +87,9 @@ print(f"Building GLMM for '{TARGET}' using 'bambi'...")
 # Only the first formula (conditional mean) uses target/by interpolation
 formula = bmb.Formula(
     *(
-        frm.format(response=opts.response, by=BY).replace("\n", " ").strip()
+        frm.format(response=opts.response, valence=VALENCE, by=BY)
+        .replace("\n", " ")
+        .strip()
         for frm in opts.formula
     )
 )
@@ -198,11 +206,10 @@ idata.add_groups(**{group: loglik.to_dataset(name=TARGET)})
 
 print("Storing model metadata in inference data...")
 # Join formula strings for storage
-formula_str = " ; ".join(opts.formula)
 store_model_metadata(
     idata,
     model,
-    formula=formula_str,
+    formula="; ".join(formula.get_all_formulas()),
     family=opts.get("family", "negativebinomial"),
     response=TARGET,
 )
@@ -210,6 +217,6 @@ store_model_metadata(
 # %% ---------------------------------------------------------------------------------
 
 print("Saving model inference data as NetCDF file...")
-idata.to_netcdf(dirpath / f"{TARGET}-{BY}.nc")
+idata.to_netcdf(dirpath / f"{TARGET}-{VALENCE}-{BY}.nc")
 
 # %% ---------------------------------------------------------------------------------

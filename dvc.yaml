@@ -179,7 +179,7 @@ stages:
       - stages/descriptives/${item}.py
       - data/proc/final.parquet
 
-  glmm-valence:
+  valence-glmm:
     foreach: ["event", "sentiment", "structural"]
     do:
       cmd:
@@ -193,7 +193,16 @@ stages:
       - glmm/valence/${item}.nc:
           persist: true
 
-  glmm-valence-by:
+  valence-validation:
+    foreach: ["event", "sentiment", "structural"]
+    do:
+      cmd:
+      - TARGET=${item} python stages/glmm/valence_validation.py
+      deps:
+      - stages/glmm/valence_validation.py
+      - glmm/valence/${item}.nc
+
+  valence-glmm-by:
     matrix:
       target: ["event", "sentiment"]
       by: ["quality", "ideology"]
@@ -208,7 +217,7 @@ stages:
       - glmm/valence/${item.target}-${item.by}.nc:
           persist: true
 
-  glmm-engagement:
+  engagement-glmm:
     matrix:
       target: ["reactions", "comments", "shares"]
       valence: ["event", "sentiment", "valence"]
@@ -223,11 +232,22 @@ stages:
     - glmm/engagement/${item.target}-${item.valence}.nc:
         persist: true
 
-  glmm-engagement-by:
+  engagement-validation:
     matrix:
       target: ["reactions", "comments", "shares"]
+      valence: ["event", "sentiment", "valence"]
+    cmd:
+    - TARGET=${item.target} VALENCE=${item.valence} python stages/glmm/engagement_validation.py
+    deps:
+    - stages/glmm/engagement_validation.py
+    - glmm/valence/${item.valence}.nc
+
+  engagement-glmm-by:
+    matrix:
+      target: ["reactions", "comments", "shares"]
+      valence: ["valence"]
       by: ["quality", "ideology"]
-    cmd: TARGET=${item.target} BY=${item.by} python stages/glmm/engagement_by.py
+    cmd: TARGET=${item.target} VALENCE=${item.valence} BY=${item.by} python stages/glmm/engagement_by.py
     params:
       - glmm.engagement.targets.${item.target}
       - glmm.engagement.by
@@ -235,10 +255,10 @@ stages:
     - stages/glmm/engagement_by.py
     - data/proc/final.parquet
     outs:
-      - glmm/engagement/${item.target}-${item.by}.nc:
+      - glmm/engagement/${item.target}-${item.valence}-${item.by}.nc:
           persist: true
 
-  analysis-engagement:
+  engagement-analysis:
     foreach: ["reactions", "comments", "shares"]
     do:
       cmd: TARGET=${item} python stages/analysis/engagement.py
@@ -246,4 +266,6 @@ stages:
       - stages/analysis/engagement.py
       - glmm/valence/event.nc
       - glmm/valence/sentiment.nc
-      - glmm/engagement/${item}.nc
+      - glmm/engagement/${item}-event.nc
+      - glmm/engagement/${item}-sentiment.nc
+      - glmm/engagement/${item}-valence.nc

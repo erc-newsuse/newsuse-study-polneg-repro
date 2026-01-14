@@ -60,7 +60,7 @@ model.build()
 axes = model.plot_priors()
 fig = axes.flatten()[0].figure
 fig.tight_layout()
-fig.savefig(figpath / f"{opts.response}-priors.pdf")
+fig.savefig(figpath / f"{TARGET}-{VALENCE}-priors.pdf")
 print(model)
 
 # %% ---------------------------------------------------------------------------------
@@ -136,7 +136,7 @@ axes = az.plot_trace(
 fig = axes.flatten()[0].figure
 fig.tight_layout()
 
-fig.savefig(figpath / f"{opts.response}-trace.pdf")
+fig.savefig(figpath / f"{TARGET}-{VALENCE}-trace.pdf")
 
 # %% ---------------------------------------------------------------------------------
 
@@ -154,68 +154,93 @@ fig.supxlabel("Quantile", fontsize="xx-large")
 fig.supylabel(ylabel, fontsize="xx-large")
 fig.tight_layout()
 
-fig.savefig(figpath / f"{opts.response}-ess.pdf")
+fig.savefig(figpath / f"{TARGET}-{VALENCE}-ess.pdf")
 
-# # %% ---------------------------------------------------------------------------------
-
-
-# def plot_ppc(
-#     idata: az.InferenceData,
-#     ax: plt.Axes | None = None,
-#     **kwargs,
-# ) -> plt.Axes:
-#     """Plot posterior predictive check with mean observed value."""
-#     kwargs = {
-#         "kind": "cumulative",
-#         "legend": False,
-#         "mean": False,
-#         "num_pp_samples": 10,
-#         **kwargs,
-#     }
-#     az.plot_ppc(idata, ax=ax, **kwargs)
-#     ax.set_xlabel(None)
-#     ax.set_ylabel(None)
-#     return ax
+# %% ---------------------------------------------------------------------------------
 
 
-# # %% ---------------------------------------------------------------------------------
+def plot_ppc(
+    idata: az.InferenceData,
+    ax: plt.Axes | None = None,
+    **kwargs,
+) -> plt.Axes:
+    """Plot posterior predictive check with mean observed value."""
+    kwargs = {
+        "kind": "cumulative",
+        "legend": False,
+        "mean": False,
+        "num_pp_samples": 10,
+        **kwargs,
+    }
+    az.plot_ppc(idata, ax=ax, **kwargs)
+    ax.set_xlabel(None)
+    ax.set_ylabel(None)
+    return ax
 
-# bys = ["country"]
-# for _by in bys:
-#     fig, axes = plt.subplots(
-#         ncols=(ncols := len(labels[_by])),
-#         nrows=(nrows := 2),
-#         figsize=((height := 3) * ncols, height * nrows),
-#     )
-#     for axrow, political in zip(axes, [0, 1], strict=True):
-#         for ax, byval in zip(axrow.flat, labels[_by], strict=True):
-#             sel = {_by: byval, "political": political}
-#             plot_ppc(idata.sel(**sel), ax=ax)
-#             ax.set_xticks(labels[opts.response])
-#             ax.set_xlabel(None)
-#             ax.set_ylabel(None)
-#             if ax in axes[0]:
-#                 ax.set_title(labels[_by][byval])
-#         axrow[0].set_ylabel(
-#             "Non-Political" if political == 0 else "Political", fontsize="xx-large"
-#         )
-#     fig.supxlabel(opts.response.capitalize(), y=0.0, fontsize="xx-large")
-#     fig.supylabel(r"$\mathbb{P}(X \leq x)$", x=0.01, y=0.55, fontsize="xx-large")
-#     fig.tight_layout()
-#     fig.savefig(figpath / f"{opts.response}-ppc-by-{_by}.pdf")
 
-# # %% ---------------------------------------------------------------------------------
+# %% ---------------------------------------------------------------------------------
 
-# fig, ax = plt.subplots(figsize=(7, 3))
-# az.plot_bpv(idata, ax=ax, var_names=[opts.response], kind="u_value")
-# ax.set_title(rf"{opts.response.capitalize()}: $u$-values")
-# ax.set_ylim(0.8, 1.2)
-# fig.tight_layout()
-# fig.savefig(figpath / f"{opts.response}-bpv.pdf")
+bys = ["country"]
+fig, axes = plt.subplots(
+    ncols=(ncols := len(config.categorical.country)),
+    nrows=(nrows := len(config.categorical[VALENCE])),
+    figsize=((height := 3) * ncols, height * nrows),
+)
+for axrow, valence in zip(axes, config.categorical[VALENCE].values(), strict=True):
+    for ax, country in zip(axrow.flat, config.categorical.country, strict=True):
+        for political in [0, 1]:
+            # Make inset axis in lower right corner
+            _ax = ax.inset_axes([0.45, 0.1, 0.5, 0.5]) if political else ax
+            sel = {VALENCE: valence, "country": country, "political": political}
+            color = [
+                config.plotting.color.semantics["political" if political else "other"]
+            ] + ["black"] * 2
+            plot_ppc(idata.sel(**sel), ax=_ax, colors=color)
+            _ax.set_xlabel(None)
+            _ax.set_ylabel(None)
+            _ax.set_yscale("log")
+            _ax.set_xscale("log")
+            if political:
+                _ax.set_title("Political", fontsize="x-large")
+        if ax in axes[0]:
+            ax.set_title(config.categorical.country[country], fontsize="xx-large")
+    axrow[0].set_ylabel(f"{VALENCE.capitalize()}: {valence}", fontsize="xx-large")
 
-# # %% ---------------------------------------------------------------------------------
+# Add custom legend for ppd / observed
+handles = [
+    mpl.lines.Line2D([], [], color="black", label="Observed"),
+    mpl.lines.Line2D(
+        [],
+        [],
+        color=config.plotting.color.semantics.other,
+        label="Posterior predictive distribution",
+    ),
+]
+fig.legend(
+    handles=handles,
+    ncols=len(handles),
+    loc="center left",
+    frameon=False,
+    fontsize="xx-large",
+    bbox_to_anchor=(0.6, 0.015),
+)
 
-# waic = az.waic(idata)
-# print(waic)
+fig.supxlabel(opts.response.capitalize(), y=0.0, fontsize=28)
+fig.supylabel(r"$\mathbb{P}(X \leq x)$", x=0.00, y=0.55, fontsize=28)
+fig.tight_layout()
+fig.savefig(figpath / f"{TARGET}-{VALENCE}-ppc.pdf")
 
-# # %% --------------------------------------------------------------------------------
+# %% ---------------------------------------------------------------------------------
+
+fig, ax = plt.subplots(figsize=(7, 3))
+az.plot_bpv(idata, ax=ax, var_names=[opts.response], kind="u_value")
+ax.set_title(rf"{opts.response.capitalize()}: $u$-values")
+fig.tight_layout()
+fig.savefig(figpath / f"{TARGET}-{VALENCE}-bpv.pdf")
+
+# %% ---------------------------------------------------------------------------------
+
+waic = az.waic(idata)
+print(waic)
+
+# %% --------------------------------------------------------------------------------

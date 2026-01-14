@@ -42,9 +42,13 @@ opts.ppd.draws = 5
 
 # %% ---------------------------------------------------------------------------------
 
+print("Sampling posterior predictive distribution for event...")
+
 event = SimpleNamespace()
 event.idata = az.from_netcdf(paths.glmm / "valence" / "event.nc")
 event.model = rebuild_model(event.idata)
+
+print("Sampling posterior predictive distribution for sentiment...")
 
 sentiment = SimpleNamespace()
 sentiment.idata = az.from_netcdf(paths.glmm / "valence" / "sentiment.nc")
@@ -57,6 +61,8 @@ for group in event.idata.groups():
 
 # %% ---------------------------------------------------------------------------------
 
+print("Sampling posterior predictive distribution for structural sentiment...")
+
 structural = SimpleNamespace()
 structural.idata = az.from_netcdf(paths.glmm / "valence" / "structural.nc")
 structural.model = rebuild_model(structural.idata)
@@ -66,6 +72,8 @@ for group in structural.idata.groups():
         del structural.idata[group]
 
 # %% ---------------------------------------------------------------------------------
+
+print("Generating general posterior predictive distribution of event and sentiment...")
 
 grid = (
     # Generate a grid of `n` values per political-country combination
@@ -120,8 +128,6 @@ sentiment.ppd = (
     .rename(columns={"sample": "sample_sentiment"})
 )
 
-# %% ---------------------------------------------------------------------------------
-
 ppd = {**opts.ppd}
 structural.ppd = (
     structural.model.predict(
@@ -141,6 +147,8 @@ structural.ppd = (
 )
 
 # %% ---------------------------------------------------------------------------------
+
+print("Building dataset for valence posterior predictive distributions...")
 
 
 def build_da(ppd: pd.DataFrame, target: str) -> xr.DataArray:
@@ -168,30 +176,34 @@ gc.collect()
 # %% ---------------------------------------------------------------------------------
 
 for response in config.engagement:
-    idata = az.from_netcdf(paths.glmm / "engagement" / f"{response}.nc")
-    idata.attrs["formula"] = idata.attrs["formula"].format(response=response)
-    model = rebuild_model(idata)
-    for group in idata.groups():
-        if group not in use_groups:
-            del idata[group]
-    kwargs = {**opts.ppd}
-    ppd = (
-        model.predict(
-            idata.isel(draw=slice(kwargs.pop("draws"))),
-            data=structural.ppd,
-            inplace=False,
-            random_seed=rng,
-            **kwargs,
+    for valence in ["event", "sentiment", "valence"]:
+        print(f"Sampling posterior predictive distribution for {response} by {valence}...")
+
+        idata = az.from_netcdf(paths.glmm / "engagement" / f"{response}-{valence}.nc")
+        model = rebuild_model(idata)
+        for group in idata.groups():
+            if group not in use_groups:
+                del idata[group]
+        kwargs = {**opts.ppd}
+        ppd = (
+            model.predict(
+                idata.isel(draw=slice(kwargs.pop("draws"))),
+                data=structural.ppd,
+                inplace=False,
+                random_seed=rng,
+                **kwargs,
+            )
+            .posterior_predictive.drop_vars("__obs__")
+            .assign_coords(
+                {n: ("__obs__", c.to_numpy()) for n, c in structural.ppd.items()}
+            )
+            .to_dataframe()
+            .reset_index()
+            .assign(sample=lambda df: df.pop("draw") + df.pop("chain") * opts.ppd.draws)
+            .rename(columns={"sample": f"sample_{response}"})
+            .pipe(build_da, target=response)
         )
-        .posterior_predictive.drop_vars("__obs__")
-        .assign_coords({n: ("__obs__", c.to_numpy()) for n, c in structural.ppd.items()})
-        .to_dataframe()
-        .reset_index()
-        .assign(sample=lambda df: df.pop("draw") + df.pop("chain") * opts.ppd.draws)
-        .rename(columns={"sample": f"sample_{response}"})
-        .pipe(build_da, target=response)
-    )
-    dset[response] = ppd
+        dset[f"{response}_{valence}"] = ppd
 
 
 # %% ---------------------------------------------------------------------------------
@@ -199,6 +211,8 @@ for response in config.engagement:
 dset = xr.Dataset(dset)
 
 # %% ---------------------------------------------------------------------------------
+
+print("Saving posterior predictive distributions for all models...")
 
 dset.to_netcdf(paths.glmm / "ppd.nc")
 
