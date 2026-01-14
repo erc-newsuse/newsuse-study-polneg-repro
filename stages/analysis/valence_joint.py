@@ -62,15 +62,18 @@ sentiment = (
 probs = (
     pd.concat(
         [
-            df := (
+            (
                 sentiment.groupby(["political", "country", "sample"])["valence"]
                 .value_counts(normalize=True)
                 .sort_index()
                 .reset_index()
             ),
-            df.groupby(["political", "valence", "sample"])["proportion"]
-            .mean()
-            .reset_index(),
+            (
+                sentiment.groupby(["political", "sample"])["valence"]
+                .value_counts(normalize=True)
+                .sort_index()
+                .reset_index()
+            ),
         ],
         ignore_index=True,
     )
