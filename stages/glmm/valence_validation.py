@@ -32,7 +32,7 @@ alpha = 1 - az.rcParams["stats.ci_prob"]
 
 # %% ---------------------------------------------------------------------------------
 
-idata = az.from_netcdf(paths.glmm / "valence" / f"{opts.response}.nc")
+idata = az.from_netcdf(paths.glmm / "valence" / f"{TARGET}.nc")
 model = rebuild_model(idata)
 
 # %% ---------------------------------------------------------------------------------
@@ -40,7 +40,7 @@ model = rebuild_model(idata)
 terms_rx = {
     "fixed": [
         r"^threshold$",
-        r"^(event)?:(sentiment)?:?(political)?:?(country)?$",
+        r"^(country|political)?:?(country|political)?:?(event)?$",
     ],
     "group (sd)": [r"\|.*_sigma$"],
     "group": [r"\|(outlet|country:year:month)$"],
@@ -140,7 +140,7 @@ axes = az.plot_trace(
 fig = axes.flatten()[0].figure
 fig.tight_layout()
 
-fig.savefig(figpath / f"{opts.response}-trace.pdf")
+fig.savefig(figpath / f"{TARGET}-trace.pdf")
 
 # %% ---------------------------------------------------------------------------------
 
@@ -158,7 +158,7 @@ fig.supxlabel("Quantile", fontsize="xx-large")
 fig.supylabel(ylabel, fontsize="xx-large")
 fig.tight_layout()
 
-fig.savefig(figpath / f"{opts.response}-ess.pdf")
+fig.savefig(figpath / f"{TARGET}-ess.pdf")
 
 # %% ---------------------------------------------------------------------------------
 

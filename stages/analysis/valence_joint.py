@@ -11,7 +11,7 @@ from newsuse.data import DataFrame
 from scipy.special import logit
 
 from project import config, paths
-from project.bayes import contr_ref, eti
+from project.bayes import eti
 
 xr.set_options(**config.xarray)
 az.rcParams.update(config.arviz)
@@ -55,7 +55,6 @@ sentiment = (
     .set_index("sample")
     .reset_index()
 )
-
 
 # %% JOINT VALENCE ANALYSIS ----------------------------------------------------------
 
@@ -113,10 +112,11 @@ posterior_political = (
 
 posterior_valence = (
     probs.pipe(logit)
-    .groupby(["country", "political", "sample"])
-    .apply(contr_ref, ref=0, level="valence")
+    .pipe(lambda df: df.sub(df.xs(0, level="valence")))
+    .drop(index=0, level="valence")
+    .dropna()
     .pipe(np.exp)
-    .groupby(["country", "political", "contrast"])
+    .groupby(["country", "political", "valence"])
     .apply(eti)
     .unstack(-1)
     .reset_index()
@@ -146,6 +146,7 @@ for ax, country in zip(axes, country_order, strict=True):
     ax.set_title(title, fontsize=24)
     ax.set_xlabel(None)
     ax.set_ylabel(None)
+    ax.yaxis.set_major_formatter(mpl.ticker.PercentFormatter(xmax=1))
     # Mark regions with colors
     for boundary in [*config.categorical.valence][:-1]:
         ax.axvline(
@@ -180,11 +181,7 @@ for ax, country in zip(axes, country_order, strict=True):
     sigs = (
         gdf[["country", "political", "valence", "median"]]
         .rename(columns={"median": "y"})
-        .merge(
-            posterior_valence[["country", "political", "contrast", "sig"]].rename(
-                columns={"contrast": "valence"}
-            )
-        )
+        .merge(posterior_valence[["country", "political", "valence", "sig"]])
         .dropna()
         .query("sig")
     )
@@ -201,7 +198,7 @@ for ax, country in zip(axes, country_order, strict=True):
 
 fig.legends.clear()
 ax = axes[0]
-ax.set_ylabel("Posterior class proportions", fontsize=18)
+ax.set_ylabel("Prevalence", fontsize=18)
 fig.suptitle(
     "Joint valence",
     fontsize=28,
@@ -210,14 +207,6 @@ fig.suptitle(
 )
 fig.tight_layout()
 fig.savefig(figpath / "valence-posterior.pdf")
-
-# %% SENTIMENT BY EVENT ANALYSIS -----------------------------------------------------
-
-# probs = (
-#     sentiment.groupby(["political", "event", "sample"])["sentiment"]
-#     .value_counts(normalize=True)
-#     .sort_index()
-# )
 
 # %% ---------------------------------------------------------------------------------
 

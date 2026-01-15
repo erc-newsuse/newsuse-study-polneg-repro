@@ -22,13 +22,6 @@ so.Plot.config.theme.update(config.plotting.params)
 opts = config.glmm.valence.targets["event"]
 support = np.asarray([*config.categorical["valence"]])
 
-analysis_name = "structural"
-
-figpath = paths.figures / analysis_name
-tabpath = paths.tables / analysis_name
-figpath.mkdir(parents=True, exist_ok=True)
-tabpath.mkdir(parents=True, exist_ok=True)
-
 countries_map = config.categorical.country
 political_map = dict(enumerate(config.categorical.political))
 
@@ -142,13 +135,14 @@ structural.ppd = (
     .assign_coords({n: ("__obs__", c.to_numpy()) for n, c in event.ppd.items()})
     .to_dataframe()
     .reset_index()
-    .assign(sample=lambda df: df.pop("draw") + df.pop("chain") * opts.ppd.draws)
+    .assign(
+        valence=lambda df: df[["event", "sentiment"]].sum(axis=1),
+        sample=lambda df: df.pop("draw") + df.pop("chain") * opts.ppd.draws,
+    )
     .rename(columns={"sample": "sample_structural"})
 )
 
 # %% ---------------------------------------------------------------------------------
-
-print("Building dataset for valence posterior predictive distributions...")
 
 
 def build_da(ppd: pd.DataFrame, target: str) -> xr.DataArray:
@@ -160,6 +154,10 @@ def build_da(ppd: pd.DataFrame, target: str) -> xr.DataArray:
     X = X[target].assign_coords(obs_coords)
     return X
 
+
+# %% ---------------------------------------------------------------------------------
+
+print("Building dataset for valence posterior predictive distributions...")
 
 dset = {
     "event": build_da(event.ppd, "event"),
@@ -204,7 +202,6 @@ for response in config.engagement:
             .pipe(build_da, target=response)
         )
         dset[f"{response}_{valence}"] = ppd
-
 
 # %% ---------------------------------------------------------------------------------
 

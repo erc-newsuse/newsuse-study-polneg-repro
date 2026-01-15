@@ -105,7 +105,7 @@ glmm:
       seed: 1
       formula: >
         {response} ~ 0
-          + political * country
+          + country * political
           + (1 + political | outlet)
           + (1 + political | country:year:month)
       family: cumulative
@@ -125,7 +125,7 @@ glmm:
       seed: 2
       formula: >
         {response} ~ 0
-          + political * country * {by}
+          + country * political * {by}
           + (1 + political * {by} | outlet)
           + (1 + political * {by} | country:year:month)
     targets:
@@ -144,7 +144,7 @@ glmm:
         seed: 303
         formula: >
           {response} ~ 0
-            + event * political * country
+            + country * political * event
             + (1 + political * event | outlet)
         common:
           - event

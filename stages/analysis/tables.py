@@ -1,6 +1,5 @@
 # %% ---------------------------------------------------------------------------------
 
-
 import arviz as az
 import matplotlib as mpl
 import numpy as np
@@ -27,6 +26,8 @@ political_map = dict(enumerate(config.categorical.political))
 
 predictors_fixed = [*opts.common]
 predictors_groups = [*opts.group]
+
+# %% VALENCE TABLES ------------------------------------------------------------------
 
 
 def bold_row(row: pd.Series) -> list[str]:
@@ -130,5 +131,86 @@ print(
         )
     )
 )
+
+
+# %% ENGAGEMENT TABLES ---------------------------------------------------------------
+
+engagement_tables = {}
+
+for table in [
+    "volume-posterior",
+    "volume-political",
+    "volume-valence",
+    "valence-posterior",
+    "baseline-diffs",
+]:
+    parts = {}
+    for target in config.engagement:
+        for valence in ["event", "sentiment", "valence"]:
+            tabname = f"{target}-{valence}-{table}"
+            if tabname.endswith("valence-posterior"):
+                continue
+            df = DataFrame.from_(paths.tables / "engagement" / f"{tabname}.tsv").rename(
+                columns={"event": "valence", "sentiment": "valence"}
+            )
+            df = (
+                df.set_index(df.columns.tolist()[: df.columns.get_loc("median")])
+                .loc[["overall", *config.categorical.country]]
+                .rename(
+                    # lambda x: config.categorical.country.get(x, "Overall"),
+                    lambda x: x.capitalize() if x == "overall" else x.upper(),
+                    axis="index",
+                    level="country",
+                )
+            )
+            parts[(target, valence)] = df.rename(
+                columns={
+                    "median": "Me",
+                    "lower": "LB",
+                    "upper": "UB",
+                }
+            )
+    if parts:
+        engagement_tables[table] = (
+            pd.concat(parts, axis=1)
+            .pipe(lambda df: df.sort_index().loc[df.index.get_level_values(0).unique()])
+            .rename(
+                lambda x: f"~{x}" if x >= 0 else str(x),
+                axis="index",
+                level="valence",
+            )
+        )
+
+# %% ---------------------------------------------------------------------------------
+
+
+def _bold_row(row: pd.Series) -> list[str]:
+    frm = []
+    for target in config.engagement:
+        for valence in ["event", "sentiment", "valence"]:
+            part = row[(target, valence)]
+            if pd.isnull(part["sig"]) or not part["sig"]:
+                frm.extend([""] * len(part))
+            else:
+                frm.extend(["bfseries:--rwrap"] * len(part))
+    return frm
+
+
+for name, df in engagement_tables.items():
+    print(f"\n\n# Table: {name}\n")
+    df = df.style
+    if "sig" in sum(df.columns, ()):
+        df = df.apply(_bold_row, axis=1)
+        df = df.hide(
+            df.data.filter(regex=r"\'sig\'|\'up\'", axis=1).columns.tolist(), axis=1
+        )
+    print(
+        df.format(precision=2, escape="latex", na_rep="").to_latex(
+            convert_css=False,
+            multirow_align="t",
+            multicol_align="c",
+            hrules=True,
+        )
+    )
 
 # %% ---------------------------------------------------------------------------------

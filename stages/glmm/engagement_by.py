@@ -38,7 +38,7 @@ opts.update(config.glmm.engagement.by)
 dirpath = paths.glmm / "engagement"
 dirpath.mkdir(parents=True, exist_ok=True)
 
-predictors_fixed = [*opts.common, BY]
+predictors_fixed = [*opts.common, VALENCE, BY]
 predictors_groups = [*opts.group]
 
 rng = np.random.default_rng(opts.seed)

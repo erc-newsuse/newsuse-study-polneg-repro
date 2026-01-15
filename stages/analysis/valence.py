@@ -12,7 +12,7 @@ from newsuse.data import DataFrame
 from scipy.special import logit
 
 from project import config, paths
-from project.bayes import contr_ref, eti
+from project.bayes import eti
 
 xr.set_options(**config.xarray)
 az.rcParams.update(config.arviz)
@@ -20,9 +20,7 @@ mpl.rcParams.update(config.plotting.params)
 so.Plot.config.theme.update(config.plotting.params)
 
 # Configuration
-TARGET = os.environ.get("TARGET")
-if TARGET is None:
-    TARGET = input("Enter target (event): ").strip() or "event"
+TARGET = os.environ.get("TARGET") or input("Enter target (event): ").strip() or "event"
 
 opts = config.glmm.valence.targets[TARGET]
 support = np.asarray([*config.categorical[opts.response]])
@@ -49,24 +47,33 @@ ppd = xr.open_dataset(paths.glmm / "ppd.nc")[opts.response]
 probs = (
     pd.concat(
         [
-            df := (
-                ppd.to_dataframe()
-                .reset_index()
-                .rename(columns={f"sample_{opts.response}": "sample"})
-                .groupby(predictors_fixed + ["sample"])[opts.response]
-                .value_counts(normalize=True)
-                .sort_index()
-                .reset_index()
-            ),
-            df.groupby(["political", opts.response, "sample"])["proportion"]
-            .mean()
+            (
+                df := (
+                    ppd.to_dataframe()
+                    .reset_index()
+                    .rename(columns={f"sample_{opts.response}": "sample"})
+                )
+            )
+            .groupby(predictors_fixed + ["sample"])[opts.response]
+            .value_counts(normalize=True)
+            .sort_index()
+            .reset_index(),
+            df.groupby([c for c in predictors_fixed if c != "country"] + ["sample"])[
+                opts.response
+            ]
+            .value_counts(normalize=True)
+            .sort_index()
             .reset_index(),
         ],
         ignore_index=True,
     )
     .fillna({"country": "overall"})
-    .set_index(predictors_fixed + ["sample", opts.response])["proportion"]
+    .set_index(predictors_fixed + [opts.response, "sample"])["proportion"]
 )
+
+assert (
+    probs.groupby(predictors_fixed + ["sample"]).sum().round(6).eq(1).all()
+), "Proportions do not sum to 1."
 
 # %% Compute posterior expected class probabilities ----------------------------------
 
@@ -106,10 +113,11 @@ posterior_political = (
 
 posterior_valence = (
     probs.pipe(logit)
-    .groupby(["country", "political", "sample"])
-    .apply(contr_ref, ref=0, level=opts.response)
+    .pipe(lambda df: df.sub(0, level=opts.response))
+    .drop(index=0, level=opts.response)
+    .dropna()
     .pipe(np.exp)
-    .groupby(["country", "political", "contrast"])
+    .groupby(["country", "political", opts.response])
     .apply(eti)
     .unstack(-1)
     .reset_index()
@@ -144,6 +152,7 @@ for ax, country in zip(axes, country_order, strict=True):
     ax.set_xlabel(None)
     ax.set_ylabel(None)
     ax.set_ylim(0, 1)
+    ax.yaxis.set_major_formatter(mpl.ticker.PercentFormatter(xmax=1))
     ax.set_xticks(
         support,
         [*map(str.capitalize, config.categorical[opts.response].values())],
@@ -181,11 +190,7 @@ for ax, country in zip(axes, country_order, strict=True):
     sigs = (
         gdf[["country", "political", opts.response, "median"]]
         .rename(columns={"median": "y"})
-        .merge(
-            posterior_valence[["country", "political", "contrast", "sig"]].rename(
-                columns={"contrast": opts.response}
-            )
-        )
+        .merge(posterior_valence[["country", "political", opts.response, "sig"]])
         .dropna()
         .query("sig")
     )
@@ -202,7 +207,7 @@ for ax, country in zip(axes, country_order, strict=True):
 
 fig.legends.clear()
 ax = axes[0]
-ax.set_ylabel("Posterior class proportions", fontsize=18)
+ax.set_ylabel("Prevalence", fontsize=18)
 fig.suptitle(
     {
         "event": "Event valence",
@@ -214,7 +219,7 @@ fig.suptitle(
     ha="left",
 )
 fig.tight_layout()
-fig.savefig(figpath / f"{opts.response}-posterior.pdf")
+fig.savefig(figpath / f"{TARGET}-posterior.pdf")
 
 # %% ---------------------------------------------------------------------------------
 
@@ -281,6 +286,6 @@ tables = {
 }
 
 for name, table in tables.items():
-    DataFrame(table).to_(tabpath / f"{opts.response}-{name}.tsv", index=False)
+    DataFrame(table).to_(tabpath / f"{TARGET}-{name}.tsv", index=False)
 
 # %% ---------------------------------------------------------------------------------

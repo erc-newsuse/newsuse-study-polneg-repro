@@ -1592,26 +1592,27 @@ stages:
       nfiles: 7
   valence-glmm@event:
     cmd:
-    - TARGET=event python stages/valence/glmm.py
+    - TARGET=event python stages/glmm/valence.py
     deps:
     - path: data/proc/final.parquet
       hash: md5
       md5: 6ed9fc519405c1cf0e919c444c893842
       size: 382132909
-    - path: stages/valence/glmm.py
+    - path: stages/glmm/valence.py
       hash: md5
-      md5: f19c27ab1e9768ed9fb2041bd3877b3d
+      md5: 9b9db6beef7d25d213c625cd77340d81
       size: 5583
     params:
       params.yaml:
         glmm.valence.targets.event:
           seed: 543
+          noncentered: true
           fit:
             draws: 2000
             tune: 2000
             chains: 4
             cores: 4
-            target_accept: 0.99
+            target_accept: 0.95
             progress_bar: true
             inference_method: nutpie
             nuts_sampler_kwargs:
@@ -1628,10 +1629,9 @@ stages:
               sample_new_groups: true
               kind: response_params
           sample: 1000000
-          formula: "{response} ~ 0\n  + political * country\n  + (1 + political |
+          formula: "{response} ~ 0\n  + country * political\n  + (1 + political |
             outlet)\n  + (1 + political | country:year:month)\n"
           family: cumulative
-          noncentered: true
           common:
           - political
           - country
@@ -1643,30 +1643,31 @@ stages:
     outs:
     - path: glmm/valence/event.nc
       hash: md5
-      md5: ff685d706e811d57763de848bafa59bb
-      size: 3424365931
+      md5: 48643c474a06cf3da388876bfb3639bf
+      size: 3424401705
   valence-glmm@sentiment:
     cmd:
-    - TARGET=sentiment python stages/valence/glmm.py
+    - TARGET=sentiment python stages/glmm/valence.py
     deps:
     - path: data/proc/final.parquet
       hash: md5
       md5: 6ed9fc519405c1cf0e919c444c893842
       size: 382132909
-    - path: stages/valence/glmm.py
+    - path: stages/glmm/valence.py
       hash: md5
-      md5: f19c27ab1e9768ed9fb2041bd3877b3d
+      md5: 9b9db6beef7d25d213c625cd77340d81
       size: 5583
     params:
       params.yaml:
         glmm.valence.targets.sentiment:
           seed: 17
+          noncentered: true
           fit:
             draws: 2000
             tune: 2000
             chains: 4
             cores: 4
-            target_accept: 0.99
+            target_accept: 0.95
             progress_bar: true
             inference_method: nutpie
             nuts_sampler_kwargs:
@@ -1683,10 +1684,9 @@ stages:
               sample_new_groups: true
               kind: response_params
           sample: 1000000
-          formula: "{response} ~ 0\n  + political * country\n  + (1 + political |
+          formula: "{response} ~ 0\n  + country * political\n  + (1 + political |
             outlet)\n  + (1 + political | country:year:month)\n"
           family: cumulative
-          noncentered: true
           common:
           - political
           - country
@@ -1698,8 +1698,8 @@ stages:
     outs:
     - path: glmm/valence/sentiment.nc
       hash: md5
-      md5: 5284a0a67e522a1f1d62602685922e1d
-      size: 3430995379
+      md5: 8e924d014331fe7e43418e1354267b5c
+      size: 3430983824
   engagement-glmm@reactions:
     cmd:
     - TARGET=reactions python stages/engagement/glmm.py
@@ -4409,26 +4409,27 @@ stages:
       size: 3434329526
   valence-glmm@structural:
     cmd:
-    - TARGET=structural python stages/valence/glmm.py
+    - TARGET=structural python stages/glmm/valence.py
     deps:
     - path: data/proc/final.parquet
       hash: md5
       md5: 6ed9fc519405c1cf0e919c444c893842
       size: 382132909
-    - path: stages/valence/glmm.py
+    - path: stages/glmm/valence.py
       hash: md5
-      md5: f19c27ab1e9768ed9fb2041bd3877b3d
+      md5: 9b9db6beef7d25d213c625cd77340d81
       size: 5583
     params:
       params.yaml:
         glmm.valence.targets.structural:
           seed: 303
+          noncentered: true
           fit:
             draws: 2000
             tune: 2000
             chains: 4
             cores: 4
-            target_accept: 0.99
+            target_accept: 0.95
             progress_bar: true
             inference_method: nutpie
             nuts_sampler_kwargs:
@@ -4444,11 +4445,10 @@ stages:
               include_group_specific: true
               sample_new_groups: true
               kind: response_params
-          sample: 500000
-          formula: "{response} ~ 0\n  + event * political * country\n  + (1 + political
-            | outlet)\n"
+          sample: 1000000
+          formula: "{response} ~ 0\n  + country * political * event\n  + (1 + political
+            * event | outlet)\n"
           family: cumulative
-          noncentered: true
           common:
           - event
           - political
@@ -4459,8 +4459,8 @@ stages:
     outs:
     - path: glmm/valence/structural.nc
       hash: md5
-      md5: 65cef33883971dda193df57a66c7cc42
-      size: 978964782
+      md5: b3704e693d8bddd15f7396a2206e6a95
+      size: 1876347968
   glmm-valence@structural:
     cmd:
     - TARGET=structural python stages/glmm/valence.py
@@ -5395,3 +5395,1187 @@ stages:
       hash: md5
       md5: 3880dbddaecd7bdeed9e98d6ba886d2a
       size: 516153331
+  glmm-engagement@reactions-sentiment:
+    cmd:
+    - TARGET=reactions VALENCE=sentiment python stages/glmm/engagement.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/glmm/engagement.py
+      hash: md5
+      md5: afbf3d9018501b3aab682d870d23ebd5
+      size: 6518
+    params:
+      params.yaml:
+        glmm.engagement.targets.reactions:
+          seed: 0
+          noncentered: false
+          fit:
+            draws: 2000
+            tune: 2000
+            chains: 4
+            cores: 4
+            target_accept: 0.95
+            progress_bar: true
+            inference_method: nutpie
+            nuts_sampler_kwargs:
+              backend: jax
+          ppd:
+            draws: 100
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+          epred:
+            samples_per_simple_effect: 100
+            predict:
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
+          sample: 100000
+          common:
+          - political
+          - country
+          group:
+          - outlet
+          - weekend
+          - year
+          - month
+          formula:
+          - "{response} ~ 1\n  + political * country * {valence}\n  + (1 + political
+            * {valence} | outlet)\n"
+          - "alpha ~ (1 | outlet)\n"
+          family: negativebinomial
+          response: reactions
+    outs:
+    - path: glmm/engagement/reactions-sentiment.nc
+      hash: md5
+      md5: aff1823762ed99ec4afa3e8c4ae5c32a
+      size: 516841039
+  glmm-engagement@reactions-valence:
+    cmd:
+    - TARGET=reactions VALENCE=valence python stages/glmm/engagement.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/glmm/engagement.py
+      hash: md5
+      md5: afbf3d9018501b3aab682d870d23ebd5
+      size: 6518
+    params:
+      params.yaml:
+        glmm.engagement.targets.reactions:
+          seed: 0
+          noncentered: false
+          fit:
+            draws: 2000
+            tune: 2000
+            chains: 4
+            cores: 4
+            target_accept: 0.95
+            progress_bar: true
+            inference_method: nutpie
+            nuts_sampler_kwargs:
+              backend: jax
+          ppd:
+            draws: 100
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+          epred:
+            samples_per_simple_effect: 100
+            predict:
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
+          sample: 100000
+          common:
+          - political
+          - country
+          group:
+          - outlet
+          - weekend
+          - year
+          - month
+          formula:
+          - "{response} ~ 1\n  + political * country * {valence}\n  + (1 + political
+            * {valence} | outlet)\n"
+          - "alpha ~ (1 | outlet)\n"
+          family: negativebinomial
+          response: reactions
+    outs:
+    - path: glmm/engagement/reactions-valence.nc
+      hash: md5
+      md5: 1834b9bb3ec20466cd040cccae0743e9
+      size: 494310208
+  glmm-engagement@comments-event:
+    cmd:
+    - TARGET=comments VALENCE=event python stages/glmm/engagement.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/glmm/engagement.py
+      hash: md5
+      md5: afbf3d9018501b3aab682d870d23ebd5
+      size: 6518
+    params:
+      params.yaml:
+        glmm.engagement.targets.comments:
+          seed: 0
+          noncentered: false
+          fit:
+            draws: 2000
+            tune: 2000
+            chains: 4
+            cores: 4
+            target_accept: 0.95
+            progress_bar: true
+            inference_method: nutpie
+            nuts_sampler_kwargs:
+              backend: jax
+          ppd:
+            draws: 100
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+          epred:
+            samples_per_simple_effect: 100
+            predict:
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
+          sample: 100000
+          common:
+          - political
+          - country
+          group:
+          - outlet
+          - weekend
+          - year
+          - month
+          formula:
+          - "{response} ~ 1\n  + political * country * {valence}\n  + (1 + political
+            * {valence} | outlet)\n"
+          - "alpha ~ (1 | outlet)\n"
+          family: negativebinomial
+          response: comments
+    outs:
+    - path: glmm/engagement/comments-event.nc
+      hash: md5
+      md5: 164c1bfcc0e360d7c5f004054c1a5a8e
+      size: 490412999
+  glmm-engagement@comments-sentiment:
+    cmd:
+    - TARGET=comments VALENCE=sentiment python stages/glmm/engagement.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/glmm/engagement.py
+      hash: md5
+      md5: afbf3d9018501b3aab682d870d23ebd5
+      size: 6518
+    params:
+      params.yaml:
+        glmm.engagement.targets.comments:
+          seed: 0
+          noncentered: false
+          fit:
+            draws: 2000
+            tune: 2000
+            chains: 4
+            cores: 4
+            target_accept: 0.95
+            progress_bar: true
+            inference_method: nutpie
+            nuts_sampler_kwargs:
+              backend: jax
+          ppd:
+            draws: 100
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+          epred:
+            samples_per_simple_effect: 100
+            predict:
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
+          sample: 100000
+          common:
+          - political
+          - country
+          group:
+          - outlet
+          - weekend
+          - year
+          - month
+          formula:
+          - "{response} ~ 1\n  + political * country * {valence}\n  + (1 + political
+            * {valence} | outlet)\n"
+          - "alpha ~ (1 | outlet)\n"
+          family: negativebinomial
+          response: comments
+    outs:
+    - path: glmm/engagement/comments-sentiment.nc
+      hash: md5
+      md5: 3a0ff918ee115f8c42ec74efc44d9ffa
+      size: 490546711
+  glmm-engagement@comments-valence:
+    cmd:
+    - TARGET=comments VALENCE=valence python stages/glmm/engagement.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/glmm/engagement.py
+      hash: md5
+      md5: afbf3d9018501b3aab682d870d23ebd5
+      size: 6518
+    params:
+      params.yaml:
+        glmm.engagement.targets.comments:
+          seed: 0
+          noncentered: false
+          fit:
+            draws: 2000
+            tune: 2000
+            chains: 4
+            cores: 4
+            target_accept: 0.95
+            progress_bar: true
+            inference_method: nutpie
+            nuts_sampler_kwargs:
+              backend: jax
+          ppd:
+            draws: 100
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+          epred:
+            samples_per_simple_effect: 100
+            predict:
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
+          sample: 100000
+          common:
+          - political
+          - country
+          group:
+          - outlet
+          - weekend
+          - year
+          - month
+          formula:
+          - "{response} ~ 1\n  + political * country * {valence}\n  + (1 + political
+            * {valence} | outlet)\n"
+          - "alpha ~ (1 | outlet)\n"
+          family: negativebinomial
+          response: comments
+    outs:
+    - path: glmm/engagement/comments-valence.nc
+      hash: md5
+      md5: c51ec7b76b49a26dc70dd1bf5d659012
+      size: 472252768
+  glmm-engagement@shares-event:
+    cmd:
+    - TARGET=shares VALENCE=event python stages/glmm/engagement.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/glmm/engagement.py
+      hash: md5
+      md5: afbf3d9018501b3aab682d870d23ebd5
+      size: 6518
+    params:
+      params.yaml:
+        glmm.engagement.targets.shares:
+          seed: 0
+          noncentered: false
+          fit:
+            draws: 2000
+            tune: 2000
+            chains: 4
+            cores: 4
+            target_accept: 0.95
+            progress_bar: true
+            inference_method: nutpie
+            nuts_sampler_kwargs:
+              backend: jax
+          ppd:
+            draws: 100
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+          epred:
+            samples_per_simple_effect: 100
+            predict:
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
+          sample: 100000
+          common:
+          - political
+          - country
+          group:
+          - outlet
+          - weekend
+          - year
+          - month
+          formula:
+          - "{response} ~ 1\n  + political * country * {valence}\n  + (1 + political
+            * {valence} | outlet)\n"
+          - "alpha ~ (1 | outlet)\n"
+          family: negativebinomial
+          response: shares
+    outs:
+    - path: glmm/engagement/shares-event.nc
+      hash: md5
+      md5: 914ff927caf2142d90ace894c66a0752
+      size: 446837842
+  glmm-engagement@shares-sentiment:
+    cmd:
+    - TARGET=shares VALENCE=sentiment python stages/glmm/engagement.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/glmm/engagement.py
+      hash: md5
+      md5: afbf3d9018501b3aab682d870d23ebd5
+      size: 6518
+    params:
+      params.yaml:
+        glmm.engagement.targets.shares:
+          seed: 0
+          noncentered: false
+          fit:
+            draws: 2000
+            tune: 2000
+            chains: 4
+            cores: 4
+            target_accept: 0.95
+            progress_bar: true
+            inference_method: nutpie
+            nuts_sampler_kwargs:
+              backend: jax
+          ppd:
+            draws: 100
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+          epred:
+            samples_per_simple_effect: 100
+            predict:
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
+          sample: 100000
+          common:
+          - political
+          - country
+          group:
+          - outlet
+          - weekend
+          - year
+          - month
+          formula:
+          - "{response} ~ 1\n  + political * country * {valence}\n  + (1 + political
+            * {valence} | outlet)\n"
+          - "alpha ~ (1 | outlet)\n"
+          family: negativebinomial
+          response: shares
+    outs:
+    - path: glmm/engagement/shares-sentiment.nc
+      hash: md5
+      md5: 58fd88ed685e79c518e1c9f75a7eb0ea
+      size: 447263864
+  glmm-engagement@shares-valence:
+    cmd:
+    - TARGET=shares VALENCE=valence python stages/glmm/engagement.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/glmm/engagement.py
+      hash: md5
+      md5: afbf3d9018501b3aab682d870d23ebd5
+      size: 6518
+    params:
+      params.yaml:
+        glmm.engagement.targets.shares:
+          seed: 0
+          noncentered: false
+          fit:
+            draws: 2000
+            tune: 2000
+            chains: 4
+            cores: 4
+            target_accept: 0.95
+            progress_bar: true
+            inference_method: nutpie
+            nuts_sampler_kwargs:
+              backend: jax
+          ppd:
+            draws: 100
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+          epred:
+            samples_per_simple_effect: 100
+            predict:
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
+          sample: 100000
+          common:
+          - political
+          - country
+          group:
+          - outlet
+          - weekend
+          - year
+          - month
+          formula:
+          - "{response} ~ 1\n  + political * country * {valence}\n  + (1 + political
+            * {valence} | outlet)\n"
+          - "alpha ~ (1 | outlet)\n"
+          family: negativebinomial
+          response: shares
+    outs:
+    - path: glmm/engagement/shares-valence.nc
+      hash: md5
+      md5: 2c56823e09dadcf95dad879e376ab2c5
+      size: 435501544
+  engagement-glmm@reactions-event:
+    cmd:
+    - TARGET=reactions VALENCE=event python stages/glmm/engagement.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/glmm/engagement.py
+      hash: md5
+      md5: afbf3d9018501b3aab682d870d23ebd5
+      size: 6518
+    params:
+      params.yaml:
+        glmm.engagement.targets.reactions:
+          seed: 0
+          noncentered: false
+          fit:
+            draws: 2000
+            tune: 2000
+            chains: 4
+            cores: 4
+            target_accept: 0.95
+            progress_bar: true
+            inference_method: nutpie
+            nuts_sampler_kwargs:
+              backend: jax
+          ppd:
+            draws: 100
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+          epred:
+            samples_per_simple_effect: 100
+            predict:
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
+          sample: 100000
+          common:
+          - political
+          - country
+          group:
+          - outlet
+          - weekend
+          - year
+          - month
+          formula:
+          - "{response} ~ 1\n  + political * country * {valence}\n  + (1 + political
+            * {valence} | outlet)\n"
+          - "alpha ~ (1 | outlet)\n"
+          family: negativebinomial
+          response: reactions
+    outs:
+    - path: glmm/engagement/reactions-event.nc
+      hash: md5
+      md5: 3880dbddaecd7bdeed9e98d6ba886d2a
+      size: 516153331
+  engagement-glmm@reactions-sentiment:
+    cmd:
+    - TARGET=reactions VALENCE=sentiment python stages/glmm/engagement.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/glmm/engagement.py
+      hash: md5
+      md5: afbf3d9018501b3aab682d870d23ebd5
+      size: 6518
+    params:
+      params.yaml:
+        glmm.engagement.targets.reactions:
+          seed: 0
+          noncentered: false
+          fit:
+            draws: 2000
+            tune: 2000
+            chains: 4
+            cores: 4
+            target_accept: 0.95
+            progress_bar: true
+            inference_method: nutpie
+            nuts_sampler_kwargs:
+              backend: jax
+          ppd:
+            draws: 100
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+          epred:
+            samples_per_simple_effect: 100
+            predict:
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
+          sample: 100000
+          common:
+          - political
+          - country
+          group:
+          - outlet
+          - weekend
+          - year
+          - month
+          formula:
+          - "{response} ~ 1\n  + political * country * {valence}\n  + (1 + political
+            * {valence} | outlet)\n"
+          - "alpha ~ (1 | outlet)\n"
+          family: negativebinomial
+          response: reactions
+    outs:
+    - path: glmm/engagement/reactions-sentiment.nc
+      hash: md5
+      md5: aff1823762ed99ec4afa3e8c4ae5c32a
+      size: 516841039
+  engagement-glmm@reactions-valence:
+    cmd:
+    - TARGET=reactions VALENCE=valence python stages/glmm/engagement.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/glmm/engagement.py
+      hash: md5
+      md5: afbf3d9018501b3aab682d870d23ebd5
+      size: 6518
+    params:
+      params.yaml:
+        glmm.engagement.targets.reactions:
+          seed: 0
+          noncentered: false
+          fit:
+            draws: 2000
+            tune: 2000
+            chains: 4
+            cores: 4
+            target_accept: 0.95
+            progress_bar: true
+            inference_method: nutpie
+            nuts_sampler_kwargs:
+              backend: jax
+          ppd:
+            draws: 100
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+          epred:
+            samples_per_simple_effect: 100
+            predict:
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
+          sample: 100000
+          common:
+          - political
+          - country
+          group:
+          - outlet
+          - weekend
+          - year
+          - month
+          formula:
+          - "{response} ~ 1\n  + political * country * {valence}\n  + (1 + political
+            * {valence} | outlet)\n"
+          - "alpha ~ (1 | outlet)\n"
+          family: negativebinomial
+          response: reactions
+    outs:
+    - path: glmm/engagement/reactions-valence.nc
+      hash: md5
+      md5: 1834b9bb3ec20466cd040cccae0743e9
+      size: 494310208
+  engagement-glmm@comments-event:
+    cmd:
+    - TARGET=comments VALENCE=event python stages/glmm/engagement.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/glmm/engagement.py
+      hash: md5
+      md5: afbf3d9018501b3aab682d870d23ebd5
+      size: 6518
+    params:
+      params.yaml:
+        glmm.engagement.targets.comments:
+          seed: 0
+          noncentered: false
+          fit:
+            draws: 2000
+            tune: 2000
+            chains: 4
+            cores: 4
+            target_accept: 0.95
+            progress_bar: true
+            inference_method: nutpie
+            nuts_sampler_kwargs:
+              backend: jax
+          ppd:
+            draws: 100
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+          epred:
+            samples_per_simple_effect: 100
+            predict:
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
+          sample: 100000
+          common:
+          - political
+          - country
+          group:
+          - outlet
+          - weekend
+          - year
+          - month
+          formula:
+          - "{response} ~ 1\n  + political * country * {valence}\n  + (1 + political
+            * {valence} | outlet)\n"
+          - "alpha ~ (1 | outlet)\n"
+          family: negativebinomial
+          response: comments
+    outs:
+    - path: glmm/engagement/comments-event.nc
+      hash: md5
+      md5: 164c1bfcc0e360d7c5f004054c1a5a8e
+      size: 490412999
+  engagement-glmm@comments-sentiment:
+    cmd:
+    - TARGET=comments VALENCE=sentiment python stages/glmm/engagement.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/glmm/engagement.py
+      hash: md5
+      md5: afbf3d9018501b3aab682d870d23ebd5
+      size: 6518
+    params:
+      params.yaml:
+        glmm.engagement.targets.comments:
+          seed: 0
+          noncentered: false
+          fit:
+            draws: 2000
+            tune: 2000
+            chains: 4
+            cores: 4
+            target_accept: 0.95
+            progress_bar: true
+            inference_method: nutpie
+            nuts_sampler_kwargs:
+              backend: jax
+          ppd:
+            draws: 100
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+          epred:
+            samples_per_simple_effect: 100
+            predict:
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
+          sample: 100000
+          common:
+          - political
+          - country
+          group:
+          - outlet
+          - weekend
+          - year
+          - month
+          formula:
+          - "{response} ~ 1\n  + political * country * {valence}\n  + (1 + political
+            * {valence} | outlet)\n"
+          - "alpha ~ (1 | outlet)\n"
+          family: negativebinomial
+          response: comments
+    outs:
+    - path: glmm/engagement/comments-sentiment.nc
+      hash: md5
+      md5: 3a0ff918ee115f8c42ec74efc44d9ffa
+      size: 490546711
+  engagement-glmm@comments-valence:
+    cmd:
+    - TARGET=comments VALENCE=valence python stages/glmm/engagement.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/glmm/engagement.py
+      hash: md5
+      md5: afbf3d9018501b3aab682d870d23ebd5
+      size: 6518
+    params:
+      params.yaml:
+        glmm.engagement.targets.comments:
+          seed: 0
+          noncentered: false
+          fit:
+            draws: 2000
+            tune: 2000
+            chains: 4
+            cores: 4
+            target_accept: 0.95
+            progress_bar: true
+            inference_method: nutpie
+            nuts_sampler_kwargs:
+              backend: jax
+          ppd:
+            draws: 100
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+          epred:
+            samples_per_simple_effect: 100
+            predict:
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
+          sample: 100000
+          common:
+          - political
+          - country
+          group:
+          - outlet
+          - weekend
+          - year
+          - month
+          formula:
+          - "{response} ~ 1\n  + political * country * {valence}\n  + (1 + political
+            * {valence} | outlet)\n"
+          - "alpha ~ (1 | outlet)\n"
+          family: negativebinomial
+          response: comments
+    outs:
+    - path: glmm/engagement/comments-valence.nc
+      hash: md5
+      md5: c51ec7b76b49a26dc70dd1bf5d659012
+      size: 472252768
+  engagement-glmm@shares-event:
+    cmd:
+    - TARGET=shares VALENCE=event python stages/glmm/engagement.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/glmm/engagement.py
+      hash: md5
+      md5: afbf3d9018501b3aab682d870d23ebd5
+      size: 6518
+    params:
+      params.yaml:
+        glmm.engagement.targets.shares:
+          seed: 0
+          noncentered: false
+          fit:
+            draws: 2000
+            tune: 2000
+            chains: 4
+            cores: 4
+            target_accept: 0.95
+            progress_bar: true
+            inference_method: nutpie
+            nuts_sampler_kwargs:
+              backend: jax
+          ppd:
+            draws: 100
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+          epred:
+            samples_per_simple_effect: 100
+            predict:
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
+          sample: 100000
+          common:
+          - political
+          - country
+          group:
+          - outlet
+          - weekend
+          - year
+          - month
+          formula:
+          - "{response} ~ 1\n  + political * country * {valence}\n  + (1 + political
+            * {valence} | outlet)\n"
+          - "alpha ~ (1 | outlet)\n"
+          family: negativebinomial
+          response: shares
+    outs:
+    - path: glmm/engagement/shares-event.nc
+      hash: md5
+      md5: 914ff927caf2142d90ace894c66a0752
+      size: 446837842
+  engagement-glmm@shares-sentiment:
+    cmd:
+    - TARGET=shares VALENCE=sentiment python stages/glmm/engagement.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/glmm/engagement.py
+      hash: md5
+      md5: afbf3d9018501b3aab682d870d23ebd5
+      size: 6518
+    params:
+      params.yaml:
+        glmm.engagement.targets.shares:
+          seed: 0
+          noncentered: false
+          fit:
+            draws: 2000
+            tune: 2000
+            chains: 4
+            cores: 4
+            target_accept: 0.95
+            progress_bar: true
+            inference_method: nutpie
+            nuts_sampler_kwargs:
+              backend: jax
+          ppd:
+            draws: 100
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+          epred:
+            samples_per_simple_effect: 100
+            predict:
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
+          sample: 100000
+          common:
+          - political
+          - country
+          group:
+          - outlet
+          - weekend
+          - year
+          - month
+          formula:
+          - "{response} ~ 1\n  + political * country * {valence}\n  + (1 + political
+            * {valence} | outlet)\n"
+          - "alpha ~ (1 | outlet)\n"
+          family: negativebinomial
+          response: shares
+    outs:
+    - path: glmm/engagement/shares-sentiment.nc
+      hash: md5
+      md5: 58fd88ed685e79c518e1c9f75a7eb0ea
+      size: 447263864
+  engagement-glmm@shares-valence:
+    cmd:
+    - TARGET=shares VALENCE=valence python stages/glmm/engagement.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/glmm/engagement.py
+      hash: md5
+      md5: afbf3d9018501b3aab682d870d23ebd5
+      size: 6518
+    params:
+      params.yaml:
+        glmm.engagement.targets.shares:
+          seed: 0
+          noncentered: false
+          fit:
+            draws: 2000
+            tune: 2000
+            chains: 4
+            cores: 4
+            target_accept: 0.95
+            progress_bar: true
+            inference_method: nutpie
+            nuts_sampler_kwargs:
+              backend: jax
+          ppd:
+            draws: 100
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+          epred:
+            samples_per_simple_effect: 100
+            predict:
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
+          sample: 100000
+          common:
+          - political
+          - country
+          group:
+          - outlet
+          - weekend
+          - year
+          - month
+          formula:
+          - "{response} ~ 1\n  + political * country * {valence}\n  + (1 + political
+            * {valence} | outlet)\n"
+          - "alpha ~ (1 | outlet)\n"
+          family: negativebinomial
+          response: shares
+    outs:
+    - path: glmm/engagement/shares-valence.nc
+      hash: md5
+      md5: 2c56823e09dadcf95dad879e376ab2c5
+      size: 435501544
+  engagement-glmm-by@shares-valence-ideology:
+    cmd: TARGET=shares VALENCE=valence BY=ideology python
+      stages/glmm/engagement_by.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/glmm/engagement_by.py
+      hash: md5
+      md5: 9dd5e6b090c6bb74fe51ca463bdcb27f
+      size: 6757
+    params:
+      params.yaml:
+        glmm.engagement.by:
+          sample: 100000
+          target_accept: 0.9
+          seed: 17
+          formula:
+          - "{response} ~ 1\n  + political * country * {valence} * {by}\n  + (1 +
+            political * {valence} | outlet)\n"
+          - "alpha ~ (1 | outlet)\n"
+        glmm.engagement.targets.shares:
+          seed: 0
+          noncentered: false
+          fit:
+            draws: 2000
+            tune: 2000
+            chains: 4
+            cores: 4
+            target_accept: 0.95
+            progress_bar: true
+            inference_method: nutpie
+            nuts_sampler_kwargs:
+              backend: jax
+          ppd:
+            draws: 100
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+          epred:
+            samples_per_simple_effect: 100
+            predict:
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
+          sample: 100000
+          common:
+          - political
+          - country
+          group:
+          - outlet
+          - weekend
+          - year
+          - month
+          formula:
+          - "{response} ~ 1\n  + political * country * {valence}\n  + (1 + political
+            * {valence} | outlet)\n"
+          - "alpha ~ (1 | outlet)\n"
+          family: negativebinomial
+          response: shares
+    outs:
+    - path: glmm/engagement/shares-valence-ideology.nc
+      hash: md5
+      md5: e75d535aab0bbd25600f20f31f7d2182
+      size: 447201185
+  engagement-glmm-by@shares-valence-quality:
+    cmd: TARGET=shares VALENCE=valence BY=quality python
+      stages/glmm/engagement_by.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/glmm/engagement_by.py
+      hash: md5
+      md5: 9dd5e6b090c6bb74fe51ca463bdcb27f
+      size: 6757
+    params:
+      params.yaml:
+        glmm.engagement.by:
+          sample: 100000
+          target_accept: 0.9
+          seed: 17
+          formula:
+          - "{response} ~ 1\n  + political * country * {valence} * {by}\n  + (1 +
+            political * {valence} | outlet)\n"
+          - "alpha ~ (1 | outlet)\n"
+        glmm.engagement.targets.shares:
+          seed: 0
+          noncentered: false
+          fit:
+            draws: 2000
+            tune: 2000
+            chains: 4
+            cores: 4
+            target_accept: 0.95
+            progress_bar: true
+            inference_method: nutpie
+            nuts_sampler_kwargs:
+              backend: jax
+          ppd:
+            draws: 100
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+          epred:
+            samples_per_simple_effect: 100
+            predict:
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
+          sample: 100000
+          common:
+          - political
+          - country
+          group:
+          - outlet
+          - weekend
+          - year
+          - month
+          formula:
+          - "{response} ~ 1\n  + political * country * {valence}\n  + (1 + political
+            * {valence} | outlet)\n"
+          - "alpha ~ (1 | outlet)\n"
+          family: negativebinomial
+          response: shares
+    outs:
+    - path: glmm/engagement/shares-valence-quality.nc
+      hash: md5
+      md5: a44b3c51bbdc246ba1bc80b01fc062ba
+      size: 447202130
+  engagement-glmm-by@comments-valence-ideology:
+    cmd: TARGET=comments VALENCE=valence BY=ideology python
+      stages/glmm/engagement_by.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/glmm/engagement_by.py
+      hash: md5
+      md5: 9dd5e6b090c6bb74fe51ca463bdcb27f
+      size: 6757
+    params:
+      params.yaml:
+        glmm.engagement.by:
+          sample: 100000
+          target_accept: 0.9
+          seed: 17
+          formula:
+          - "{response} ~ 1\n  + political * country * {valence} * {by}\n  + (1 +
+            political * {valence} | outlet)\n"
+          - "alpha ~ (1 | outlet)\n"
+        glmm.engagement.targets.comments:
+          seed: 0
+          noncentered: false
+          fit:
+            draws: 2000
+            tune: 2000
+            chains: 4
+            cores: 4
+            target_accept: 0.95
+            progress_bar: true
+            inference_method: nutpie
+            nuts_sampler_kwargs:
+              backend: jax
+          ppd:
+            draws: 100
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+          epred:
+            samples_per_simple_effect: 100
+            predict:
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
+          sample: 100000
+          common:
+          - political
+          - country
+          group:
+          - outlet
+          - weekend
+          - year
+          - month
+          formula:
+          - "{response} ~ 1\n  + political * country * {valence}\n  + (1 + political
+            * {valence} | outlet)\n"
+          - "alpha ~ (1 | outlet)\n"
+          family: negativebinomial
+          response: comments
+    outs:
+    - path: glmm/engagement/comments-valence-ideology.nc
+      hash: md5
+      md5: d7bf8fd1d27d6544288bc9ceb3e97929
+      size: 483550169

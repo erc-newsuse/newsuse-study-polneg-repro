@@ -1,5 +1,5 @@
 import json
-from collections.abc import Hashable, Mapping, Sequence
+from collections.abc import Mapping
 from typing import Any
 
 import arviz as az
@@ -9,13 +9,10 @@ import pandas as pd
 from rpy2 import robjects as ro
 
 __all__ = (
-    "index_idata",
     "rebuild_model",
     "store_model_metadata",
     "hdi",
     "eti",
-    "contr_effect",
-    "contr_ref",
 )
 
 DataCoordsT = Mapping[str, np.ndarray | tuple[str, np.ndarray]]
@@ -160,49 +157,5 @@ def eti(
         alpha = float(1 - az.rcParams["stats.ci_prob"])
     return pd.Series(
         np.quantile(s, [0.5, alpha / 2, 1 - alpha / 2], method=method, **kwargs),
-        index=["median", "lower", "upper"],
+        index=pd.Series(["median", "lower", "upper"], name="eti"),
     )
-
-
-def index_idata(idata: az.InferenceData, xindex: Sequence[Hashable]) -> az.InferenceData:
-    """Set xindex for all groups in InferenceData.
-
-    The xindex is used by ArviZ for plotting and indexing. The function is a convenience
-    wrapper around xarray's `set_xindex` method.
-
-    Parameters
-    ----------
-    idata
-        An ArviZ InferenceData object.
-    xindex
-        A sequence of coordinate names to set as xindex.
-    """
-    for group in idata.groups():
-        ds = getattr(idata, group)
-        xs = [col for col in xindex if col in ds.coords]
-        if not xs:
-            continue
-        ds = ds.set_xindex(xs)
-        setattr(idata, group, ds)
-    return idata
-
-
-def contr_effect(s: pd.Series, level: int | str = 0) -> pd.Series:
-    """Effect coding contrasts."""
-    index = s.index.get_level_values(level)
-    x = s.to_numpy()
-    contr = x - (x.sum() - x) / (x.size - 1)
-    contr = pd.Series(contr, index=pd.Series(index, name="contrast"))
-    return contr
-
-
-def contr_ref(s: pd.Series, ref: int | str, level: int | str) -> pd.Series:
-    """Reference category contrasts."""
-    index = s.index.get_level_values(level)
-    x = s.to_numpy()
-    mask = index == ref
-    if not mask.any():
-        index = pd.Series([], dtype=index.dtype, name="contrast")
-        return pd.Series([], dtype=s.dtype, index=index)
-    contr = x[~mask] - x[mask]
-    return pd.Series(contr, index=pd.Series(index[~mask], name="contrast"))
