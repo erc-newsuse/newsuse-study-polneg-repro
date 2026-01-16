@@ -5877,11 +5877,11 @@ stages:
           seed: 0
           noncentered: false
           fit:
-            draws: 2000
-            tune: 2000
+            draws: 1000
+            tune: 1000
             chains: 4
             cores: 4
-            target_accept: 0.95
+            target_accept: 0.8
             progress_bar: true
             inference_method: nutpie
             nuts_sampler_kwargs:
@@ -5897,7 +5897,7 @@ stages:
               include_group_specific: true
               sample_new_groups: true
               kind: response_params
-          sample: 100000
+          sample: 500000
           common:
           - political
           - country
@@ -5915,8 +5915,8 @@ stages:
     outs:
     - path: glmm/engagement/reactions-event.nc
       hash: md5
-      md5: 3880dbddaecd7bdeed9e98d6ba886d2a
-      size: 516153331
+      md5: 8a73ebf3e0128c4276c86c0cd6a7905a
+      size: 2148446563
   engagement-glmm@reactions-sentiment:
     cmd:
     - TARGET=reactions VALENCE=sentiment python stages/glmm/engagement.py
@@ -6051,11 +6051,11 @@ stages:
           seed: 0
           noncentered: false
           fit:
-            draws: 2000
-            tune: 2000
+            draws: 1000
+            tune: 1000
             chains: 4
             cores: 4
-            target_accept: 0.95
+            target_accept: 0.8
             progress_bar: true
             inference_method: nutpie
             nuts_sampler_kwargs:
@@ -6071,7 +6071,7 @@ stages:
               include_group_specific: true
               sample_new_groups: true
               kind: response_params
-          sample: 100000
+          sample: 500000
           common:
           - political
           - country
@@ -6089,8 +6089,8 @@ stages:
     outs:
     - path: glmm/engagement/comments-event.nc
       hash: md5
-      md5: 164c1bfcc0e360d7c5f004054c1a5a8e
-      size: 490412999
+      md5: bb6e3d4b095851672621a64a1e20e69b
+      size: 1988558090
   engagement-glmm@comments-sentiment:
     cmd:
     - TARGET=comments VALENCE=sentiment python stages/glmm/engagement.py
@@ -6225,11 +6225,11 @@ stages:
           seed: 0
           noncentered: false
           fit:
-            draws: 2000
-            tune: 2000
+            draws: 1000
+            tune: 1000
             chains: 4
             cores: 4
-            target_accept: 0.95
+            target_accept: 0.8
             progress_bar: true
             inference_method: nutpie
             nuts_sampler_kwargs:
@@ -6245,7 +6245,7 @@ stages:
               include_group_specific: true
               sample_new_groups: true
               kind: response_params
-          sample: 100000
+          sample: 500000
           common:
           - political
           - country
@@ -6263,8 +6263,8 @@ stages:
     outs:
     - path: glmm/engagement/shares-event.nc
       hash: md5
-      md5: 914ff927caf2142d90ace894c66a0752
-      size: 446837842
+      md5: a945643d55f053093b9e345cda546fa6
+      size: 1732921892
   engagement-glmm@shares-sentiment:
     cmd:
     - TARGET=shares VALENCE=sentiment python stages/glmm/engagement.py
@@ -6341,11 +6341,11 @@ stages:
           seed: 0
           noncentered: false
           fit:
-            draws: 2000
-            tune: 2000
+            draws: 1000
+            tune: 1000
             chains: 4
             cores: 4
-            target_accept: 0.95
+            target_accept: 0.8
             progress_bar: true
             inference_method: nutpie
             nuts_sampler_kwargs:
@@ -6361,7 +6361,7 @@ stages:
               include_group_specific: true
               sample_new_groups: true
               kind: response_params
-          sample: 100000
+          sample: 500000
           common:
           - political
           - country
@@ -6379,8 +6379,8 @@ stages:
     outs:
     - path: glmm/engagement/shares-valence.nc
       hash: md5
-      md5: 2c56823e09dadcf95dad879e376ab2c5
-      size: 435501544
+      md5: ccc15e7cdc707d5d975a6a043cc6e11f
+      size: 1796852077
   engagement-glmm-by@shares-valence-ideology:
     cmd: TARGET=shares VALENCE=valence BY=ideology python
       stages/glmm/engagement_by.py

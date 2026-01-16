@@ -1,5 +1,0 @@
-outs:
-- md5: 832d9253adb5ea60bb4fe7654054ac25
-  size: 266934
-  hash: md5
-  path: valence-ground-truth.json.gz
