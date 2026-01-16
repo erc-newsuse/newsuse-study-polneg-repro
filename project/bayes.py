@@ -142,7 +142,10 @@ def hdi(s: pd.Series, prob: float | None = None) -> pd.Series:
     if prob is None:
         prob = az.rcParams["stats.ci_prob"]
     hdi_bounds = az.hdi(s.values, hdi_prob=prob)
-    return pd.Series({"median": s.median(), "lower": hdi_bounds[0], "upper": hdi_bounds[1]})
+    return pd.Series(
+        {"median": s.median(), "lower": hdi_bounds[0], "upper": hdi_bounds[1]},
+        name="hdi",
+    )
 
 
 def eti(

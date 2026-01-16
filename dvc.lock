@@ -6579,3 +6579,201 @@ stages:
       hash: md5
       md5: d7bf8fd1d27d6544288bc9ceb3e97929
       size: 483550169
+  engagement-glmm-by@reactions-valence-quality:
+    cmd: TARGET=reactions VALENCE=valence BY=quality python
+      stages/glmm/engagement_by.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/glmm/engagement_by.py
+      hash: md5
+      md5: 9dd5e6b090c6bb74fe51ca463bdcb27f
+      size: 6757
+    params:
+      params.yaml:
+        glmm.engagement.by:
+          sample: 100000
+          target_accept: 0.9
+          seed: 17
+          formula:
+          - "{response} ~ 1\n  + political * country * {valence} * {by}\n  + (1 +
+            political * {valence} | outlet)\n"
+          - "alpha ~ (1 | outlet)\n"
+        glmm.engagement.targets.reactions:
+          seed: 0
+          noncentered: false
+          fit:
+            draws: 2000
+            tune: 2000
+            chains: 4
+            cores: 4
+            target_accept: 0.95
+            progress_bar: true
+            inference_method: nutpie
+            nuts_sampler_kwargs:
+              backend: jax
+          ppd:
+            draws: 100
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+          epred:
+            samples_per_simple_effect: 100
+            predict:
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
+          sample: 100000
+          common:
+          - political
+          - country
+          group:
+          - outlet
+          - weekend
+          - year
+          - month
+          formula:
+          - "{response} ~ 1\n  + political * country * {valence}\n  + (1 + political
+            * {valence} | outlet)\n"
+          - "alpha ~ (1 | outlet)\n"
+          family: negativebinomial
+          response: reactions
+    outs:
+    - path: glmm/engagement/reactions-valence-quality.nc
+      hash: md5
+      md5: 9a7b3ec5c09a00a6d65e7391d6b99cfb
+      size: 505522689
+  engagement-glmm-by@comments-valence-quality:
+    cmd: TARGET=comments VALENCE=valence BY=quality python
+      stages/glmm/engagement_by.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/glmm/engagement_by.py
+      hash: md5
+      md5: 9dd5e6b090c6bb74fe51ca463bdcb27f
+      size: 6757
+    params:
+      params.yaml:
+        glmm.engagement.by:
+          sample: 100000
+          target_accept: 0.9
+          seed: 17
+          formula:
+          - "{response} ~ 1\n  + political * country * {valence} * {by}\n  + (1 +
+            political * {valence} | outlet)\n"
+          - "alpha ~ (1 | outlet)\n"
+        glmm.engagement.targets.comments:
+          seed: 0
+          noncentered: false
+          fit:
+            draws: 2000
+            tune: 2000
+            chains: 4
+            cores: 4
+            target_accept: 0.95
+            progress_bar: true
+            inference_method: nutpie
+            nuts_sampler_kwargs:
+              backend: jax
+          ppd:
+            draws: 100
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+          epred:
+            samples_per_simple_effect: 100
+            predict:
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
+          sample: 100000
+          common:
+          - political
+          - country
+          group:
+          - outlet
+          - weekend
+          - year
+          - month
+          formula:
+          - "{response} ~ 1\n  + political * country * {valence}\n  + (1 + political
+            * {valence} | outlet)\n"
+          - "alpha ~ (1 | outlet)\n"
+          family: negativebinomial
+          response: comments
+    outs:
+    - path: glmm/engagement/comments-valence-quality.nc
+      hash: md5
+      md5: 70ef5f2d54975555d937281ee37a5297
+      size: 483502044
+  engagement-glmm-by@reactions-valence-ideology:
+    cmd: TARGET=reactions VALENCE=valence BY=ideology python
+      stages/glmm/engagement_by.py
+    deps:
+    - path: data/proc/final.parquet
+      hash: md5
+      md5: 6ed9fc519405c1cf0e919c444c893842
+      size: 382132909
+    - path: stages/glmm/engagement_by.py
+      hash: md5
+      md5: 9dd5e6b090c6bb74fe51ca463bdcb27f
+      size: 6757
+    params:
+      params.yaml:
+        glmm.engagement.by:
+          sample: 100000
+          target_accept: 0.9
+          seed: 17
+          formula:
+          - "{response} ~ 1\n  + political * country * {valence} * {by}\n  + (1 +
+            political * {valence} | outlet)\n"
+          - "alpha ~ (1 | outlet)\n"
+        glmm.engagement.targets.reactions:
+          seed: 0
+          noncentered: false
+          fit:
+            draws: 2000
+            tune: 2000
+            chains: 4
+            cores: 4
+            target_accept: 0.95
+            progress_bar: true
+            inference_method: nutpie
+            nuts_sampler_kwargs:
+              backend: jax
+          ppd:
+            draws: 100
+            sample_new_groups: true
+            include_group_specific: true
+            kind: response
+          epred:
+            samples_per_simple_effect: 100
+            predict:
+              include_group_specific: true
+              sample_new_groups: true
+              kind: response_params
+          sample: 100000
+          common:
+          - political
+          - country
+          group:
+          - outlet
+          - weekend
+          - year
+          - month
+          formula:
+          - "{response} ~ 1\n  + political * country * {valence}\n  + (1 + political
+            * {valence} | outlet)\n"
+          - "alpha ~ (1 | outlet)\n"
+          family: negativebinomial
+          response: reactions
+    outs:
+    - path: glmm/engagement/reactions-valence-ideology.nc
+      hash: md5
+      md5: 72de732c173d989806bdd71426b83023
+      size: 505550734
