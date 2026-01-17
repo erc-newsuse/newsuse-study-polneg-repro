@@ -254,7 +254,7 @@ stages:
     - TARGET=${item.target} VALENCE=${item.valence} python stages/glmm/engagement_validation.py
     deps:
     - stages/glmm/engagement_validation.py
-    - glmm/valence/${item.valence}.nc
+    - glmm/engagement/${item.target}-${item.valence}.nc
 
   engagement-glmm-by:
     matrix:
@@ -281,11 +281,11 @@ stages:
       - glmm/ppd.nc
 
   ppd:
-    cmd: python stages/analysis/ppd.py
+    cmd: python stages/glmm/ppd.py
     deps:
-    - stages/analysis/ppd.py
+    - stages/glmm/ppd.py
     - glmm/valence
     - glmm/engagement
     outs:
-    - data/proc/ppd.nc:
+    - glmm/ppd.nc:
         persist: true
