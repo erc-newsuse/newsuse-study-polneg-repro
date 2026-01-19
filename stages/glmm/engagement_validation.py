@@ -36,7 +36,7 @@ model = rebuild_model(idata)
 
 terms_rx = {
     "fixed": [
-        r"^(country)?:?(political)?:?(event|sentiment|valence)?$",
+        r"^((event|sentiment|valence|country|political)?:?){1,3}$",
     ],
     "group (sd)": [r"\|.*_sigma$"],
     "group": [r"\|(outlet|country:year:month)$"],
@@ -57,11 +57,11 @@ terms_fixed = sorted(
 # %% ---------------------------------------------------------------------------------
 
 model.build()
-axes = model.plot_priors()
-fig = axes.flatten()[0].figure
-fig.tight_layout()
-fig.savefig(figpath / f"{TARGET}-{VALENCE}-priors.pdf")
-print(model)
+s = str(model)
+s = re.sub(r"(\.\d{1,2})\d*", r"\1", s)
+s = re.sub(r"\[(0\.\s*)+\]", r"0.", s)
+s = re.sub(r"[ \t]+", r" ", s)
+print(s)
 
 # %% ---------------------------------------------------------------------------------
 
@@ -117,6 +117,14 @@ print(
 
 bad = az.summary(idata).query("r_hat > 1.01").sort_values("r_hat", ascending=False)
 bad.head(len(bad))
+
+# %% ---------------------------------------------------------------------------------
+
+axes = model.plot_priors()
+fig = axes.flatten()[0].figure
+fig.tight_layout()
+fig.savefig(figpath / f"{TARGET}-{VALENCE}-priors.pdf")
+print(model)
 
 # %% ---------------------------------------------------------------------------------
 

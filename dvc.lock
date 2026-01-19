@@ -7049,8 +7049,8 @@ stages:
       size: 2148446563
     - path: stages/glmm/engagement_validation.py
       hash: md5
-      md5: 2f0e8f1f8c32ecdc5a0e20fa7e8e5094
-      size: 7411
+      md5: 6e07bcf58340580ee54527d8caa5c428
+      size: 7635
   engagement-validation@reactions-sentiment:
     cmd:
     - TARGET=reactions VALENCE=sentiment python
@@ -7062,8 +7062,8 @@ stages:
       size: 2152043541
     - path: stages/glmm/engagement_validation.py
       hash: md5
-      md5: 2f0e8f1f8c32ecdc5a0e20fa7e8e5094
-      size: 7411
+      md5: 6e07bcf58340580ee54527d8caa5c428
+      size: 7635
   engagement-validation@reactions-valence:
     cmd:
     - TARGET=reactions VALENCE=valence python
@@ -7075,8 +7075,8 @@ stages:
       size: 2162482933
     - path: stages/glmm/engagement_validation.py
       hash: md5
-      md5: 2f0e8f1f8c32ecdc5a0e20fa7e8e5094
-      size: 7411
+      md5: 6e07bcf58340580ee54527d8caa5c428
+      size: 7635
   engagement-validation@comments-event:
     cmd:
     - TARGET=comments VALENCE=event python stages/glmm/engagement_validation.py
@@ -7152,3 +7152,39 @@ stages:
       hash: md5
       md5: 2f0e8f1f8c32ecdc5a0e20fa7e8e5094
       size: 7411
+  valence-validation@structural:
+    cmd:
+    - TARGET=structural python stages/glmm/valence_validation.py
+    deps:
+    - path: glmm/valence/structural.nc
+      hash: md5
+      md5: b3704e693d8bddd15f7396a2206e6a95
+      size: 1876347968
+    - path: stages/glmm/valence_validation.py
+      hash: md5
+      md5: d7ff607fb7871b5be53ec72e5fee94ae
+      size: 6768
+  valence-validation@event:
+    cmd:
+    - TARGET=event python stages/glmm/valence_validation.py
+    deps:
+    - path: glmm/valence/event.nc
+      hash: md5
+      md5: 48643c474a06cf3da388876bfb3639bf
+      size: 3424401705
+    - path: stages/glmm/valence_validation.py
+      hash: md5
+      md5: d7ff607fb7871b5be53ec72e5fee94ae
+      size: 6768
+  valence-validation@sentiment:
+    cmd:
+    - TARGET=sentiment python stages/glmm/valence_validation.py
+    deps:
+    - path: glmm/valence/sentiment.nc
+      hash: md5
+      md5: 8e924d014331fe7e43418e1354267b5c
+      size: 3430983824
+    - path: stages/glmm/valence_validation.py
+      hash: md5
+      md5: d7ff607fb7871b5be53ec72e5fee94ae
+      size: 6768
