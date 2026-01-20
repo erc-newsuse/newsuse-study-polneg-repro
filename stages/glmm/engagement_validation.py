@@ -190,29 +190,29 @@ def plot_ppc(
 
 bys = ["country"]
 fig, axes = plt.subplots(
-    ncols=(ncols := len(config.categorical.country)),
-    nrows=(nrows := len(config.categorical[VALENCE])),
-    figsize=((height := 3) * ncols, height * nrows),
+    ncols=(ncols := len(config.categorical[VALENCE])),
+    nrows=(nrows := 1),
+    figsize=(3 * ncols, 4 * nrows),
 )
-for axrow, valence in zip(axes, config.categorical[VALENCE].values(), strict=True):
-    for ax, country in zip(axrow.flat, config.categorical.country, strict=True):
-        for political in [0, 1]:
-            # Make inset axis in lower right corner
-            _ax = ax.inset_axes([0.45, 0.1, 0.5, 0.5]) if political else ax
-            sel = {VALENCE: valence, "country": country, "political": political}
-            color = [
-                config.plotting.color.semantics["political" if political else "other"]
-            ] + ["black"] * 2
-            plot_ppc(idata.sel(**sel), ax=_ax, colors=color)
-            _ax.set_xlabel(None)
-            _ax.set_ylabel(None)
-            _ax.set_yscale("log")
-            _ax.set_xscale("log")
-            if political:
-                _ax.set_title("Political", fontsize="x-large")
-        if ax in axes[0]:
-            ax.set_title(config.categorical.country[country], fontsize="xx-large")
-    axrow[0].set_ylabel(f"{VALENCE.capitalize()}: {valence}", fontsize="xx-large")
+for ax, valence in zip(axes.flat, config.categorical[VALENCE], strict=True):
+    for political in [0, 1]:
+        # Make inset axis in lower right corner
+        _ax = ax.inset_axes([0.45, 0.1, 0.5, 0.5]) if political else ax
+        mask = {VALENCE: valence, "political": political}
+        color = [config.plotting.color.semantics["political" if political else "other"]] + [
+            "black"
+        ] * 2
+        mask = (idata.posterior_predictive[VALENCE] == valence) & (
+            idata.posterior_predictive["political"] == political
+        )
+        plot_ppc(idata.isel(__obs__=mask), ax=_ax, colors=color)
+        _ax.set_xlabel(None)
+        _ax.set_ylabel(None)
+        _ax.set_yscale("log")
+        _ax.set_xscale("log")
+        if political:
+            _ax.set_title("Political", fontsize="x-large")
+        ax.set_title(str(valence), fontsize="xx-large")
 
 # Add custom legend for ppd / observed
 handles = [
@@ -227,14 +227,17 @@ handles = [
 fig.legend(
     handles=handles,
     ncols=len(handles),
-    loc="center left",
+    loc="center",
     frameon=False,
     fontsize="xx-large",
-    bbox_to_anchor=(0.6, 0.015),
+    bbox_to_anchor=(0.5, -0.08),
 )
 
+
+title = "Joint valence" if VALENCE == "valence" else VALENCE.capitalize()
+fig.suptitle(f"{title}", fontsize=28)
 fig.supxlabel(opts.response.capitalize(), y=0.0, fontsize=28)
-fig.supylabel(r"$\mathbb{P}(X \leq x)$", x=0.00, y=0.55, fontsize=28)
+fig.supylabel(r"$\mathbb{P}(X \leq x)$", fontsize="xx-large", x=0.0, y=0.5)
 fig.tight_layout()
 fig.savefig(figpath / f"{TARGET}-{VALENCE}-ppc.pdf")
 
