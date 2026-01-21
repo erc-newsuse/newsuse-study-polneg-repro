@@ -7,7 +7,6 @@ import pandas as pd
 import seaborn as sns  # noqa
 from dlordinal.metrics import accuracy_off1
 from newsuse.data import DataFrame
-from scipy.stats import hmean
 from sklearn.metrics import f1_score
 from tqdm.auto import tqdm
 from transformers import AutoModel, AutoTokenizer
@@ -20,15 +19,11 @@ from project.pipelines import KeyDataset, pipeline
 domain = "valence"
 targets = ["event", "sentiment"]
 
-# %% ---------------------------------------------------------------------------------
-
-hyper = DataFrame.from_(paths.proc / f"{domain}-hyper.parquet")
-best_model = hyper.loc[hyper.value.idxmax()].params_base
 
 # %% ---------------------------------------------------------------------------------
 
 dataset = datasets.load_from_disk(paths.ml / "datasets" / domain)
-model = AutoModel.from_pretrained(paths.ml / "models" / domain / best_model)
+model = AutoModel.from_pretrained(paths.ml / "models" / domain / "best")
 tokenizer = AutoTokenizer.from_pretrained(model.config.base_name_or_path)
 
 # %% ---------------------------------------------------------------------------------
@@ -86,12 +81,13 @@ data = (
 
 
 def compute_metrics(df: pd.DataFrame) -> pd.Series:
+    labels = [-1, 0, 1]
     return pd.Series(
         {
-            "f1": hmean(f1_score(df["true"], df["pred"], average="macro")),
-            "o1": o1_score(df["true"], df["pred"]),
+            "f1": f1_score(df["true"], df["pred"], average="macro", labels=labels),
+            "o1": o1_score(df["true"], df["pred"], labels=labels),
             "amae": amae_score(df["true"], df["pred"]),
-            "acc1": accuracy_off1(df["true"], df["pred"]),
+            "acc1": accuracy_off1(df["true"], df["pred"], labels=labels),
         }
     )
 
@@ -156,7 +152,6 @@ ground_truth = data.xs(True, level="ground_truth")
 
 perf_gt = ground_truth.groupby(level="target").apply(compute_metrics)
 perf_gt_country = ground_truth.groupby(["country", "target"]).apply(compute_metrics)
-
 
 # %% ---------------------------------------------------------------------------------
 
