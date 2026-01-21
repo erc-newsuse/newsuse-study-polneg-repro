@@ -50,7 +50,7 @@ tables = {}
 for by in factors:
     posteriors = {}
     for target in targets:
-        idata = az.from_netcdf(paths.glmm / "engagement" / f"{target}-{by}.nc")
+        idata = az.from_netcdf(paths.glmm / "engagement" / f"{target}-valence-{by}.nc")
         stats = az.summary(idata, **terms).filter(regex=r"^mean|hdi_[0-9.]+%|r_hat")
         stats.columns = ["mean", "lower", "upper", r"$\hat{R}$"]
         stats["sig"] = np.sign(stats["lower"]) == np.sign(stats["upper"])
