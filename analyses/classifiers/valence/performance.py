@@ -12,7 +12,7 @@ from tqdm.auto import tqdm
 from transformers import AutoModel, AutoTokenizer
 
 import project.model  # noqa
-from project import paths
+from project import config, paths
 from project.metrics import amae_score, o1_score
 from project.pipelines import KeyDataset, pipeline
 
@@ -25,6 +25,31 @@ targets = ["event", "sentiment"]
 dataset = datasets.load_from_disk(paths.ml / "datasets" / domain)
 model = AutoModel.from_pretrained(paths.ml / "models" / domain / "best")
 tokenizer = AutoTokenizer.from_pretrained(model.config.base_name_or_path)
+
+# %% ---------------------------------------------------------------------------------
+
+sizes = (
+    pd.concat(
+        {split: dset.to_pandas() for split, dset in dataset.items()},
+        names=["split"],
+    )
+    .reset_index("split")
+    .reset_index(drop=True)
+    .groupby(["split", "country"])
+    .size()
+    .swaplevel("split", "country")
+    .loc[[*config.categorical.country]]
+    .rename(config.categorical.country, axis=0, level="country")
+    .unstack("country")
+    .astype(str)
+    .map(lambda x: rf"\num{{{x}}}")
+)
+
+print(
+    sizes.style.to_latex(
+        hrules=True,
+    )
+)
 
 # %% ---------------------------------------------------------------------------------
 
