@@ -1,0 +1,5 @@
+outs:
+- md5: e467c8756e90701d69fd24266ddc9351
+  size: 666438
+  hash: md5
+  path: political-ground-truth.parquet

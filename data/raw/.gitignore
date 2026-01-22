@@ -5,3 +5,4 @@
 /posts
 /perspective.parquet
 /valence-ground-truth.json.gz
+/political-ground-truth.parquet
