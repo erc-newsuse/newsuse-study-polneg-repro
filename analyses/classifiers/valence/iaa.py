@@ -8,8 +8,6 @@ from sklearn.metrics import cohen_kappa_score, matthews_corrcoef
 
 from project import paths
 
-here = paths.root / "analyses" / "classifiers" / "valence" / "_auxiliary"
-
 data = DataFrame.from_(paths.raw / "valence-ground-truth.json.gz")
 
 # %% ---------------------------------------------------------------------------------
@@ -56,7 +54,7 @@ pairs = (
     .sort_index()
 )
 
-#  %% ---------------------------------------------------------------------------------
+# %% ---------------------------------------------------------------------------------
 
 n_annotations = (
     annotations.groupby(["task_id", "target"]).size().groupby("target").describe()
@@ -66,7 +64,7 @@ scores = pairs.groupby(["annotator1", "annotator2", "target"]).apply(
     lambda df: pd.Series(
         {
             "Off-1 Accuracy": accuracy_off1(df["value1"], df["value2"]),
-            "Mathew's Correlation Coefficient": matthews_corrcoef(
+            "Matthew's Correlation Coefficient": matthews_corrcoef(
                 df["value1"], df["value2"]
             ),
             "Cohen's Kappa": cohen_kappa_score(df["value1"], df["value2"]),

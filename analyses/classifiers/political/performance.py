@@ -37,6 +37,33 @@ pipe = pipeline("text-classification", model_source)
 
 # %% ---------------------------------------------------------------------------------
 
+dset = (
+    pd.concat(
+        {split: dset.to_pandas() for split, dset in dataset.items()},
+        names=["split"],
+    )
+    .reset_index("split")
+    .reset_index(drop=True)
+)
+sizes = (
+    dset.groupby(["split", "country"])
+    .size()
+    .swaplevel("split", "country")
+    .loc[[*config.categorical.country]]
+    .rename(config.categorical.country, axis=0, level="country")
+)
+
+print(
+    sizes.unstack("country")
+    .astype(str)
+    .map(lambda x: rf"\num{{{x}}}")
+    .style.to_latex(
+        hrules=True,
+    )
+)
+
+# %% ---------------------------------------------------------------------------------
+
 testing = pd.concat(
     [
         dataset["test"].to_pandas().set_index(["country", "key"]),
@@ -55,8 +82,6 @@ data = (
     .rename(columns={"label": "pred"})
     .combine_first(testing[["label"]].rename(columns={"label": "true"}))
 )
-
-# %% ---------------------------------------------------------------------------------
 
 # %% ---------------------------------------------------------------------------------
 
@@ -83,6 +108,27 @@ print(
     )[["Overall", *map(str.upper, config.categorical.country)]]
     .style.format(precision=3)
     .to_latex(hrules=True)
+)
+
+# %% EXAMPLES ------------------------------------------------------------------------
+
+examples = (
+    data.loc["us"]
+    .groupby("pred")
+    .sample(10, random_state=17)
+    .reset_index()
+    .merge(testing.reset_index()[["key", "text"]])[["pred", "text"]]
+    .rename(columns={"pred": "Label", "text": "Text"})
+    .set_index("Label")
+    .rename({"OTHER": "Non-political", "POLITICAL": "Political"}, axis=0)
+)
+
+print(
+    examples.style.format(escape="latex").to_latex(
+        hrules=True,
+        column_format="X|l",
+        multirow_align="t",
+    )
 )
 
 # %% ---------------------------------------------------------------------------------
