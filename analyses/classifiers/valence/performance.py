@@ -191,110 +191,13 @@ ground_truth = data.xs(True, level="ground_truth")
 # %% ---------------------------------------------------------------------------------
 
 perf_gt = ground_truth.groupby(level="target").apply(compute_metrics)
-perf_gt_country = ground_truth.groupby(["country", "target"]).apply(compute_metrics)
-
-# %% ---------------------------------------------------------------------------------
-
-countries = data.index.get_level_values("country").unique()
-
-fig, axes = plt.subplots(
-    nrows=len(countries),
-    ncols=len(targets),
-    figsize=(7, 2 * len(countries)),
-)
-
-for axrow, country in zip(axes, countries, strict=True):
-    axrow[0].set_title(country.upper())
-    for (target, df), ax in zip(ground_truth.groupby("target"), axrow.flat, strict=True):
-        odist = (
-            df.xs(country, level="country")
-            .xs(target, level="target")["pred"]
-            .value_counts(normalize=True)
-            .sort_index()
-        )
-        tdist = (
-            df.xs(country, level="country")
-            .xs(target, level="target")["true"]
-            .value_counts(normalize=True)
-            .sort_index()
-        )
-        df = (
-            DataFrame({"output": odist, "target": tdist})
-            .melt(ignore_index=False)
-            .reset_index()
-        )
-        sns.barplot(
-            data=df,
-            x="index",
-            y="value",
-            hue="variable",
-            ax=ax,
-        )
-
-fig.tight_layout()
-
-# %% ---------------------------------------------------------------------------------
-
-
-def determine_valence(df: pd.DataFrame) -> pd.Series:
-    return pd.Series(
-        np.where(
-            df.ge(1).any(axis=1) & df.ge(0).all(axis=1),
-            1,
-            np.where(
-                df.le(-1).any(axis=1) & df.le(0).all(axis=1),
-                -1,
-                0,
-            ),
-        ),
-        index=df.index,
-        name="valence",
-    )
-
-
-def determine_strong_valence(df: pd.DataFrame) -> pd.Series:
-    return pd.Series(
-        np.where(df.ge(1).all(axis=1), 1, np.where(df.le(-1).all(axis=1), -1, 0)),
-        index=df.index,
-        name="strong_valence",
-    )
-
-
-# %% ---------------------------------------------------------------------------------
-
-labels = (
-    data.unstack("target")
-    .stack(level=0, future_stack=True)
-    .assign(
-        valence=lambda df: determine_valence(df),
-        strong_valence=lambda df: determine_strong_valence(df),
-        additive=lambda df: df["event"] + df["sentiment"],
-    )
-    .unstack(level=-1)
-)
-
-# %% ---------------------------------------------------------------------------------
-
-(data.groupby(["ground_truth", "target"]).apply(compute_metrics))
-
-# %% ---------------------------------------------------------------------------------
-
-labels["valence"].groupby("ground_truth").apply(compute_metrics)
-
-# %% ---------------------------------------------------------------------------------
-
-labels["strong_valence"].groupby("ground_truth").apply(compute_metrics)
-
-# %% ---------------------------------------------------------------------------------
-
-labels["additive"].groupby("ground_truth").apply(compute_metrics)
-
+# perf_gt_country = ground_truth.groupby(["country", "target"]).apply(compute_metrics)
 
 # %% Sample ground truth examples with machine labels --------------------------------
 
 content = (
-    data.xs(True, level="ground_truth")
-    .unstack("target")
+    # data.xs(True, level="ground_truth")
+    data.unstack("target")
     .swaplevel(0, 1, axis=1)
     .sort_index(axis=1)
     .pipe(
@@ -310,18 +213,23 @@ content = (
 
 # %% ---------------------------------------------------------------------------------
 
-
-def show(row: pd.Series) -> None:
-    print("Event | Sentiment [T/P]")
-    print(f"{row['event_t']}/{row['event_p']} | {row['sentiment_t']}/{row['sentiment_p']}")
-    print("\n")
-    if pd.notnull(row["title"]):
-        print(row["title"], "\n")
-    print(row["text"], "\n")
-
+examples = (
+    content.loc["us"][["event_p", "sentiment_p", "fulltext"]]
+    .rename(columns={"event_p": "event", "sentiment_p": "sentiment", "fulltext": "text"})
+    .groupby(["event", "sentiment"])
+    .sample(3, random_state=303)
+    .reset_index(drop=True)
+    .set_index(["event", "sentiment"])
+    .sort_index()
+)
 
 # %% ---------------------------------------------------------------------------------
 
-content.loc["us"].sample(1).iloc[0].pipe(show)
+print(
+    examples.style.format(escape="latex").to_latex(
+        hrules=True,
+        multirow_align="t",
+    )
+)
 
 # %% ---------------------------------------------------------------------------------

@@ -201,7 +201,10 @@ for _by in bys:
     for axrow, political in zip(axes, [0, 1], strict=True):
         for ax, byval in zip(axrow.flat, labels[_by], strict=True):
             sel = {_by: byval, "political": political}
-            plot_ppc(idata.sel(**sel), ax=ax)
+            mask = (idata.posterior_predictive[_by] == byval) & (
+                idata.posterior_predictive["political"] == political
+            )
+            plot_ppc(idata.sel(__obs__=mask), ax=ax)
             ax.set_xticks(labels[opts.response])
             ax.set_xlabel(None)
             ax.set_ylabel(None)
