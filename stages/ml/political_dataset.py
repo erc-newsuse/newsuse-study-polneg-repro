@@ -1,40 +1,41 @@
 # %% ---------------------------------------------------------------------------------
 
+import datasets
+import numpy as np
+from datasets import Dataset, DatasetDict
 from newsuse.data import DataFrame
-from newsuse.ml import Dataset, DatasetDict
 
 from project import config, paths
 
-LABELS = [n.upper() for n in config.categorical.political]
+domain = "political"
+dirpath = paths.ml / "datasets"
 
-paths.political.mkdir(parents=True, exist_ok=True)
+datasets.disable_caching()
+
+rng = np.random.default_rng(config.ml.dataset[domain].seed)
 
 # %% ---------------------------------------------------------------------------------
 
-data = DataFrame.from_(paths.political / "data.parquet").merge(
-    DataFrame.from_(paths.political / "text.parquet"), on=["key", "split"], how="left"
+ground_truth = DataFrame.from_(
+    paths.raw / f"{domain}-ground-truth.parquet",
+    columns=["key", "country", "label", "text"],
+).sample(frac=1.0, random_state=config.ml.dataset[domain].seed, replace=False)
+
+# %% ---------------------------------------------------------------------------------
+
+n_train = int(len(ground_truth) * config.ml.dataset[domain].training)
+n_test = int(len(ground_truth) * config.ml.dataset[domain].testing)
+
+dataset = DatasetDict(
+    {
+        "train": Dataset.from_pandas(ground_truth[:n_train]),
+        "test": Dataset.from_pandas(ground_truth[n_train : n_train + n_test]),
+        "valid": Dataset.from_pandas(ground_truth[n_train + n_test :]),
+    }
 )
 
 # %% ---------------------------------------------------------------------------------
 
-dataset = data.pipe(
-    lambda df: DatasetDict(
-        {
-            key: Dataset.from_pandas(gdf.reset_index(drop=True).drop(columns="split"))
-            for key, gdf in df.groupby("split")
-        }
-    )
-)
-
-# %% ---------------------------------------------------------------------------------
-
-info = dataset["train"].info
-info.features["label"].names = LABELS
-
-dataset = dataset.update_info(info)
-
-# %% ---------------------------------------------------------------------------------
-
-dataset.save_to_disk(paths.ml / "datasets" / "political")
+dataset.save_to_disk(paths.ml / "datasets" / domain)
 
 # %% ---------------------------------------------------------------------------------

@@ -281,6 +281,9 @@ ml:
     valence:
       <<: *ml_dataset_defaults
       seed: 34280
+    political:
+      <<: *ml_dataset_defaults
+      seed: 90316
   inference:
     batch_size: ${eval:${oc.env:NEWSUSE_ML_INFERENCE_BATCH_SIZE,32}}
   tokenize: &ml_tokenize_defaults
