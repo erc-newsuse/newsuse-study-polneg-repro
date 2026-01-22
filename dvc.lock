@@ -815,14 +815,8 @@ stages:
       size: 382132909
     - path: stages/descriptives/valence.py
       hash: md5
-      md5: 1be79ddd9c1148e0ffaf4c282290eb7f
-      size: 14538
-    outs:
-    - path: figures/descriptives/valence
-      hash: md5
-      md5: 4be1db4952d131f16bc146f31050d084.dir
-      size: 1212646
-      nfiles: 13
+      md5: 44d9f4b5f1c2dee1c4ba9b8df11617b6
+      size: 5344
   descriptives@engagement:
     cmd: python stages/descriptives/engagement.py
     deps:
@@ -832,14 +826,8 @@ stages:
       size: 382132909
     - path: stages/descriptives/engagement.py
       hash: md5
-      md5: 19ad9fe16748833b2cd9017b4c2cb48c
-      size: 5414
-    outs:
-    - path: figures/descriptives/engagement
-      hash: md5
-      md5: 8508ac3e680dc55e779f1363fdac049c.dir
-      size: 58821261
-      nfiles: 15
+      md5: fcf2fe1712b0465e4bad592f924a51c6
+      size: 4203
   glmm-valence-latent@event:
     cmd:
     - TARGET=event python stages/glmm/valence_latent.py
@@ -1535,61 +1523,27 @@ stages:
       md5: 9803f0bcd0789f6dec18b74ede4a1e11
       size: 392117461
   valence-analysis@event:
-    cmd:
-    - TARGET=event python stages/valence/validation.py
-    - TARGET=event python stages/valence/analysis.py
+    cmd: TARGET=event python stages/analysis/valence.py
     deps:
-    - path: glmm/valence/event.nc
+    - path: glmm/ppd.nc
       hash: md5
-      md5: ff2fc4285d7a9381f2f297227b5b5e9c
-      size: 391967892
-    - path: stages/valence/analysis.py
+      md5: ebe051db8ca4ad60e9717267c715c2fb
+      size: 695627032
+    - path: stages/analysis/valence.py
       hash: md5
-      md5: 3513aff1286cc5946f97fd71ce35a8fb
-      size: 10840
-    - path: stages/valence/validation.py
-      hash: md5
-      md5: 5328a80ff44788a38c2b0f131dc87fb1
-      size: 7075
-    outs:
-    - path: figures/valence/event
-      hash: md5
-      md5: 9b44cc2a398a0c401dba4b56d318cd5c.dir
-      size: 150924
-      nfiles: 1
-    - path: figures/valence/validation/event
-      hash: md5
-      md5: 74ba9a097fe57f2c361af4c7c4415a1f.dir
-      size: 1007028
-      nfiles: 7
+      md5: 2410be786421f9985f7eb8cbfa691557
+      size: 8345
   valence-analysis@sentiment:
-    cmd:
-    - TARGET=sentiment python stages/valence/validation.py
-    - TARGET=sentiment python stages/valence/analysis.py
+    cmd: TARGET=sentiment python stages/analysis/valence.py
     deps:
-    - path: glmm/valence/sentiment.nc
+    - path: glmm/ppd.nc
       hash: md5
-      md5: 9803f0bcd0789f6dec18b74ede4a1e11
-      size: 392117461
-    - path: stages/valence/analysis.py
+      md5: ebe051db8ca4ad60e9717267c715c2fb
+      size: 695627032
+    - path: stages/analysis/valence.py
       hash: md5
-      md5: 3513aff1286cc5946f97fd71ce35a8fb
-      size: 10840
-    - path: stages/valence/validation.py
-      hash: md5
-      md5: 5328a80ff44788a38c2b0f131dc87fb1
-      size: 7075
-    outs:
-    - path: figures/valence/sentiment
-      hash: md5
-      md5: 11e95744cc0c844365a1674753040263.dir
-      size: 151181
-      nfiles: 1
-    - path: figures/valence/validation/sentiment
-      hash: md5
-      md5: 97e8de38b3d518a8e235bd9d7ff12322.dir
-      size: 1012704
-      nfiles: 7
+      md5: 2410be786421f9985f7eb8cbfa691557
+      size: 8345
   valence-glmm@event:
     cmd:
     - TARGET=event python stages/glmm/valence.py
@@ -7022,14 +6976,14 @@ stages:
     deps:
     - path: glmm/engagement
       hash: md5
-      md5: 6fa4e66abe3c5f3f8573b2a3b5b04a57.dir
-      size: 27401836408
-      nfiles: 24
+      md5: 74715cdee9200dc84ba2051dcbbcab54.dir
+      size: 20601495759
+      nfiles: 15
     - path: glmm/valence
       hash: md5
-      md5: 861d8caf859a6e5c7ba058fbf624022f.dir
-      size: 15621192468
-      nfiles: 8
+      md5: 5682f10dfc512432ef30d593d290d786.dir
+      size: 12186862942
+      nfiles: 7
     - path: stages/glmm/ppd.py
       hash: md5
       md5: b8888d2f6c602bc889852962366d3259
@@ -7188,3 +7142,47 @@ stages:
       hash: md5
       md5: a453cb6d34fb54735476b64e41274ee3
       size: 6924
+  valence-analysis-joint:
+    cmd: python stages/analysis/valence_joint.py
+    deps:
+    - path: glmm/ppd.nc
+      hash: md5
+      md5: ebe051db8ca4ad60e9717267c715c2fb
+      size: 695627032
+    - path: stages/analysis/valence_joint.py
+      hash: md5
+      md5: fb60b3d2e76a6a9acacd52c905982b04
+      size: 6606
+  engagement-analysis@reactions:
+    cmd: TARGET=reactions python stages/analysis/engagement.py
+    deps:
+    - path: glmm/ppd.nc
+      hash: md5
+      md5: ebe051db8ca4ad60e9717267c715c2fb
+      size: 695627032
+    - path: stages/analysis/engagement.py
+      hash: md5
+      md5: 2fdca2e8236fbce6f3f1f273bcd740da
+      size: 17667
+  engagement-analysis@comments:
+    cmd: TARGET=comments python stages/analysis/engagement.py
+    deps:
+    - path: glmm/ppd.nc
+      hash: md5
+      md5: ebe051db8ca4ad60e9717267c715c2fb
+      size: 695627032
+    - path: stages/analysis/engagement.py
+      hash: md5
+      md5: 2fdca2e8236fbce6f3f1f273bcd740da
+      size: 17667
+  engagement-analysis@shares:
+    cmd: TARGET=shares python stages/analysis/engagement.py
+    deps:
+    - path: glmm/ppd.nc
+      hash: md5
+      md5: ebe051db8ca4ad60e9717267c715c2fb
+      size: 695627032
+    - path: stages/analysis/engagement.py
+      hash: md5
+      md5: 2fdca2e8236fbce6f3f1f273bcd740da
+      size: 17667

@@ -1,6 +1,5 @@
 # %% ---------------------------------------------------------------------------------
 
-import os
 from typing import Any
 
 import matplotlib as mpl
@@ -16,19 +15,9 @@ from project import config, paths
 
 mpl.rcParams.update(config.plotting.params)
 
-TARGET = os.environ.get("TARGET")
-if TARGET is None:
-    TARGET = input("Enter target name (event): ").strip() or "event"
-
-support = np.asarray([*config.categorical[TARGET]])
-
+targets = ["event", "sentiment", "valence"]
 quality = ["low", "medium", "high"]
 ideology = ["left", "center", "right"]
-valence = (
-    [*config.categorical.valence]
-    if TARGET == "valence"
-    else ["negative", "neutral", "positive"]
-)
 
 figpath = paths.figures / "descriptives"
 figpath.mkdir(parents=True, exist_ok=True)
@@ -87,78 +76,88 @@ def plot_frequencies(
             )
 
 
-# %% --------------------------------------------------------------------------------
+# %% ---------------------------------------------------------------------------------
 
-fig, axes = plt.subplots(ncols=7, figsize=(21, 3))
+for target in targets:
+    support = np.asarray([*config.categorical[target]])
+    valence = (
+        [*config.categorical.valence]
+        if target == "valence"
+        else ["negative", "neutral", "positive"]
+    )
 
-ax = axes[0]
-dist = data[TARGET].value_counts(normalize=True).sort_index().reset_index()
-plot_frequencies(ax, dist, TARGET)
-ax.set_title("Overall", fontsize="xx-large")
-ax.set_ylabel(None)
+    # %% --------------------------------------------------------------------------------
 
-for ax, (country, df) in zip(
-    axes.flatten()[1:],
-    data.groupby("country", observed=True),
-    strict=True,
-):
-    dist = df[TARGET].value_counts(normalize=True).sort_index().reset_index()
-    plot_frequencies(ax, dist, TARGET, legend=False)
-    ax.set_title(config.categorical.country[country], fontsize="xx-large")
+    fig, axes = plt.subplots(ncols=7, figsize=(21, 3))
 
-for ax in axes.flat:
-    ax.set_xticks(support - support.min(), labels=valence)
+    ax = axes[0]
+    dist = data[target].value_counts(normalize=True).sort_index().reset_index()
+    plot_frequencies(ax, dist, target)
+    ax.set_title("Overall", fontsize="xx-large")
+    ax.set_ylabel(None)
 
-title = "Combined valence" if TARGET == "valence" else f"{TARGET.capitalize()} valence"
-fig.suptitle(title, fontsize=32, x=0.0, y=0.95, ha="left")
-fig.tight_layout()
-fig.savefig(figpath / f"{TARGET}-frequencies.pdf")
+    for ax, (country, df) in zip(
+        axes.flatten()[1:],
+        data.groupby("country", observed=True),
+        strict=True,
+    ):
+        dist = df[target].value_counts(normalize=True).sort_index().reset_index()
+        plot_frequencies(ax, dist, target, legend=False)
+        ax.set_title(config.categorical.country[country], fontsize="xx-large")
 
-# %% --------------------------------------------------------------------------------
+    for ax in axes.flat:
+        ax.set_xticks(support - support.min(), labels=valence)
 
-fig, axes = plt.subplots(ncols=7, figsize=(21, 3))
+    title = "Combined valence" if target == "valence" else f"{target.capitalize()} valence"
+    fig.suptitle(title, fontsize=32, x=0.0, y=0.95, ha="left")
+    fig.tight_layout()
+    fig.savefig(figpath / f"{target}-frequencies.pdf")
 
-ax = axes[0]
-dist = pd.concat(
-    {
-        pol: data.query(f"political == {pol}")[[TARGET]].value_counts(normalize=True)
-        for pol in [0, 1]
-    },
-    names=["political"],
-).reset_index()
-plot_frequencies(ax, dist, TARGET, hue="political", legend=True)
-ax.set_title(None)
-ax.set_ylabel(None)
-legend = ax.get_legend()
-ax.legend(
-    title=None,
-    frameon=False,
-    handles=legend.legend_handles,
-    labels=[
-        "non-political" if int(h.get_label()) == 0 else "political"
-        for h in legend.legend_handles
-    ],
-)
+    # %% --------------------------------------------------------------------------------
 
-for ax, (_, df) in zip(
-    axes.flatten()[1:],
-    data.groupby("country", observed=True),
-    strict=True,
-):
+    fig, axes = plt.subplots(ncols=7, figsize=(21, 3))
+
+    ax = axes[0]
     dist = pd.concat(
         {
-            pol: df.query(f"political == {pol}")[[TARGET]].value_counts(normalize=True)
+            pol: data.query(f"political == {pol}")[[target]].value_counts(normalize=True)
             for pol in [0, 1]
         },
         names=["political"],
     ).reset_index()
-    plot_frequencies(ax, dist, TARGET, hue="political", legend=False)
+    plot_frequencies(ax, dist, target, hue="political", legend=True)
     ax.set_title(None)
+    ax.set_ylabel(None)
+    legend = ax.get_legend()
+    ax.legend(
+        title=None,
+        frameon=False,
+        handles=legend.legend_handles,
+        labels=[
+            "non-political" if int(h.get_label()) == 0 else "political"
+            for h in legend.legend_handles
+        ],
+    )
 
-for ax in axes.flat:
-    ax.set_xticks(support - support.min(), labels=valence)
+    for ax, (_, df) in zip(
+        axes.flatten()[1:],
+        data.groupby("country", observed=True),
+        strict=True,
+    ):
+        dist = pd.concat(
+            {
+                pol: df.query(f"political == {pol}")[[target]].value_counts(normalize=True)
+                for pol in [0, 1]
+            },
+            names=["political"],
+        ).reset_index()
+        plot_frequencies(ax, dist, target, hue="political", legend=False)
+        ax.set_title(None)
 
-fig.tight_layout()
-fig.savefig(figpath / f"{TARGET}-frequencies-political.pdf")
+    for ax in axes.flat:
+        ax.set_xticks(support - support.min(), labels=valence)
+
+    fig.tight_layout()
+    fig.savefig(figpath / f"{target}-frequencies-political.pdf")
 
 # %% ---------------------------------------------------------------------------------
