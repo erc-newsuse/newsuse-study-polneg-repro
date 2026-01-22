@@ -4,3 +4,4 @@
 /followers.parquet
 /posts
 /perspective.parquet
+/valence-ground-truth.json.gz

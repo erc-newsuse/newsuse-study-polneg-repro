@@ -13,12 +13,11 @@ from transformers import AutoModel, AutoTokenizer
 
 import project.model  # noqa
 from project import config, paths
-from project.metrics import amae_score, o1_score
+from project.metrics import o1_score
 from project.pipelines import KeyDataset, pipeline
 
 domain = "valence"
 targets = ["event", "sentiment"]
-
 
 # %% ---------------------------------------------------------------------------------
 
@@ -28,14 +27,16 @@ tokenizer = AutoTokenizer.from_pretrained(model.config.base_name_or_path)
 
 # %% ---------------------------------------------------------------------------------
 
-sizes = (
+dset = (
     pd.concat(
         {split: dset.to_pandas() for split, dset in dataset.items()},
         names=["split"],
     )
     .reset_index("split")
     .reset_index(drop=True)
-    .groupby(["split", "country"])
+)
+sizes = (
+    dset.groupby(["split", "country"])
     .size()
     .swaplevel("split", "country")
     .loc[[*config.categorical.country]]
@@ -111,7 +112,6 @@ def compute_metrics(df: pd.DataFrame) -> pd.Series:
         {
             "f1": f1_score(df["true"], df["pred"], average="macro", labels=labels),
             "o1": o1_score(df["true"], df["pred"], labels=labels),
-            "amae": amae_score(df["true"], df["pred"]),
             "acc1": accuracy_off1(df["true"], df["pred"], labels=labels),
         }
     )
@@ -119,15 +119,30 @@ def compute_metrics(df: pd.DataFrame) -> pd.Series:
 
 # %% ---------------------------------------------------------------------------------
 
-perf = data.groupby("target").apply(compute_metrics)
+perf_overall = data.groupby("target").apply(compute_metrics).reset_index()
 
-print(perf.to_markdown(floatfmt=".3f"))
-
-# %% ---------------------------------------------------------------------------------
-
-perf_country = data.groupby(["country", "target"]).apply(compute_metrics)
+perf_country = (
+    data.groupby(["country", "target"])
+    .apply(compute_metrics)
+    .rename(str.upper, axis=0, level="country")
+    .reset_index()
+)
 
 perf_country  # noqa  # type: ignore
+
+print(
+    pd.concat([perf_overall, perf_country])
+    .fillna({"country": "Overall"})
+    .set_index(["country", "target"])
+    .sort_index()
+    .unstack("country")
+    .stack(level=0, future_stack=True)
+    .rename(
+        {"f1": r"$F_1$", "o1": r"$O_1$", "acc1": r"$\pm 1$ Acc."},
+    )[["Overall", *map(str.upper, config.categorical.country)]]
+    .style.format(precision=3)
+    .to_latex(hrules=True)
+)
 
 # %% ---------------------------------------------------------------------------------
 

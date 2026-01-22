@@ -14,7 +14,7 @@ from sklearn.metrics import f1_score
 from project import paths
 from project.metrics import amae_score, o1_score
 
-here = paths.root / "analyses" / "valence" / "gpt"
+here = paths.root / "analyses" / "classifiers" / "valence" / "gpt"
 
 prompt = "prompt_6"
 targets = ["event", "sentiment"]
