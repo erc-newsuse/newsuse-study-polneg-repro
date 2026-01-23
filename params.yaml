@@ -207,7 +207,7 @@ classification:
       name: sztal/erc-newsuse-political
 
 articles_sample:
-  groupsize: 10
+  groupsize: 5
 
 gpt:
   header: &gpt_default_header

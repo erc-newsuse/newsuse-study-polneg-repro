@@ -2,6 +2,7 @@
 
 import datasets
 import pandas as pd
+from newsuse.data import DataFrame
 from sklearn.metrics import accuracy_score, f1_score
 from tqdm.auto import tqdm
 
@@ -50,11 +51,11 @@ sizes = (
     .size()
     .swaplevel("split", "country")
     .loc[[*config.categorical.country]]
-    .rename(config.categorical.country, axis=0, level="country")
 )
 
 print(
-    sizes.unstack("country")
+    sizes.unstack("country")[[*config.categorical.country]]
+    .rename(columns=config.categorical.country)
     .astype(str)
     .map(lambda x: rf"\num{{{x}}}")
     .style.to_latex(
@@ -66,9 +67,20 @@ print(
 
 testing = pd.concat(
     [
-        dataset["test"].to_pandas().set_index(["country", "key"]),
+        dataset["test"].to_pandas(),
     ]
 )
+
+if (field := "text") not in testing.columns or testing[field].isnull().all():
+    if field in testing.columns:
+        testing = testing.drop(columns=[field])
+    testing = (
+        testing.merge(DataFrame.from_(paths.text, columns=["key", "fulltext"]))
+        .rename(columns={"fulltext": "text"})
+        .set_index(["country", "key"])
+    )
+
+# %% ---------------------------------------------------------------------------------
 
 results = pd.DataFrame(
     tqdm(pipe(KeyDataset(testing, "text"), batch_size=16), total=len(testing)),
