@@ -40,14 +40,14 @@ sizes = (
     .size()
     .swaplevel("split", "country")
     .loc[[*config.categorical.country]]
-    .rename(config.categorical.country, axis=0, level="country")
-    .unstack("country")
-    .astype(str)
-    .map(lambda x: rf"\num{{{x}}}")
 )
 
 print(
-    sizes.style.to_latex(
+    sizes.unstack("country")[[*config.categorical.country]]
+    .rename(config.categorical.country, axis=1, level="country")
+    .astype(str)
+    .map(lambda x: rf"\num{{{x}}}")
+    .style.to_latex(
         hrules=True,
     )
 )
@@ -143,46 +143,6 @@ print(
     .style.format(precision=3)
     .to_latex(hrules=True)
 )
-
-# %% ---------------------------------------------------------------------------------
-
-countries = data.index.get_level_values("country").unique()
-
-fig, axes = plt.subplots(
-    nrows=len(countries),
-    ncols=len(targets),
-    figsize=(7, 2 * len(countries)),
-)
-
-for axrow, country in zip(axes, countries, strict=True):
-    axrow[0].set_title(country.upper())
-    for (target, df), ax in zip(data.groupby("target"), axrow.flat, strict=True):
-        odist = (
-            df.xs(country, level="country")
-            .xs(target, level="target")["pred"]
-            .value_counts(normalize=True)
-            .sort_index()
-        )
-        tdist = (
-            df.xs(country, level="country")
-            .xs(target, level="target")["true"]
-            .value_counts(normalize=True)
-            .sort_index()
-        )
-        df = (
-            DataFrame({"output": odist, "target": tdist})
-            .melt(ignore_index=False)
-            .reset_index()
-        )
-        sns.barplot(
-            data=df,
-            x="index",
-            y="value",
-            hue="variable",
-            ax=ax,
-        )
-
-fig.tight_layout()
 
 # %% Validation on ground truth labels -----------------------------------------------
 
