@@ -9,7 +9,7 @@ import pandas as pd
 import seaborn.objects as so
 import xarray as xr
 from newsuse.data import DataFrame
-from scipy.special import logit
+from scipy.special import expit, logit
 
 from project import config, paths
 from project.bayes import eti
@@ -88,6 +88,17 @@ posterior = (
             categories=["overall", *config.categorical.country],
         ),
     )
+)
+
+posterior_overall = (
+    probs.pipe(logit)
+    .groupby([opts.response, "sample"])
+    .mean()
+    .pipe(expit)
+    .groupby(opts.response)
+    .apply(eti)
+    .unstack(-1)
+    .reset_index()
 )
 
 posterior_political = (
