@@ -11,6 +11,7 @@ import seaborn.objects as so
 import xarray as xr
 from newsuse.data import DataFrame
 from rich.progress import track
+from scipy.special import logit
 
 from project import config, paths
 from project.bayes import eti
@@ -186,7 +187,7 @@ def make_posteriors(
         )
         .reset_index()
     )
-    volume_sentiment = (
+    volume_valence = (
         volumes.pipe(lambda df: df.sub(df.xs(0, level=valence)))
         .drop(index=0, level=valence)
         .dropna()
@@ -202,22 +203,24 @@ def make_posteriors(
         .reset_index()
     )
     baseline_diffs = (
-        (volumes - freqs)
+        volumes.pipe(logit)
+        .sub(logit(freqs))
+        .pipe(np.exp)
         .groupby(["country", "political", valence])
         .apply(eti)
         .unstack(-1)
         .sort_index()
         .loc[[*config.categorical.country, "overall"]]
         .assign(
-            sig=lambda df: df[["lower", "upper"]].pipe(np.sign).prod(axis=1).eq(1),
-            up=lambda df: df["median"] > 0,
+            sig=lambda df: df[["lower", "upper"]].sub(1).pipe(np.sign).prod(axis=1).eq(1),
+            up=lambda df: df["median"] > 1,
         )
         .reset_index()
     )
     return (
         volume_posterior,
         volume_political,
-        volume_sentiment,
+        volume_valence,
         valence_posterior,
         baseline_diffs,
     )
@@ -282,7 +285,7 @@ for ax, valence in zip(axes.flat, valences, strict=True):
     )
     for _, row in sigs.iterrows():
         ax.plot(
-            *row[["sentiment", "y"]],
+            *row[[valence, "y"]],
             marker="^" if row["up"] else "v",
             color="black",
             markersize=8,
@@ -307,13 +310,14 @@ for ax, valence in zip(axes.flat, valences, strict=True):
             zorder=10,
         )
     # Mark baseline differences
+    on = ["country", "political", valence]
     sigs = (
-        volume_posterior[["country", "political", valence, "lower", "upper"]]
-        .merge(baseline_diffs)
+        volume_posterior[[*on, "lower", "upper"]]
+        .merge(baseline_diffs[[*on, "sig", "up"]])
         .assign(
             y=lambda df: (
                 np.where(df["up"], df["upper"], df["lower"])
-                + np.where(df["up"], 0.025, -0.025)
+                + np.where(df["up"], 0.06, -0.06)
             )
         )
         .dropna()
@@ -322,7 +326,7 @@ for ax, valence in zip(axes.flat, valences, strict=True):
     for _, row in sigs.iterrows():
         x = row[valence]
         ax.plot(
-            x + 0.4 * (-1 + row["political"] * 2),
+            x + 0.2 * (-1 + row["political"] * 2),
             row["y"],
             marker="^" if row["up"] else "v",
             color="red",
@@ -457,15 +461,14 @@ for ax, (country, df) in zip(
             zorder=10,
         )
     # Mark baseline differences
+    on = ["country", "political", "valence"]
     sigs = (
-        volume_posterior.query("country == @country")[
-            ["country", "political", "valence", "lower", "upper"]
-        ]
-        .merge(baseline_diffs)
+        volume_posterior.query("country == @country")[[*on, "lower", "upper"]]
+        .merge(baseline_diffs[[*on, "sig", "up"]])
         .assign(
             y=lambda df: (
                 np.where(df["up"], df["upper"], df["lower"])
-                + np.where(df["up"], 0.025, -0.025)
+                + np.where(df["up"], 0.05, -0.05)
             )
         )
         .dropna()
@@ -474,7 +477,7 @@ for ax, (country, df) in zip(
     for _, row in sigs.iterrows():
         x = row["valence"]
         ax.plot(
-            x + 0.4 * (-1 + row["political"] * 2),
+            x + 0.2 * (-1 + row["political"] * 2),
             row["y"],
             marker="^" if row["up"] else "v",
             color="red",

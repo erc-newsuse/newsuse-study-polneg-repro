@@ -280,6 +280,14 @@ stages:
       - stages/analysis/engagement.py
       - glmm/ppd.nc
 
+  engagement-effecs-analysis:
+    foreach: ["reactions", "comments", "shares"]
+    do:
+      cmd: TARGET=${item} python stages/analysis/engagement_effects.py
+      deps:
+      - stages/analysis/engagement_effects.py
+      - glmm/ppd.nc
+
   ppd:
     cmd: python stages/glmm/ppd.py
     deps:

@@ -182,7 +182,8 @@ for response in config.engagement:
         for group in idata.groups():
             if group not in use_groups:
                 del idata[group]
-        kwargs = {**opts.ppd}
+        # kwargs = {**opts.ppd}
+        kwargs = {**opts.ppd, "kind": "response_params"}
         ppd = (
             model.predict(
                 idata.isel(draw=slice(kwargs.pop("draws"))),
@@ -191,7 +192,9 @@ for response in config.engagement:
                 random_seed=rng,
                 **kwargs,
             )
-            .posterior_predictive.drop_vars("__obs__")
+            .posterior.drop_vars("__obs__")[["mu"]]
+            .rename_vars({"mu": response})
+            # .posterior_predictive.drop_vars("__obs__")
             .assign_coords(
                 {n: ("__obs__", c.to_numpy()) for n, c in structural.ppd.items()}
             )
