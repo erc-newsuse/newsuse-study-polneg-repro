@@ -93,6 +93,19 @@ posterior = (
     )
 )
 
+posterior_overall = (
+    probs.groupby(["country", "valence"])
+    .apply(eti)
+    .unstack(-1)
+    .reset_index()
+    .assign(
+        country=lambda df: pd.Categorical(
+            df["country"],
+            categories=["overall", *config.categorical.country],
+        ),
+    )
+)
+
 posterior_political = (
     probs.pipe(logit)
     .groupby(["country", "valence", "sample"])
