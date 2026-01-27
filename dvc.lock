@@ -399,17 +399,17 @@ stages:
     outs:
     - path: ml/datasets/valence
       hash: md5
-      md5: 5f34957fa2b4e4557af16edc6a75ca07.dir
-      size: 7288321
-      nfiles: 16
+      md5: 52611fa1f0390414555e66f2939ac33f.dir
+      size: 7313809
+      nfiles: 25
   valence-train:
     cmd: python stages/ml/valence_hyper.py
     deps:
     - path: ml/datasets/valence
       hash: md5
-      md5: 5f34957fa2b4e4557af16edc6a75ca07.dir
-      size: 7288321
-      nfiles: 16
+      md5: 52611fa1f0390414555e66f2939ac33f.dir
+      size: 7313809
+      nfiles: 25
     - path: stages/ml/valence_hyper.py
       hash: md5
       md5: 469c7ff8bfc400aabff3409ce266ede5
@@ -7219,3 +7219,36 @@ stages:
       hash: md5
       md5: fd7620dcba63ae19fbc4dfa66c967d06
       size: 7975
+  engagement-analysis-effects@reactions:
+    cmd: TARGET=reactions python stages/analysis/engagement_effects.py
+    deps:
+    - path: glmm/ppd.nc
+      hash: md5
+      md5: 985e963cef19166b52f31f03d62ea64c
+      size: 695628056
+    - path: stages/analysis/engagement_effects.py
+      hash: md5
+      md5: ddb9419d918c6da518afc34f53577b17
+      size: 7995
+  engagement-analysis-effects@comments:
+    cmd: TARGET=comments python stages/analysis/engagement_effects.py
+    deps:
+    - path: glmm/ppd.nc
+      hash: md5
+      md5: 985e963cef19166b52f31f03d62ea64c
+      size: 695628056
+    - path: stages/analysis/engagement_effects.py
+      hash: md5
+      md5: ddb9419d918c6da518afc34f53577b17
+      size: 7995
+  engagement-analysis-effects@shares:
+    cmd: TARGET=shares python stages/analysis/engagement_effects.py
+    deps:
+    - path: glmm/ppd.nc
+      hash: md5
+      md5: 985e963cef19166b52f31f03d62ea64c
+      size: 695628056
+    - path: stages/analysis/engagement_effects.py
+      hash: md5
+      md5: 64a181b98db1c49b58813c5e53f00604
+      size: 8736

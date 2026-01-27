@@ -570,7 +570,7 @@ handles_baseline = [
     mpl.patches.Patch(
         color=config.plotting.color.semantics.other,
         alpha=0.5,
-        label="Valence frequency baseline",
+        label="valence frequency baseline",
     )
 ] + [
     mpl.lines.Line2D(

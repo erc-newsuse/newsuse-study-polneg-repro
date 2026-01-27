@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 import seaborn.objects as so
 import xarray as xr
+from newsuse.data import DataFrame
 from rich.progress import track
 
 from project import config, paths
@@ -200,7 +201,7 @@ for ax, valence in zip(axes.flat, valences, strict=True):
         labels=[*map(str.capitalize, config.categorical[valence].values())],
     )
     ax.set_yscale("log", base=2)
-    ax.set_title(f"{valence.capitalize()}")
+    ax.set_title(f"{valence.capitalize()}", fontsize="x-large")
     ax.set_xlabel(None)
     ax.set_ylabel(None)
 # Mark boundaries between categories with vertical lines
@@ -273,5 +274,23 @@ fig.legend(
 )
 fig.tight_layout()
 fig.savefig(figpath / "engagement-rr-legend.pdf")
+
+# %% ---------------------------------------------------------------------------------
+
+for valence in ["event", "sentiment"]:
+    (
+        posterior_political,
+        posterior_valence,
+    ) = make_posteriors(rates[f"{opts.response}_{valence}"])
+    tables = {
+        "political": posterior_political.reset_index(),
+        "valence": posterior_valence.reset_index(),
+    }
+    for name, table in tables.items():
+        DataFrame(table).to_(
+            tabpath / f"{TARGET}-{valence}-rr-{name}.tsv",
+            index=False,
+        )
+
 
 # %% ---------------------------------------------------------------------------------
