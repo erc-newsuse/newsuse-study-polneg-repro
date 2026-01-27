@@ -1527,23 +1527,23 @@ stages:
     deps:
     - path: glmm/ppd.nc
       hash: md5
-      md5: ebe051db8ca4ad60e9717267c715c2fb
-      size: 695627032
+      md5: 985e963cef19166b52f31f03d62ea64c
+      size: 695628056
     - path: stages/analysis/valence.py
       hash: md5
-      md5: 2410be786421f9985f7eb8cbfa691557
-      size: 8345
+      md5: 5d66e961c99738fc4bd640a08fac6aad
+      size: 8548
   valence-analysis@sentiment:
     cmd: TARGET=sentiment python stages/analysis/valence.py
     deps:
     - path: glmm/ppd.nc
       hash: md5
-      md5: ebe051db8ca4ad60e9717267c715c2fb
-      size: 695627032
+      md5: 985e963cef19166b52f31f03d62ea64c
+      size: 695628056
     - path: stages/analysis/valence.py
       hash: md5
-      md5: 2410be786421f9985f7eb8cbfa691557
-      size: 8345
+      md5: 5d66e961c99738fc4bd640a08fac6aad
+      size: 8548
   valence-glmm@event:
     cmd:
     - TARGET=event python stages/glmm/valence.py
@@ -6986,13 +6986,13 @@ stages:
       nfiles: 7
     - path: stages/glmm/ppd.py
       hash: md5
-      md5: b8888d2f6c602bc889852962366d3259
-      size: 7087
+      md5: 9071c2526f8fddbab9368a7bddd01efb
+      size: 7243
     outs:
     - path: glmm/ppd.nc
       hash: md5
-      md5: ebe051db8ca4ad60e9717267c715c2fb
-      size: 695627032
+      md5: 985e963cef19166b52f31f03d62ea64c
+      size: 695628056
   engagement-validation@reactions-event:
     cmd:
     - TARGET=reactions VALENCE=event python stages/glmm/engagement_validation.py
@@ -7147,42 +7147,75 @@ stages:
     deps:
     - path: glmm/ppd.nc
       hash: md5
-      md5: ebe051db8ca4ad60e9717267c715c2fb
-      size: 695627032
+      md5: 985e963cef19166b52f31f03d62ea64c
+      size: 695628056
     - path: stages/analysis/valence_joint.py
       hash: md5
-      md5: fb60b3d2e76a6a9acacd52c905982b04
-      size: 6606
+      md5: 3ff41baa577076c96fc4c54b6a04cd51
+      size: 6890
   engagement-analysis@reactions:
     cmd: TARGET=reactions python stages/analysis/engagement.py
     deps:
     - path: glmm/ppd.nc
       hash: md5
-      md5: ebe051db8ca4ad60e9717267c715c2fb
-      size: 695627032
+      md5: 985e963cef19166b52f31f03d62ea64c
+      size: 695628056
     - path: stages/analysis/engagement.py
       hash: md5
-      md5: 2fdca2e8236fbce6f3f1f273bcd740da
-      size: 17667
+      md5: 60459fe101464876e62a374dcd924953
+      size: 17793
   engagement-analysis@comments:
     cmd: TARGET=comments python stages/analysis/engagement.py
     deps:
     - path: glmm/ppd.nc
       hash: md5
-      md5: ebe051db8ca4ad60e9717267c715c2fb
-      size: 695627032
+      md5: 985e963cef19166b52f31f03d62ea64c
+      size: 695628056
     - path: stages/analysis/engagement.py
       hash: md5
-      md5: 2fdca2e8236fbce6f3f1f273bcd740da
-      size: 17667
+      md5: 60459fe101464876e62a374dcd924953
+      size: 17793
   engagement-analysis@shares:
     cmd: TARGET=shares python stages/analysis/engagement.py
     deps:
     - path: glmm/ppd.nc
       hash: md5
-      md5: ebe051db8ca4ad60e9717267c715c2fb
-      size: 695627032
+      md5: 985e963cef19166b52f31f03d62ea64c
+      size: 695628056
     - path: stages/analysis/engagement.py
       hash: md5
-      md5: 2fdca2e8236fbce6f3f1f273bcd740da
-      size: 17667
+      md5: 60459fe101464876e62a374dcd924953
+      size: 17793
+  engagement-effecs-analysis@reactions:
+    cmd: TARGET=reactions python stages/analysis/engagement_effects.py
+    deps:
+    - path: glmm/ppd.nc
+      hash: md5
+      md5: 985e963cef19166b52f31f03d62ea64c
+      size: 695628056
+    - path: stages/analysis/engagement_effects.py
+      hash: md5
+      md5: fd7620dcba63ae19fbc4dfa66c967d06
+      size: 7975
+  engagement-effecs-analysis@comments:
+    cmd: TARGET=comments python stages/analysis/engagement_effects.py
+    deps:
+    - path: glmm/ppd.nc
+      hash: md5
+      md5: 985e963cef19166b52f31f03d62ea64c
+      size: 695628056
+    - path: stages/analysis/engagement_effects.py
+      hash: md5
+      md5: fd7620dcba63ae19fbc4dfa66c967d06
+      size: 7975
+  engagement-effecs-analysis@shares:
+    cmd: TARGET=shares python stages/analysis/engagement_effects.py
+    deps:
+    - path: glmm/ppd.nc
+      hash: md5
+      md5: 985e963cef19166b52f31f03d62ea64c
+      size: 695628056
+    - path: stages/analysis/engagement_effects.py
+      hash: md5
+      md5: fd7620dcba63ae19fbc4dfa66c967d06
+      size: 7975
