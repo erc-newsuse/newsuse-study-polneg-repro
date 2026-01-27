@@ -143,12 +143,14 @@ for table in [
     "volume-valence",
     "valence-posterior",
     "baseline-diffs",
+    "rr-political",
+    "rr-valence",
 ]:
     parts = {}
     for target in config.engagement:
         for valence in ["event", "sentiment", "valence"]:
             tabname = f"{target}-{valence}-{table}"
-            if tabname.endswith("valence-posterior"):
+            if tabname.endswith("valence-posterior") or "valence-rr" in tabname:
                 continue
             df = DataFrame.from_(paths.tables / "engagement" / f"{tabname}.tsv").rename(
                 columns={"event": "valence", "sentiment": "valence"}
@@ -188,7 +190,9 @@ def _bold_row(row: pd.Series) -> list[str]:
     frm = []
     for target in config.engagement:
         for valence in ["event", "sentiment", "valence"]:
-            part = row[(target, valence)]
+            if (key := (target, valence)) not in row.index:
+                continue
+            part = row[key]
             if pd.isnull(part["sig"]) or not part["sig"]:
                 frm.extend([""] * len(part))
             else:
