@@ -184,8 +184,8 @@ def make_posteriors(
         .sort_index()
         .loc[[*config.categorical.country, "overall"]]
         .assign(
-            sig=lambda df: df[["lower", "upper"]].pipe(np.sign).prod(axis=1).eq(1),
-            up=lambda df: df["median"] > 0,
+            sig=lambda df: df[["lower", "upper"]].sub(1).pipe(np.sign).prod(axis=1).eq(1),
+            up=lambda df: df["median"] > 1,
         )
         .reset_index()
     )
@@ -201,8 +201,8 @@ def make_posteriors(
         .sort_index()
         .loc[[*config.categorical.country, "overall"]]
         .assign(
-            sig=lambda df: df[["lower", "upper"]].pipe(np.sign).prod(axis=1).eq(1),
-            up=lambda df: df["median"] > 0,
+            sig=lambda df: df[["lower", "upper"]].sub(1).pipe(np.sign).prod(axis=1).eq(1),
+            up=lambda df: df["median"] > 1,
         )
         .reset_index()
     )
