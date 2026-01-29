@@ -42,11 +42,11 @@ keys_political = [
 # %% ---------------------------------------------------------------------------------
 
 examples_main_text = (
-    data[data["key"].isin(keys_non_political + keys_political)]
-    .groupby(["event", "sentiment"])
-    .sample(1, random_state=rng)[
+    data[data["key"].isin(keys_non_political + keys_political)][
         ["key", "political", "event", "sentiment", "valence", "text"]
     ]
+    # .groupby(["event", "sentiment"])
+    # .sample(1, random_state=rng)
 )
 
 # %% ---------------------------------------------------------------------------------

@@ -30,7 +30,9 @@ pairs = (
 
 n_annotations = annotations.groupby(["key"]).size().describe()
 
-n_pairs = pairs.groupby(["annotator1", "annotator2"]).size()
+n_pairs = (
+    pairs.query("annotator1 < annotator2").groupby(["annotator1", "annotator2"]).size()
+)
 
 scores = pairs.groupby(["annotator1", "annotator2"]).apply(
     lambda df: pd.Series(

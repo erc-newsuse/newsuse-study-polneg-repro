@@ -3,7 +3,7 @@
 import pandas as pd
 from dlordinal.metrics import accuracy_off1
 from newsuse.data import DataFrame
-from sklearn.metrics import f1_score
+from sklearn.metrics import cohen_kappa_score, f1_score
 
 from project import paths
 from project.metrics import o1_score
@@ -40,6 +40,7 @@ def compute_metrics(df: pd.DataFrame) -> pd.Series:
             "f1": f1_score(df["true"], df["pred"], average="macro"),
             "o1": o1_score(df["true"], df["pred"]),
             "acc1": accuracy_off1(df["true"], df["pred"]),
+            "kappa": cohen_kappa_score(df["true"], df["pred"]),
         }
     )
 

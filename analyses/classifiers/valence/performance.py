@@ -211,11 +211,43 @@ perf_gt = data_gt.loc[["valid"]].groupby(level="target").apply(compute_metrics)
 perf_gt.head()
 
 # %% ---------------------------------------------------------------------------------
-
-data_gt.groupby(["country", "target"]).apply(compute_metrics)
-
-# %% ---------------------------------------------------------------------------------
 # Additional validation (LLM)
 
+samples = {}
+for model in ["llm", "transformer"]:
+    samples[model] = (
+        DataFrame.from_(paths.aux / f"{model}-sample.xlsx")[
+            ["country", "key", "event", "sentiment", "event_mw", "sentiment_mw"]
+        ]
+        .assign(
+            country=lambda df: df["country"].ffill(),
+            event_mw=lambda df: df["event_mw"].combine_first(df["event"]),
+            sentiment_mw=lambda df: df["sentiment_mw"].combine_first(df["sentiment"]),
+        )
+        .set_index(["country", "key"])
+        .melt(ignore_index=False)
+        .assign(
+            target=lambda df: np.where(
+                df["variable"].str.startswith("event"), "event", "sentiment"
+            ),
+            which=lambda df: np.where(df["variable"].str.endswith("_mw"), "true", "pred"),
+        )
+        .drop(columns=["variable"])
+        .set_index(["target", "which"], append=True)
+        .pipe(lambda df: df[~df.index.duplicated(keep="first")])["value"]
+        .unstack("which")
+        .sort_index()
+        .astype(int)
+        .map(lambda x: x if x in [-1, 0, 1] else np.nan)
+        .dropna()
+    )
+
+# %% ---------------------------------------------------------------------------------
+
+samples["llm"].groupby(level=["target"]).apply(compute_metrics)
+
+# %% ---------------------------------------------------------------------------------
+
+samples["transformer"].groupby(level=["target"]).apply(compute_metrics)
 
 # %% ---------------------------------------------------------------------------------
