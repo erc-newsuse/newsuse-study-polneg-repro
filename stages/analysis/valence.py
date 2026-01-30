@@ -299,4 +299,22 @@ tables = {
 for name, table in tables.items():
     DataFrame(table).to_(tabpath / f"{TARGET}-{name}.tsv", index=False)
 
+# %% Selected country comparisons ----------------------------------------------------
+
+# %% PL vs ESP (non-political)
+(
+    probs.loc[0]
+    .sort_index()
+    .loc[["pl", "esp"]]
+    .pipe(logit)
+    .groupby(["sample", opts.response])
+    .apply(lambda s: s.loc["pl"] - s.loc["esp"])
+    .dropna()
+    .pipe(np.exp)
+    .groupby(opts.response)
+    .apply(eti)
+    .unstack(-1)
+    # .reset_index()
+)
+
 # %% ---------------------------------------------------------------------------------
