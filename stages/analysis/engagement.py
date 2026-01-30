@@ -634,4 +634,75 @@ for valence in ["event", "sentiment", "valence"]:
             index=False,
         )
 
+# %% Pooled estimates ----------------------------------------------------------------
+
+V = pd.concat(
+    [
+        volumes[f"{opts.response}_{valence}"]
+        .groupby(["sample", "country", "political", valence])
+        .sum()
+        .rename_axis(index={valence: "value"})
+        for valence in ["event", "sentiment", "valence"]
+    ],
+    axis=1,
+).sort_index()
+
+F = (
+    pd.concat(
+        [
+            volumes.reset_index()
+            .groupby(["sample", "country", "political"])[valence]
+            .value_counts(normalize=True)
+            .pipe(lambda s: pd.Series(s, name=valence))
+            for valence in ["event", "sentiment", "valence"]
+        ],
+        axis=1,
+    )
+    .sort_index()
+    .rename_axis(index={None: "value"})
+)
+
+# %% ---------------------------------------------------------------------------------
+
+pooled_volumes = V.groupby(["sample", "value"]).mean()
+pooled_freqs = F.groupby(["sample", "value"]).mean()
+
+# %% ---------------------------------------------------------------------------------
+
+posterior_pooled_volumes = (
+    pooled_volumes.groupby(["value"]).apply(lambda df: df.apply(eti)).unstack(-1)
+)
+
+posterior_pooled_freqs = (
+    pooled_freqs.groupby(["value"]).apply(lambda df: df.apply(eti)).unstack(-1)
+)
+
+posterior_pooled_or = (
+    pooled_volumes.pipe(logit)
+    .rename(
+        columns={
+            f"{opts.response}_{valence}": valence
+            for valence in ["event", "sentiment", "valence"]
+        }
+    )
+    .sub(logit(pooled_freqs))
+    .pipe(np.exp)
+    .groupby(["value"])
+    .apply(lambda df: df.apply(eti))
+    .unstack(-1)
+)
+
+# %% ---------------------------------------------------------------------------------
+
+print(opts.response.upper())
+posterior_pooled_volumes.head()
+
+# %% ---------------------------------------------------------------------------------
+
+posterior_pooled_freqs.head()
+
+# %% ---------------------------------------------------------------------------------
+
+posterior_pooled_or.head()
+
 # %% ---------------------------------------------------------------------------------
