@@ -240,7 +240,7 @@ handles_political = [
         color=color,
         marker="o",
         linestyle="",
-        markersize=10,
+        markersize=14,
         label=f"relative to neutral ({label})",
     )
     for label, color in zip(
@@ -257,7 +257,7 @@ handles_diff = [
         markeredgecolor="white",
         marker="o",
         label="political / non-political",
-        markersize=10,
+        markersize=14,
         linestyle="",
     )
 ]
@@ -269,7 +269,7 @@ fig.legend(
     ncols=len(handles),
     loc="center",
     bbox_to_anchor=(0.5, 0.5),
-    fontsize=12,
+    fontsize=16,
     frameon=False,
 )
 fig.tight_layout()
