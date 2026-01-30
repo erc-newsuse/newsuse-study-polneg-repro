@@ -232,10 +232,10 @@ def make_posteriors(
 
 # %% ---------------------------------------------------------------------------------
 
-valences = ["event", "sentiment"]
+valences = ["event", "sentiment", "valence"]
 fig, axes = plt.subplots(
     ncols=(ncols := len(valences)),
-    figsize=((size := 3) * ncols, size),
+    figsize=((size := 3.2) * ncols, size * 0.7),
     sharex=False,
     sharey=True,
 )
@@ -337,14 +337,17 @@ for ax, valence in zip(axes.flat, valences, strict=True):
             markersize=8,
             zorder=10,
         )
-    ax.set_title(valence.capitalize(), fontsize="x-large")
+    title = valence.capitalize() if valence != "valence" else "Joint valence"
+    ax.set_title(title, fontsize="x-large")
     ax.set_xlabel(None)
     ax.set_ylabel(None)
-    ax.set_xticks(
-        config.categorical[valence],
-        labels=[*map(str.capitalize, config.categorical[valence].values())],
+    xtlabels = (
+        [*map(str.capitalize, config.categorical[valence].values())]
+        if valence != "valence"
+        else [*map(str, config.categorical[valence])]
     )
-    ax.set_ylim(-0.05, 1.05)
+    ax.set_xticks(config.categorical[valence], labels=xtlabels)
+    ax.set_ylim(-0.05, 0.75)
     ax.yaxis.set_major_formatter(mpl.ticker.PercentFormatter(xmax=1))
 
 # Mark boundaries between categories with vertical lines
@@ -366,7 +369,7 @@ fig.supylabel(
     rf"\textbf{{{opts.response.capitalize()}}}",
     fontsize="x-large",
     va="center",
-    x=0.04,
+    x=0.02,
     y=0.50,
 )
 fig.tight_layout()
@@ -375,7 +378,7 @@ fig.savefig(figpath / f"{TARGET}-volume-event-sentiment.pdf")
 # %% ---------------------------------------------------------------------------------
 
 fig, axes = plt.subplots(
-    ncols=(ncols := len(config.categorical.country) + 1),
+    ncols=(ncols := len(config.categorical.country)),
     figsize=((size := 3) * ncols, size),
     sharex=True,
     sharey=True,
@@ -391,12 +394,14 @@ fig, axes = plt.subplots(
 
 for ax, (country, df) in zip(
     axes.flat,
-    volume_posterior.assign(
+    volume_posterior.query("country != 'overall'")
+    .assign(
         country=lambda df: pd.Categorical(
             df["country"],
             categories=["overall", *config.categorical.country],
         )
-    ).groupby("country", observed=True),
+    )
+    .groupby("country", observed=True),
     strict=True,
 ):
     (
@@ -495,7 +500,7 @@ for ax, (country, df) in zip(
     ax.set_xlabel(None)
     ax.set_ylabel(None)
     ax.set_xticks(config.categorical["valence"])
-    ax.set_ylim(-0.05, 1.05)
+    ax.set_ylim(-0.05, 0.75)
     ax.yaxis.set_major_formatter(mpl.ticker.PercentFormatter(xmax=1))
 
 ax = axes.flatten()[0]
