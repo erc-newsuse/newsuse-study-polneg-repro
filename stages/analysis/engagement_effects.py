@@ -292,5 +292,75 @@ for valence in ["event", "sentiment"]:
             index=False,
         )
 
+# %% Pooled effects ------------------------------------------------------------------
+
+R = pd.concat(
+    [
+        rates[[f"{opts.response}_{valence}"]]
+        .groupby(["sample", "country", "political", valence])
+        .mean()
+        .pipe(np.log)
+        .rename_axis(index={valence: "valence"})
+        for valence in valences
+    ],
+    axis=1,
+)
+
+# %% ---------------------------------------------------------------------------------
+
+print(opts.response.upper())
+pooled_valence = (
+    R.pipe(lambda df: df.sub(df.xs(0, level="valence")))
+    .drop(index=0, level="valence")
+    .dropna()
+    .groupby(["sample", "valence"])
+    .mean()
+    .assign(**{opts.response: lambda df: df.mean(axis=1)})[opts.response]
+    .pipe(np.exp)
+    .groupby(["valence"])
+    .apply(eti)
+    .unstack(-1)
+    .sort_index()
+    .assign(
+        sig=lambda df: df[["lower", "upper"]].sub(1).pipe(np.sign).prod(axis=1).eq(1),
+        up=lambda df: df["median"] > 1,
+    )
+)
+pooled_valence.head()
+
+# %% ---------------------------------------------------------------------------------
+
+pooled_valence_by = (
+    R.pipe(lambda df: df.sub(df.xs(0, level="valence")))
+    .drop(index=0, level="valence")
+    .dropna()
+    .groupby(["sample", "valence"])
+    .mean()
+    .pipe(np.exp)
+    .groupby(["valence"])
+    .apply(lambda df: df.apply(eti, axis=0))
+    .unstack(-1)
+)
+pooled_valence_by.head()
+
+# %% ---------------------------------------------------------------------------------
+
+pooled_political = (
+    R.groupby(["sample", "country", "valence"])
+    .diff()
+    .dropna()
+    .droplevel("political")
+    .assign(**{opts.response: lambda df: df.mean(axis=1)})[opts.response]
+    .groupby(["sample"])
+    .mean()
+    .pipe(np.exp)
+    .pipe(eti)
+    .to_frame()
+    .T.assign(
+        sig=lambda df: df[["lower", "upper"]].sub(1).pipe(np.sign).prod(axis=1).eq(1),
+        up=lambda df: df["median"] > 1,
+    )
+)
+pooled_political.head()
 
 # %% ---------------------------------------------------------------------------------
