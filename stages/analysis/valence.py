@@ -299,6 +299,21 @@ tables = {
 for name, table in tables.items():
     DataFrame(table).to_(tabpath / f"{TARGET}-{name}.tsv", index=False)
 
+# %% Pooled estimates ----------------------------------------------------------------
+
+print(opts.response.capitalize())
+pooled_posterior = (
+    probs.pipe(logit)
+    .groupby(["sample", opts.response])
+    .mean()
+    .pipe(expit)
+    .groupby(opts.response)
+    .apply(eti)
+    .unstack(-1)
+    .reset_index()
+)
+pooled_posterior.head()
+
 # %% Selected country comparisons ----------------------------------------------------
 
 # %% PL vs ESP (non-political)
