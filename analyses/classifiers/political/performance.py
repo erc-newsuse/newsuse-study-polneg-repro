@@ -7,7 +7,7 @@ from sklearn.metrics import accuracy_score, f1_score
 from tqdm.auto import tqdm
 
 from project import config, paths
-from project.pipelines import KeyDataset, pipeline
+from project.ml import KeyDataset, pipeline
 
 # %% ---------------------------------------------------------------------------------
 

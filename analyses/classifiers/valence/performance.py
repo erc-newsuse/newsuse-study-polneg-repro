@@ -14,7 +14,7 @@ from transformers import AutoModel, AutoTokenizer
 import project.ml  # noqa
 from project import config, paths
 from project.metrics import o1_score
-from project.pipelines import KeyDataset, pipeline
+from project.ml import KeyDataset, pipeline
 
 domain = "valence"
 targets = ["event", "sentiment"]

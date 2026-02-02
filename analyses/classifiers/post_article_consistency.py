@@ -6,9 +6,8 @@ from sklearn.metrics import accuracy_score, matthews_corrcoef
 from tqdm.auto import tqdm
 from transformers import AutoModel, AutoTokenizer
 
-import project.ml  # noqa
 from project import config, paths
-from project.pipelines import pipeline
+from project.ml import pipeline
 
 # %% ---------------------------------------------------------------------------------
 
