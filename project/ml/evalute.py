@@ -6,8 +6,7 @@ from scipy.stats import hmean
 from sklearn.metrics import f1_score
 from transformers import EvalPrediction
 
-from .model import NewsuseValenceClassifierConfig
-from .ordinal import ordinal_probs
+from .model import NewsuseValenceClassifierConfig, ordinal_probs
 
 MultiOutputT = Mapping[str, torch.Tensor]
 

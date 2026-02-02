@@ -1,3 +1,11 @@
+"""Pipeline for multi-target text classification.
+
+This module extends the Hugging Face Transformers pipeline to support
+multi-target text classification tasks.
+
+Tested with:
+- transformers[torch]==4.45.2
+"""
 from functools import singledispatchmethod, wraps
 from typing import Any, ClassVar
 

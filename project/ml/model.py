@@ -1,11 +1,30 @@
+"""Newsuse valence classification model with ordinal classification heads.
+
+This is a classifier for detecting valence of news articles, posts, headlines etc.
+It distinguishes between event valence (whether the reported event is likely to be
+perceived as negative, neutral, or positive), and sentiment
+(whether the language and framing used in the text expresses negative, neutral, or positive
+attitudes or emotions).
+
+It is implemented as an extension of XLM-RoBERTa-Large with two ordinal classification
+heads (negative < neutral < positive).
+
+It is implemented using Hugging Face Transformers and PyTorch, and tested with:
+- transformers[torch]==4.45.2
+
+It comes with a custom pipeline for multi-target text classification tasks.
+"""
 from collections.abc import Mapping
 from copy import deepcopy
-from functools import wraps
+from functools import singledispatch, wraps
 from types import MappingProxyType
 from typing import Any, ClassVar
 
+import numpy as np
 import torch
+from scipy.special import expit
 from torch import nn
+from torch.nn import functional as F
 from torch.utils.checkpoint import checkpoint
 from transformers import (
     AutoConfig,
@@ -15,7 +34,6 @@ from transformers import (
 )
 from transformers.modeling_outputs import SequenceClassifierOutput
 
-from .ordinal import OrdinalLogit, extend_ordinal_labels, ordinal_loss, ordinal_probs
 from .pipelines import (
     PipeOutputT,
     TextMultiClassificationPipeline,
@@ -32,6 +50,106 @@ __all__ = (
     "NewsuseValenceClassifier",
     "NewsuseValenceClassifierConfig",
 )
+
+# ORDINAL LOGIT ----------------------------------------------------------------------
+
+
+class OrdinalLogit(nn.Module):
+    """Ordinal logit layer for classification tasks."""
+
+    def __init__(
+        self,
+        in_features: int,
+        num_classes: int,
+        bias_scale: float = 2.0,
+    ) -> None:
+        super().__init__()
+        if num_classes <= 1:
+            errmsg = "'num_classes' must be greater than 1."
+            raise ValueError(errmsg)
+        bias = -(torch.arange(num_classes - 1) + 0.5 - (num_classes - 1) / 2) * bias_scale
+        self.bias = nn.Parameter(torch.as_tensor(bias).float())
+        self.linear = nn.Linear(in_features, 1, bias=False)
+        self.bias_scale = bias_scale
+
+    def __repr__(self) -> str:
+        cn = self.__class__.__name__
+        indim = self.linear.in_features
+        outdim = self.num_classes
+        scale = self.bias_scale
+        return f"{cn}(in_features={indim}, num_classes={outdim}, bias_scale={scale})"
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Forward pass through the ordinal logit layer."""
+        return self.linear(x) + self.bias
+
+    @property
+    def num_classes(self) -> int:
+        """Number of ordinal classes."""
+        return len(self.bias) + 1
+
+
+def ordinal_loss(
+    logits: torch.Tensor,
+    labels: torch.Tensor,
+    num_classes: int,
+) -> torch.Tensor:
+    """Compute ordinal loss for the logits and labels."""
+    loss = sum(
+        F.cross_entropy(torch.column_stack([-logits[:, i], logits[:, i]]), labels[:, i])
+        for i in range(num_classes - 1)
+    )
+    return loss
+
+
+def extend_ordinal_labels(labels: torch.Tensor, num_classes: int) -> torch.Tensor:
+    """Convert integer ordinal labels to extended binary vector format."""
+    labels = labels - labels.min(0).values
+    vlen = num_classes - 1
+    ext = torch.arange(vlen * labels.size(0), device=labels.device).reshape(-1, vlen)
+    elabs = (ext % vlen < labels[:, None]).long()
+    return elabs
+
+
+@singledispatch
+def ordinal_probs(logits: torch.Tensor) -> torch.Tensor:
+    """Convert ordinal logits to class probabilities."""
+    probs = F.sigmoid(logits)
+    surv = torch.zeros(
+        (*probs.shape[:-1], probs.shape[-1] + 2),
+        dtype=probs.dtype,
+        device=logits.device,
+    )
+    surv[..., 0] = 1.0
+    surv[..., 1:-1] = probs
+    cprobs = surv[..., :-1] - surv[..., 1:]
+    return cprobs
+
+
+@ordinal_probs.register
+def _(logits: np.ndarray) -> np.ndarray:
+    probs = expit(logits)
+    cmf = np.zeros(
+        (*probs.shape[:-1], probs.shape[-1] + 2),
+        dtype=probs.dtype,
+    )
+    cmf[..., 0] = 1.0
+    cmf[..., 1:-1] = probs
+    return cmf[..., :-1] - cmf[..., 1:]
+
+
+@singledispatch
+def ordinal_inverse(probs: torch.Tensor) -> torch.Tensor:
+    """Convert ordinal class probabilities to logits."""
+    return -torch.log(1 / (1 - probs.cumsum(-1)[..., :-1]) - 1)
+
+
+@ordinal_inverse.register
+def _(probs: np.ndarray) -> np.ndarray:
+    return -np.log(1 / (1 - probs.cumsum(-1)[..., :-1]) - 1)
+
+
+# VALENCE CLASSIFIER -----------------------------------------------------------------
 
 
 class NewsuseValenceClassifierConfig(PretrainedConfig):
