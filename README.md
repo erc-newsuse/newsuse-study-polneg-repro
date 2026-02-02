@@ -1,76 +1,42 @@
-# Political valence
+# Political negativity
 
-This is a repository for reproducing the results from the paper
+This is a repository for reproducing the results from the paper:
 
-> Negative news is less prevalent and generates lower user engagement
-> than non-negative news across six countries
-
-## [Github repo](https://github.com/erc-newsuse/newsuse-study-polneg-repro)
-
-Code (without data) is archived in the
-[Github repository](https://github.com/erc-newsuse/newsuse-study-polneg-repro).
-
-## Text data availability
-
-For legal reasons we do not distribute the content of the posts.
-However, in all cases metadata allowing for identification of and access to
-individual posts is retained, so the dataset can be _rehydrated_ by filling
-the missing data after obtaining the content, i.e. through Facebook API,
-by scraping content of selected posts or obtaining it by any other means.
-<!-- We can also share the content data for private use upon a reasonable request. -->
-
-> **NOTE.** Most importantly, all analyses in this study, other than model training
-> and post labeling, do not require text content and can be reproduced without it.
+> Negativity bias in news is only weak - evidence from six western countries
 
 
-## [OSF data and code repository](https://osf.io/79a46/?view_only=f7cad71ef9b54a5a866e2e579eb92e62)
+## Project structure
 
-Dehydrated data and full code is archived as an OSF repository,
-which allows for reproduction of all analyses other than the training of classifiers and posts' classification even without data rehydration.
-It uses a simplified set of computation stages defined `dvc.yaml`
-(run `dvc stage list` or `dvc dag` to see them) that uses a precomputed
-set of post labels (in `data/proc/cls.parquet` file).
-
-In order to easily reproduce only the part of the pipeline depending
-on non-text data provided in the OSF repostory
-rename `dvc-dehydrated.yaml` to `dvc.yaml` and run `dvc repro`.
-
-> **NOTE.** Read _Reproduction_ section below for more details on how to run and inspect the pipeline.
-
-### Classifier model files
-
-Due to limitations of the OSF platform, the classifiers are not distributed
-in the OSF repository. However, they are available through the _Huggingface Hub_.
-See the _Classifiers_ section below for more details.
-
-### Key fields
-
-There are two key fields allowing, in principle, for rehydration of the Facebook data:
-
-1. `key` : it contains a unique Facebook post identifier (namespace prefix ending with `@`, i.e. `sotrender@`, needs to be removed to obatin the actual post ID)
-2. `post_url` : stores URLs pointing to individual posts
-
-### Rehydration
-
-In order to run the full pipeline using the rehydrated data
-create the following files in the following files:
-- `data/raw/posts-text.parquet` with columns `key`, `country` and `text` (the text content of the posts). The value in `key` and `country` columns should match the values in the `data/raw/posts.parquet` file.
-- `data/ml/political/text.parquet` with columns `split`, `key`, `text` (the text content of the posts used for training the political classifier). The value in `key` column should match the values in the `data/ml/data.parquet` file.
-- `data/ml/valence/text.parquet` with columns `split`, `key`, `text` (the text content of the posts used for training the valence classifier). The value in `key` column should match the values in the `data/ml/data.parquet` file.
+```
+├── stages/              # Pipeline scripts (Python)
+│   ├── ml/              # Machine learning classification stages
+│   ├── glmm/            # Generalized linear mixed models
+│   ├── analysis/        # Analysis and visualization stages
+│   └── descriptives/    # Descriptive statistics stages
+├── project/             # Local Python package with shared utilities
+├── analyses/            # Quarto notebooks and scripts for reporting
+├── data/                # DVC-managed data storage
+│   ├── raw/             # Raw input data
+│   ├── proc/            # Processed data
+│   └── aux/             # Auxiliary data
+├── glmm/                # Fitted GLMM model outputs (NetCDF format)
+├── ml/                  # Machine learning resources
+├── figures/             # Generated figures
+└── tables/              # Generated tables
+```
 
 
 ## Reproduction
 
-The project management, including versioning of the most of important
+The project management, including versioning of the most important
 software libraries, is handled using
 [Conda package manager](https://anaconda.org/anaconda/conda).
 
 ### Project setup
 
-
 ```bash
 conda env create -f environment.yaml
-conda activate polneg-repro
+conda activate newsuse-study-polneg
 make init
 # The last command is defined in `Makefile` and initializes
 # the state of the environment, including installing all
@@ -81,115 +47,119 @@ make init
 
 The project workflow is organized using [DVC](https://dvc.org/),
 which allows for defining all important computation stages as
-interdependent tasks.
+interdependent tasks. All stages are defined in `dvc.yaml`
+and implemented in the `stages/` directory.
 
 ```bash
 dvc stage list  # list defined computation stages
+dvc dag         # display directed acyclic graph of stage dependencies
 ```
 
-This should be the output:
+#### Data processing stages
 
-```
-data                    Outputs data/proc/posts.parquet, data/proc/posts-text.parquet
-ml-datasets@political   Outputs ml/datasets/political
-ml-datasets@valence  Outputs ml/datasets/valence
-train@political         Outputs ml/classifiers/political
-train@valence        Outputs ml/classifiers/valence
-labels@political        Outputs data/proc/cls-political.parquet
-labels@valence       Outputs data/proc/cls-valence.parquet
-merge-labels            Outputs data/proc/cls.parquet
-daily-counts            Outputs data/proc/daily.parquet
-dataset                 Outputs data/proc/dataset.parquet, data/proc/quality.parquet
-glmm@valence         Outputs models/glmm/valence
-glmm@reactions          Outputs models/glmm/reactions
-glmm@comments           Outputs models/glmm/comments
-glmm@shares             Outputs models/glmm/shares
-articles-sample         Outputs data/proc/articles-sample.parquet
-predictions             Outputs data/proc/predictions.parquet
-```
+| Stage | Script | Description |
+|-------|--------|-------------|
+| `posts` | `stages/posts.py` | Process raw posts data into cleaned format |
+| `daily-counts` | `stages/daily_counts.py` | Compute daily post counts per outlet |
+| `dataset` | `stages/dataset.py` | Create main analysis dataset |
+| `outlet-meta` | `stages/outlet_meta.py` | Process outlet metadata |
+| `merge-cls` | `stages/merge_cls.py` | Merge classification labels |
+| `final` | `stages/final.py` | Create final analysis-ready dataset |
 
-One can also display a directed acyclic graph of relationships between the tasks.
+#### Classification stages
 
-```bash
-dvc dag
-```
+| Stage | Script | Description |
+|-------|--------|-------------|
+| `political-classify` | `stages/ml/political_classify.py` | Classify posts as political/non-political |
+| `valence-classify` | `stages/ml/valence_classify.py` | Classify post valence (negative/neutral/positive) |
 
-All analyses used in the paper can be reproduced simply by running the
-following command:
+#### GLMM stages
 
+| Stage | Script | Description |
+|-------|--------|-------------|
+| `valence-glmm` | `stages/glmm/valence.py` | Fit valence prevalence models (event, sentiment, structural) |
+| `valence-glmm-by` | `stages/glmm/valence_by.py` | Fit valence models by outlet quality/ideology |
+| `valence-validation` | `stages/glmm/valence_validation.py` | Validate valence models |
+| `engagement-glmm` | `stages/glmm/engagement.py` | Fit engagement models (reactions, comments, shares) |
+| `engagement-glmm-by` | `stages/glmm/engagement_by.py` | Fit engagement models by outlet quality/ideology |
+| `engagement-validation` | `stages/glmm/engagement_validation.py` | Validate engagement models |
+| `ppd` | `stages/glmm/ppd.py` | Compute posterior predictive distributions |
+
+#### Analysis stages
+
+| Stage | Script | Description |
+|-------|--------|-------------|
+| `descriptives` | `stages/descriptives/valence.py`, `stages/descriptives/engagement.py` | Generate descriptive statistics |
+| `valence-analysis` | `stages/analysis/valence.py` | Valence prevalence analysis |
+| `valence-analysis-joint` | `stages/analysis/valence_joint.py` | Joint valence analysis |
+| `engagement-analysis` | `stages/analysis/engagement.py` | Engagement analysis |
+| `engagement-analysis-effects` | `stages/analysis/engagement_effects.py` | Engagement effect sizes |
+
+### Running the pipeline
+
+All analyses used in the paper can be reproduced by running:
 
 ```bash
 dvc repro
 ```
 
 > **IMPORTANT.** A full run of the entire pipeline may take several hours
-> or even more than a day of compute time
+> or even several days of compute time.
 
 ### Running individual stages
 
-Individual computation stages
-(of which names are given by `dvc stage list`)
-can be run simply using `dvc repro <name>`, where `<name>` is one or
-more stage names (separated by spaces).
+Individual computation stages can be run using `dvc repro <name>`,
+where `<name>` is one or more stage names (separated by spaces).
 
-Importantly, a single stage can be run without running all the previous stages by using the following command:
+To run a single stage without running all preceding stages:
 
 ```bash
 dvc repro --single-item <name>
 ```
 
-## Main results
 
-The pipeline run by `dvc repro` converts raw data into final dataset(s)
-used in the paper, fits generalized linear mixed effects models,
-and possibly also run the training of machine learning
-classifiers and assigns classification labels to posts.
-In other words, it runs all the time-consuming computations.
+## Analyses and reporting
+
+The pipeline run by `dvc repro` converts raw data into final datasets,
+fits generalized linear mixed effects models, runs machine learning
+classifiers, and assigns classification labels to posts.
 
 The actual analyses and plots from the paper are organized
-as either simple Python scripts or [Quarto](https://quarto.org/)
-notebooks, which allow for easy mixing of Python and R code.
-Thus, results and figures can be reproduced by rerunning the code
-from the notebooks.
-
-> **NOTE.** We used [matplotlib](https://matplotlib.org/) with TeX-based text rendering
-> for generating the figures. This allows for beautiful typesetting but may makes
-> reproducibility more difficult. In case of problems try switching
-> `plotting.usetex` param in `params.yaml` to `false`.
-
-In particular there are the following notebooks and scripts in the `analyses` subfolder:
+as Python scripts or [Quarto](https://quarto.org/) notebooks
+in the `analyses/` directory:
 
 ```
 analyses/
-├── classifiers              // python scripts for evaluating classifier performance
-│   ├── valence.py
-│   └── political.py
-├── descriptives
-│   ├── descriptives.py      // descriptive statistics
-│   └── examples.py          // examples of text classifications
-├── glmm
-│   ├── comments
-│   │   └── validation.qmd   // validation of GLMM for comments
-│   ├── likes
-│   │   └── validation.qmd   // validation of GLMM for likes
-│   ├── valence
-│   │   └── validation.qmd   // validation of GLMM for valence
-│   ├── shares
-│   │   └── validation.qmd   // validation of GLMM for shares
-│   ├── models-table.qmd     // generation of the model coefficient table
-│   ├── polneg.qmd           // generation of valence prevalence subfigure
-│   ├── engagement.qmd       // generation of engagement subfigure
-│   └── simulation.qmd       // generation of figure with simulation results
+├── classifiers/
+│   ├── political/
+│   │   ├── iaa.py               # Inter-annotator agreement
+│   │   └── performance.py       # Classifier performance metrics
+│   ├── valence/
+│   │   ├── iaa.py               # Inter-annotator agreement
+│   │   └── performance.py       # Classifier performance metrics
+│   ├── examples.py              # Classification examples
+│   └── post_article_consistency.py
+├── glmm/
+│   ├── comments/
+│   │   └── validation.qmd       # GLMM validation for comments
+│   ├── reactions/
+│   │   └── validation.qmd       # GLMM validation for reactions
+│   ├── shares/
+│   │   └── validation.qmd       # GLMM validation for shares
+│   ├── engagement.qmd           # Engagement analysis figure
+│   ├── models-table.qmd         # Model coefficients table
+│   ├── outlets.qmd              # Outlet-level analysis
+│   ├── polneg.qmd               # Valence prevalence figure
+│   └── simulation.qmd           # Simulation results figure
 ```
 
 
 ## Classifiers
 
-Classifiers are stored in `classifiers` folder. They are saved using standard format
-used by `transformers` library from [HuggingFace](https://huggingface.co/),
-and should be compatible with `transformers>=4.44` and `torch>=2.4`.
-See the `scripts/make_labels.py` script for an example.
+Classifiers are accessible through _Huggingface Hub_:
 
-They are also accessible through _Huggingface Hub_:
 - [political](https://huggingface.co/sztal/erc-newsuse-political)
-- [valence](https://huggingface.co/sztal/erc-newsuse-valence).
+- [valence](https://huggingface.co/sztal/erc-newsuse-valence)
+
+They use the standard format from the `transformers` library
+and are compatible with `transformers>=4.45` and `torch>=2.4`.
