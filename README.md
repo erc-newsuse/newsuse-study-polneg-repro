@@ -2,7 +2,7 @@
 
 This is a repository for reproducing the results from the paper:
 
-> Negativity bias in news is only weak - evidence from six western countries
+> Limited news negativity on Facebook: Evidence on prevalence and engagement from six countries
 
 
 ## Project structure
