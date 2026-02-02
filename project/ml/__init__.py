@@ -1,6 +1,6 @@
 from .datasets import KeyDataset, SimpleDataset
 from .evalute import NewsuseValenceEvaluator
-from .model import (
+from .valence import (
     NewsuseValenceClassifier,
     NewsuseValenceClassifierConfig,
     TextMultiClassificationPipeline,
