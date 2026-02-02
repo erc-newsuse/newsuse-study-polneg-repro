@@ -15,8 +15,6 @@ paths:
   labels:           "@proc/cls.parquet"
   final:            "@proc/final.parquet"
   articles_sample:  "@proc/articles-sample.parquet"
-  predictions:      "@proc/predictions.parquet"
-  followers:        "@raw/followers.parquet"
   mldata:           "@data/ml"
   ml:               "ml"
   glmm:             "glmm"
@@ -24,7 +22,6 @@ paths:
   tables:           "tables"
   prompts:          "@ml/prompts"
   gpt:              "@proc/gpt/"
-  annotations:      "annotations"
   valence_hyper:     "@proc/valence-hyper.parquet"
   analyses:          "analyses"
 

@@ -23,18 +23,9 @@ def compute_metrics(df: pd.DataFrame) -> pd.Series:
 
 # %% ---------------------------------------------------------------------------------
 
-opts = config.classification.political
-inference_opts = config.ml.inference
-
-if opts.model.source == "huggingface":
-    model_source = opts.model.name
-else:
-    model_source = paths.mldata / opts.model.name
-
-# %% ---------------------------------------------------------------------------------
-
+opts = config.ml.classifiers.political
 dataset = datasets.load_from_disk(paths.ml / "datasets" / "political")
-pipe = pipeline("text-classification", model_source)
+pipe = pipeline(opts.task, opts.name)
 
 # %% ---------------------------------------------------------------------------------
 
