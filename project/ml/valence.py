@@ -10,17 +10,20 @@ It is implemented as an extension of XLM-RoBERTa-Large with two ordinal classifi
 heads (negative < neutral < positive).
 
 It is implemented using Hugging Face Transformers and PyTorch, and tested with:
-- transformers[torch]==4.45.2
+- `python==3.12`
+- `numpy==2.3.5`
+- `scipy==1.16.2`
+- `torch==2.9.0`
+- `transformers==4.45.2`
 
 It comes with a custom pipeline for multi-target text classification tasks registered
 under the label "text-multi-classification". The pipeline uses the following defalts:
-- truncation: True
-- padding: "max_length"
-- max_length: model.config.model_max_length
-- tokenizer: model's tokenizer
+- `truncation: True`
+- `padding: "max_length"`
+- `max_length: model.config.model_max_length`
+- `tokenizer: model's tokenizer`
 """
 from collections.abc import Mapping
-from copy import deepcopy
 from functools import singledispatch, singledispatchmethod, wraps
 from types import MappingProxyType
 from typing import Any, ClassVar
@@ -79,13 +82,6 @@ class TextMultiClassificationPipeline(Pipeline):
     """Text classification pipeline for tasks with multiple targets."""
 
     task: ClassVar[str] = "text-multi-classification"
-
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
-        if self.framework != "pt":
-            cn = self.__class__.__name__
-            errmsg = f"'{cn}' only supports PyTorch models."
-            raise ValueError(errmsg)
 
     def _sanitize_parameters(self, *args: Any, **kwargs: Any) -> PipeParamsT:
         return TextClassificationPipeline._sanitize_parameters(self, *args, **kwargs)
@@ -293,10 +289,25 @@ class NewsuseValenceClassifierConfig(PretrainedConfig):
             self.base = base
             self.base.update(kwargs)
         elif isinstance(base, Mapping):
-            base = deepcopy(base)
-            base.update(kwargs)
-            _name_or_path = base.pop("_name_or_path")
-            self.base = AutoConfig.from_pretrained(_name_or_path, **base)
+            # When loading from saved config, base is a dict that already contains
+            # all necessary fields. Use model_type to get the right config class
+            # directly, avoiding from_pretrained which can trigger recursion.
+            from transformers.models.auto.configuration_auto import CONFIG_MAPPING
+
+            base = dict(base)
+            # Don't update with kwargs - they contain parent config fields
+            # (like model_type="newsuse-valence-classifier") that would override
+            # the correct base config values.
+            model_type = base.pop("model_type", None)
+            # Remove fields that aren't part of the base config
+            base.pop("architectures", None)
+            if model_type and model_type in CONFIG_MAPPING:
+                config_class = CONFIG_MAPPING[model_type]
+                self.base = config_class(**base)
+            else:
+                # Fallback: fetch config from HF Hub
+                _name_or_path = base.pop("_name_or_path")
+                self.base = AutoConfig.from_pretrained(_name_or_path, **base)
         elif isinstance(base, str):
             self.base = AutoConfig.from_pretrained(base, **kwargs)
         else:
@@ -410,12 +421,14 @@ class NewsuseValenceClassifier(PreTrainedModel):
 
     config_class: ClassVar[type[PretrainedConfig]] = NewsuseValenceClassifierConfig
     supports_gradient_checkpointing: ClassVar[bool] = True
+    _tied_weights_keys: ClassVar[list[str]] = []
 
     def __init__(self, config: NewsuseValenceClassifierConfig) -> None:
         super().__init__(config)
-        self.base = AutoModel.from_pretrained(
-            (d := self.config.base.to_dict()).pop("_name_or_path"), **d
-        )
+        # Use from_config to create architecture without loading weights.
+        # This avoids re-downloading the base model when loading a pretrained
+        # NewsuseValenceClassifier - weights are loaded by from_pretrained().
+        self.base = AutoModel.from_config(config.base)
         self.ff = nn.ModuleList(
             [FeedForward(config) for _ in range(config.num_shared_layers)]
         )
@@ -428,6 +441,42 @@ class NewsuseValenceClassifier(PreTrainedModel):
         self._use_gradient_checkpointing = False
         # Initialize weights and biases
         self.init_weights()
+
+    @property
+    def all_tied_weights_keys(self) -> dict[str, str]:
+        """Return tied weights keys. This model has no tied weights at the top level."""
+        return {}
+
+    @classmethod
+    def from_base_pretrained(
+        cls,
+        base_name_or_path: str,
+        **config_kwargs: Any,
+    ) -> "NewsuseValenceClassifier":
+        """Create a new model with pretrained base and randomly initialized heads.
+
+        Use this method when training a new classifier from scratch.
+        For loading an already trained NewsuseValenceClassifier, use `from_pretrained()`.
+
+        Parameters
+        ----------
+        base_name_or_path
+            HuggingFace model ID or path for the base transformer model
+            (e.g., "xlm-roberta-large").
+        **config_kwargs
+            Additional arguments passed to `NewsuseValenceClassifierConfig`.
+
+        Returns
+        -------
+        NewsuseValenceClassifier
+            Model with pretrained base weights and randomly initialized heads.
+        """
+        config = NewsuseValenceClassifierConfig(base=base_name_or_path, **config_kwargs)
+        model = cls(config)
+        # Load pretrained weights into the base model
+        pretrained_base = AutoModel.from_pretrained(base_name_or_path)
+        model.base.load_state_dict(pretrained_base.state_dict())
+        return model
 
     def feed_forward(self, pooled_output: torch.Tensor) -> torch.Tensor:
         """Feed forward through the shared layers."""

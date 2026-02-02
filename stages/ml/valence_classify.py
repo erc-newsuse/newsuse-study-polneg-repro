@@ -29,18 +29,15 @@ data = (
     .set_index("key")
 )
 
-hyper = DataFrame.from_(paths.proc / f"{domain}-hyper.parquet")
-best_model = hyper.loc[hyper.value.idxmax()].params_base
-
 # %% ---------------------------------------------------------------------------------
 
-model = AutoModel.from_pretrained(paths.ml / "models" / domain / best_model)
+model = AutoModel.from_pretrained(paths.ml / "models" / domain / "best")
 tokenizer = AutoTokenizer.from_pretrained(model.config.base_name_or_path)
 pipe = pipeline("text-multi-classification", model=model, tokenizer=tokenizer)
 
 # %% ---------------------------------------------------------------------------------
 
-dset = KeyDataset(data[["text"]], "text")
+dset = KeyDataset(data[["text"]][:100], "text")
 bsize = config.ml.inference.batch_size
 results = [*tqdm(pipe(dset, top_k=None, batch_size=bsize), total=len(dset))]
 
