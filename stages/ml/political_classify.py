@@ -5,7 +5,7 @@ from newsuse.data import DataFrame
 from tqdm.auto import tqdm
 
 from project import config, paths
-from project.pipelines import KeyDataset, pipeline
+from project.ml import KeyDataset, pipeline
 
 # %% ---------------------------------------------------------------------------------
 

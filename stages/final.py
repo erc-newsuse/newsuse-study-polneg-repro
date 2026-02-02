@@ -6,7 +6,7 @@ from newsuse.data import DataFrame
 from transformers import AutoModel
 
 from project import paths
-from project.model.ordinal import ordinal_inverse, ordinal_probs
+from project.ml import ordinal_inverse, ordinal_probs
 
 domain = "valence"
 

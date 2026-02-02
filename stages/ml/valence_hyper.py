@@ -14,7 +14,7 @@ from newsuse.data import DataFrame
 from transformers import AutoConfig, AutoTokenizer, Trainer
 
 from project import config, paths
-from project.model import (
+from project.ml import (
     NewsuseValenceClassifier,
     NewsuseValenceClassifierConfig,
     NewsuseValenceEvaluator,

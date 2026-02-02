@@ -10,7 +10,7 @@ import pandas as pd
 import seaborn as sns
 from newsuse.data import DataFrame
 
-import project.model  # noqa
+import project.ml  # noqa
 from project import config, paths
 
 mpl.rcParams.update(config.plotting.params)

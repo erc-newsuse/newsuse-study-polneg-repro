@@ -11,7 +11,7 @@ from sklearn.metrics import f1_score
 from tqdm.auto import tqdm
 from transformers import AutoModel, AutoTokenizer
 
-import project.model  # noqa
+import project.ml  # noqa
 from project import config, paths
 from project.metrics import o1_score
 from project.pipelines import KeyDataset, pipeline

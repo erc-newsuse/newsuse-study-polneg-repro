@@ -6,13 +6,11 @@ from newsuse.data import DataFrame
 from tqdm.auto import tqdm
 from transformers import AutoModel, AutoTokenizer
 
-import project.model  # noqa
 from project import config, paths
-from project.pipelines import KeyDataset, pipeline
+from project.ml import KeyDataset, pipeline
 
 domain = "valence"
 targets = ["event", "sentiment"]
-
 
 # %% ---------------------------------------------------------------------------------
 

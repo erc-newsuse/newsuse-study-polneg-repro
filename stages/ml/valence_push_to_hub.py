@@ -2,13 +2,9 @@
 
 import os
 
+import datasets
 import huggingface_hub
-from newsuse.ml import (
-    AutoModelForSequenceClassification,
-    AutoTokenizer,
-    Dataset,
-    Trainer,
-)
+from transformers import AutoModelForSequenceClassification, AutoTokenizer, Trainer
 
 from project import config, paths
 
@@ -31,7 +27,9 @@ paths = paths.__copy__(
 
 model = AutoModelForSequenceClassification.from_pretrained(paths.model)
 tokenizer = AutoTokenizer.from_pretrained(paths.model)
-dataset = Dataset.from_disk(paths.dataset).tokenize(tokenizer, **config.model.tokenize)
+dataset = datasets.load_from_disk(paths.dataset).map(
+    lambda d: tokenizer(d["text"], **config.model.tokenize), batched=True
+)
 
 # %% Make trainer --------------------------------------------------------------------
 

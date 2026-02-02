@@ -15,12 +15,11 @@ from transformers import (
 )
 from transformers.modeling_outputs import SequenceClassifierOutput
 
-from project.pipelines.pipelines import (
+from .ordinal import OrdinalLogit, extend_ordinal_labels, ordinal_loss, ordinal_probs
+from .pipelines import (
     PipeOutputT,
     TextMultiClassificationPipeline,
 )
-
-from .ordinal import OrdinalLogit, extend_ordinal_labels, ordinal_loss, ordinal_probs
 
 ID2LABEL = MappingProxyType(
     {

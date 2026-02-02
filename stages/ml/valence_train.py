@@ -4,7 +4,7 @@ import datasets
 from transformers import AutoTokenizer, Trainer
 
 from project import config, paths
-from project.model import (
+from project.ml import (
     NewsuseValenceClassifier,
     NewsuseValenceClassifierConfig,
     NewsuseValenceEvaluator,

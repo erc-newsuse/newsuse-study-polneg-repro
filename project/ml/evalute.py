@@ -13,7 +13,7 @@ MultiOutputT = Mapping[str, torch.Tensor]
 
 
 class NewsuseValenceEvaluator:
-    """Evaluator for :class:`~project.model.newsuse.NewsuseValenceModel` models.
+    """Evaluator for :class:`~project.ml.model.newsuse.NewsuseValenceModel` models.
 
     Attributes
     ----------
