@@ -31,13 +31,14 @@ data = (
 
 # %% ---------------------------------------------------------------------------------
 
-model = AutoModel.from_pretrained(paths.ml / "models" / domain / "best")
-tokenizer = AutoTokenizer.from_pretrained(model.config.base_name_or_path)
-pipe = pipeline("text-multi-classification", model=model, tokenizer=tokenizer)
+opts = config.ml.classifiers[domain]
+model = AutoModel.from_pretrained(opts.name, trust_remote_code=True)
+tokenizer = AutoTokenizer.from_pretrained(model.base.name_or_path)
+pipe = pipeline(opts.task, model=model, tokenizer=tokenizer)
 
 # %% ---------------------------------------------------------------------------------
 
-dset = KeyDataset(data[["text"]][:100], "text")
+dset = KeyDataset(data[["text"]], "text")
 bsize = config.ml.inference.batch_size
 results = [*tqdm(pipe(dset, top_k=None, batch_size=bsize), total=len(dset))]
 

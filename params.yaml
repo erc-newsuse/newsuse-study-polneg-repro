@@ -200,11 +200,16 @@ glmm:
         response: shares
         <<: *glmm_engagement_default
 
-classification:
-  political:
-    model:
-      source: huggingface
+ml:
+  classifiers:
+    political:
+      task: text-classification
       name: sztal/erc-newsuse-political
+    valence:
+      task: text-multi-classification
+      name: sztal/erc-newsuse-valence
+  inference:
+    batch_size: ${eval:${oc.env:NEWSUSE_ML_INFERENCE_BATCH_SIZE,32}}
 
 articles_sample:
   groupsize: 5

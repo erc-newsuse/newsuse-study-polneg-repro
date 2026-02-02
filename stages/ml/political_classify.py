@@ -17,22 +17,13 @@ data = (
 
 # %% ---------------------------------------------------------------------------------
 
-opts = config.classification.political
-inference_opts = config.ml.inference
-
-if opts.model.source == "huggingface":
-    model_source = opts.model.name
-else:
-    model_source = paths.mldata / opts.model.name
-
-# %% ---------------------------------------------------------------------------------
-
-classifier = pipeline("text-classification", model_source, padding=True)
+opts = config.ml.classifiers.political
+classifier = pipeline(opts.task, opts.name, padding=True)
 dataset = KeyDataset(data, "text")
 
 # %% ---------------------------------------------------------------------------------
 
-results = DataFrame(tqdm(classifier(dataset, **inference_opts), total=len(dataset)))
+results = DataFrame(tqdm(classifier(dataset, **config.ml.inference), total=len(dataset)))
 
 # %% ---------------------------------------------------------------------------------
 
