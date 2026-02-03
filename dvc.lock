@@ -101,8 +101,8 @@ stages:
       size: 142110678
     - path: stages/ml/political_classify.py
       hash: md5
-      md5: 23a21bc1ba7a2382cef5528f93ee16d7
-      size: 1576
+      md5: e27dba17209644d6be6d75967fd28cd7
+      size: 1309
     outs:
     - path: data/proc/cls-political.parquet
       hash: md5
@@ -121,8 +121,8 @@ stages:
       size: 13911
     - path: stages/ml/valence_classify.py
       hash: md5
-      md5: 62966677a32c8a204748d983e1bf5424
-      size: 2624
+      md5: 62e97be35f4b364191d8d39336870a07
+      size: 2506
     params:
       params.yaml:
         ml.inference:
